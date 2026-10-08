@@ -9,7 +9,7 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 
 ## Steps
 
-1. **Write the spec** at `work/<ACRONYM>.app.json`. Copy the shape of `app-specs/example-equipment-request.json` (simple steps) or `app-specs/example-supplier-registration.json` (sections, columns, dropdowns, radio groups, required fields):
+1. **Write the spec** at `work/<ACRONYM>.app.json`. Copy the shape of `app-specs/example-equipment-request.json` (simple steps), `app-specs/example-supplier-registration.json` (sections, columns, dropdowns, radio groups, required fields) or `app-specs/example-themed-quote.json` (tabs, theme, banner, placed columns, field icons, Cancel):
 
    | Key | Rule |
    |---|---|
@@ -18,17 +18,19 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
    | `businessObject.name` / `.variable` | e.g. `LeaveRequest` / `leave` (JavaScript identifiers) |
    | `service.name` | What users see, e.g. "Leave Request" |
    | `layout` | `"steps"` (default): one screen per step with Back / Next. `"tabs"`: one screen with a tab per step, the user moves freely between tabs, then Next goes to the review |
-   | `form` | Only for `"tabs"`: optional `title`, `intro` and `nextLabel` of the tabbed screen (default title: `service.name`) |
-   | `steps[]` | In order: `title`, optional `intro` (`"steps"` layout only), optional `nextLabel` / `backLabel` (button text), and either `fields[]` (one panel titled like the step, optional `columns`) or `sections[]`. With `"tabs"` each step is one tab |
-   | `sections[]` | Titled panels within a step: `title`, optional `intro`, `columns` (1, 2 or 3; fields fill left to right, row by row) and `fields[]` |
-   | `fields[]` | `name` (identifier, unique across all steps), `label`, `type`: `String`, `Text Area`, `Date`, `Boolean`, `Integer`, `Decimal`, `Select` (dropdown) or `Radio`. Optional: `required` (shows the required marker), `help` (text under the field), `wide` (full width in a multi-column section) |
+   | `form` | Only for `"tabs"`: optional `title`, `intro`, `nextLabel` and `cancelLabel` of the tabbed screen (default title: `service.name`) |
+   | `steps[]` | In order: `title`, optional `intro` (`"steps"` layout only), optional `nextLabel` / `backLabel` / `cancelLabel` (button text; Cancel ends the service), and either `fields[]` (one panel titled like the step, optional `columns` and `widths`) or `sections[]`. With `"tabs"` each step is one tab |
+   | `sections[]` | Titled panels within a step: `title`, optional `intro`, `columns` (1 to 6; fields fill left to right, row by row, unless every field has a `column`), optional `widths` (one relative width per column, e.g. `[1, 1.6, 1]`) and `fields[]` |
+   | `fields[]` | `name` (identifier, unique across all steps), `label`, `type`: `String`, `Text Area`, `Date`, `Boolean`, `Integer`, `Decimal`, `Select` (dropdown) or `Radio`. Optional: `required` (shows the required marker), `help` (help icon with this text), `wide` (full width in a multi-column section), `column` (1, 2, …: the column it sits in, top to bottom in list order), `icon` (with `theme.fieldIcons`: `text`, `file`, `user`, `users`, `calendar`, `list`, `options`, `check`, `hash`, `search`, `id`, `mail`, `phone`, `building`, `dollar`, `info`, `briefcase`) |
    | `options` | For `Select` and `Radio`: a list of strings, or of `{ "value": ..., "label": ... }` when the stored value differs from the text shown |
    | `review` | `{ "title": ..., "submitLabel": ... }` for a read-only review screen, or `false` |
    | `confirmation` | Optional: `title`, `message`, `referencePrefix`, `showFields` (field names) |
+   | `theme` | Optional look of every coach. Colours as `#rrggbb`: `primary` (banner, section bars, icon boxes), `onPrimary` (text on primary), `heading` (banner title), `button` (main button, active tab), `secondaryButton` (Cancel / Back; outlined when absent), `background` (page). Also `font`, `shape` (`square`, `rounded`, `pill`), `fieldIcons` (an icon box before every input), `width` (px or `"full"`), `buttonAlign` (`left`, `center`, `right`) |
+   | `banner` | Optional header strip in `primary` instead of the plain title: `title`, `product`, `text`, `logo` (an image file in `work/`, at most 200 KB) |
 
    Use only the fields the requirement names. A yes/no question is `Boolean`; a choice from a short fixed list is `Radio` (up to about 4 options) or `Select`; long free text is `Text Area`; money and percentages are `Decimal`; counts are `Integer`. Address parts are separate `String` fields. Group more than about six fields into titled `sections`.
 
-   To build from a screenshot or mockup instead of a written requirement, use the screenshot-to-app skill.
+   Leave `theme` and `banner` out unless the user asks for a look, names brand colours, or gives a screenshot. To build from a screenshot or mockup, use the screenshot-to-app skill: it reads the theme from the image.
 
 2. **Build:** `create_app` with the spec path. It validates the spec first and lists every problem; fix the spec and call it again. If the app already exists on the server, the build becomes a new snapshot of it, so bump `app.snapshot` for every change.
 

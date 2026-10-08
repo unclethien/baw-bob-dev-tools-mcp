@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["mcp>=2.3,<3"]
+# dependencies = ["mcp>=2.3,<3", "pillow>=10"]
 # ///
 """
 BAW Dev Tools: an MCP server (stdio) that gives an agent the platform operations it needs to
@@ -41,7 +41,8 @@ mcp = MCPServer("baw-dev-tools", instructions=(
     "Platform tools for IBM BAW on CP4BA. You design and write: app specs (work/<ACR>.app.json), "
     "coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx). "
     "These tools build, install, inspect and test them; view_image shows a screenshot to build from "
-    "or to compare with. Paths are relative to the project root."))
+    "or to compare with, image_colors reads its exact colours and crop_image cuts out its logo. "
+    "Paths are relative to the project root."))
 _ops = None
 
 
@@ -165,6 +166,49 @@ def view_image(path: str) -> Image:
     return Image(path=image)
 
 
+def open_image(path: str, box):
+    """The image at path, cropped to box: [left, top, right, bottom] as fractions (0-1) of its width and height."""
+    from PIL import Image as Pil
+    source = local(path)
+    if source.suffix.lower() not in IMAGE_TYPES or not source.is_file():
+        raise ToolError(f"{path} is not a PNG, JPEG, GIF or WebP file in the project")
+    image = Pil.open(source).convert("RGB")
+    if box is None:
+        return image
+    if len(box) != 4 or not all(0 <= b <= 1 for b in box) or box[0] >= box[2] or box[1] >= box[3]:
+        raise ToolError("box must be [left, top, right, bottom] as fractions from 0 to 1, left < right and top < bottom")
+    w, h = image.size
+    return image.crop((round(box[0] * w), round(box[1] * h), max(round(box[2] * w), round(box[0] * w) + 1), max(round(box[3] * h), round(box[1] * h) + 1)))
+
+
+@mcp.tool()
+def image_colors(path: str, box: list[float] | None = None, count: int = 5) -> list[dict]:
+    """The main colours of an image file, or of one region of it, as hex with their share of the area.
+    box is [left, top, right, bottom] as fractions (0-1) of the image, e.g. [0, 0, 1, 0.15] for a
+    header strip. Use it to read the exact colours of a screenshot's banner, section bars, tabs and buttons."""
+    region = open_image(path, box)
+    region.thumbnail((400, 400))
+    quantized = region.quantize(colors=max(1, min(count, 12)) + 3)
+    palette, total = quantized.getpalette(), region.width * region.height
+    colours = sorted(quantized.getcolors(), reverse=True)[:count]
+    return [{"hex": "#{:02x}{:02x}{:02x}".format(*palette[i * 3:i * 3 + 3]), "share": round(n / total, 3)} for n, i in colours]
+
+
+@mcp.tool()
+def crop_image(path: str, box: list[float], dest: str) -> Image:
+    """Cut a region out of an image file and save it as a PNG in work/, e.g. the logo of a screenshot
+    for the app spec's banner.logo. box is [left, top, right, bottom] as fractions (0-1) of the image.
+    Returns the crop so you can check it and adjust the box."""
+    out = local(dest)
+    if WORK not in out.parents or out.suffix.lower() != ".png":
+        raise ToolError("dest must be a .png file in work/, e.g. work/logo.png")
+    crop = open_image(path, box)
+    crop.thumbnail((600, 240))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    crop.save(out, optimize=True)
+    return Image(path=out)
+
+
 # ---------------------------------------------------------------- build
 
 
@@ -180,7 +224,8 @@ def inspect_coaches(twx: str) -> dict:
 
 @mcp.tool()
 def create_app(app_spec: str) -> dict:
-    """Build an installable .twx from an app spec (see app-specs/example-equipment-request.json).
+    """Build an installable .twx from an app spec (see app-specs/example-equipment-request.json, and
+    app-specs/example-themed-quote.json for a theme, banner, placed columns and field icons).
     When the app already exists on the server, the build becomes a new snapshot of that app."""
     spec_path = local(app_spec)
     app = json.loads(spec_path.read_text())["app"]

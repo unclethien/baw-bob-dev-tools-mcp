@@ -1,0 +1,60 @@
+{
+  "app": { "name": "ZZ Quote Desk", "acronym": "ZZQD", "snapshot": "1.0.0" },
+  "businessObject": { "name": "QuoteRequest", "variable": "quote" },
+  "service": { "name": "New Quote", "description": "Request a group insurance quote." },
+  "layout": "tabs",
+  "theme": {
+    "primary": "#5aa9d6",
+    "onPrimary": "#ffffff",
+    "heading": "#1f5f99",
+    "button": "#2f74c0",
+    "secondaryButton": "#e8a33d",
+    "background": "#f5f6f8",
+    "font": "Open Sans",
+    "shape": "pill",
+    "fieldIcons": true,
+    "width": "full",
+    "buttonAlign": "right"
+  },
+  "banner": { "product": "QUOTE DESK", "text": "Good afternoon" },
+  "form": { "title": "New Quote", "nextLabel": "Submit", "cancelLabel": "Cancel" },
+  "steps": [
+    {
+      "title": "General",
+      "sections": [
+        {
+          "title": "General",
+          "columns": 4,
+          "widths": [1, 1.5, 1, 1],
+          "fields": [
+            { "name": "quoteNumber", "label": "Quote #", "column": 1, "icon": "hash" },
+            { "name": "quoteDescription", "label": "Quote Description", "column": 1, "icon": "text" },
+            { "name": "quoteType", "label": "Quote Type", "type": "Select", "options": ["New Business", "Renewal", "Re-quote"], "column": 1, "icon": "list" },
+            { "name": "effectiveDate", "label": "Effective Date", "type": "Date", "column": 1, "required": true },
+
+            { "name": "grandfathered", "label": "Is this plan grandfathered?", "type": "Radio", "options": ["Yes", "No"], "column": 2, "icon": "users" },
+            { "name": "broker", "label": "Broker", "column": 2, "icon": "user" },
+            { "name": "industryCode", "label": "Industry Code", "column": 2, "icon": "building" },
+            { "name": "needByDate", "label": "Need By Date", "type": "Date", "column": 2 },
+
+            { "name": "priorCustomer", "label": "Prior Customer", "type": "Boolean", "column": 3 },
+            { "name": "multiOption", "label": "Multi Option", "type": "Boolean", "column": 3, "icon": "file" },
+            { "name": "paperworkReceivedDate", "label": "Paperwork Received Date", "type": "Date", "column": 3 },
+
+            { "name": "underwriter", "label": "Underwriter", "type": "Select", "options": ["Team A", "Team B", "Team C"], "column": 4, "icon": "user" },
+            { "name": "previousQuoteId", "label": "Previous Quote ID", "column": 4, "icon": "id", "help": "The quote this one replaces, if any." }
+          ]
+        }
+      ]
+    },
+    { "title": "Benefits", "fields": [{ "name": "benefitsNotes", "label": "Benefits Notes", "type": "Text Area", "wide": true }] },
+    { "title": "Census", "fields": [{ "name": "censusNotes", "label": "Census Notes", "type": "Text Area", "wide": true }] }
+  ],
+  "review": false,
+  "confirmation": {
+    "title": "Quote Submitted",
+    "message": "Your quote request has been submitted.",
+    "referencePrefix": "QD-",
+    "showFields": ["quoteNumber", "quoteType", "effectiveDate"]
+  }
+}

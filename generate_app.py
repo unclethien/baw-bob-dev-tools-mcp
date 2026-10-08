@@ -9,8 +9,13 @@ The app holds one client-side human service, exposed as a URL, with one coach pe
                               and so is the confirmation (with its generated reference number).
 
 With "layout": "tabs" the steps become tabs of one form coach instead (Next goes to Review).
-A step lists its fields, or "sections" of fields, each a titled panel; "columns": 2 or 3 lays the
-fields out side by side ("wide": true keeps a field full width). Fields of type Select (dropdown) and Radio take a list of "options".
+A step lists its fields, or "sections" of fields, each a titled panel; "columns": 2 to 6 lays the
+fields out side by side ("wide": true keeps a field full width). By default fields fill the columns left
+to right, row by row; give every field a "column" (1, 2, ...) to place it, top to bottom, in that column,
+and "widths": [1, 1.6, 1] to make some columns wider. Fields of type Select (dropdown) and Radio take a
+list of "options". "cancelLabel" on a step or on "form" adds a button that ends the service.
+
+"theme" and "banner" style the coaches (colours, shapes, field icons, a header banner); see coach_theme.py.
 
 Every coach is built from standard UI Toolkit views bound to one business object, so the
 result runs as soon as it is installed and can be inventoried and modernized like any app.
@@ -29,6 +34,7 @@ import re
 import tempfile
 from pathlib import Path
 
+import coach_theme
 from coach_builder import SYSTEM_TYPES, Layout, coachflow, uid, write_twx
 from twx_clone import clone
 
@@ -43,9 +49,12 @@ FIELD_TYPES = {  # spec type -> (business object type, input view)
     "Radio": ("String", "Radio Button Group"),
 }
 CHOICES = {"Select", "Radio"}
-COLUMN_WIDTH = {2: "49%", 3: "32%"}
+MAX_COLUMNS = 6
+PROJECT = Path(__file__).resolve().parent
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 REFERENCE = "referenceNumber"
+
+
 def visibility(value):
     return [("@visibility", json.dumps({"isResponsiveData": True, "values": [{"deviceConfigID": "LargeID", "value": value}]}))]
 
@@ -58,6 +67,10 @@ div.body { max-width: 960px; margin: 0 auto !important; padding: 16px 24px !impo
 .panel { margin-bottom: 16px !important; }
 .Button.CoachView { flex: 0 0 auto !important; width: auto !important; margin-right: 8px; }
 .btn { width: auto !important; }
+@media (max-width: 900px) {
+  .layoutSec.hChild { flex-wrap: wrap; }
+  .layoutSec.hChild > .Vertical_Layout { width: 100% !important; }
+}
 """
 
 
@@ -93,10 +106,20 @@ def load_spec(path: Path) -> dict:
                 if not s.get("fields"):
                     errors.append(f"step {i} section {j}: fields must list at least one field")
         else:
-            step["sections"] = [{"title": step.get("title", ""), "columns": step.get("columns", 1), "fields": step.get("fields", []), "implicit": True}]
+            step["sections"] = [{"title": step.get("title", ""), "columns": step.get("columns", 1), "widths": step.get("widths"), "fields": step.get("fields", []), "implicit": True}]
         for s in step["sections"]:
-            if s.get("columns", 1) not in (1, *COLUMN_WIDTH):
-                errors.append(f"step {i}: columns must be 1, 2 or 3")
+            count = s.get("columns", 1)
+            if count not in range(1, MAX_COLUMNS + 1):
+                errors.append(f"step {i}: columns must be 1 to {MAX_COLUMNS}")
+                continue
+            widths = s.get("widths")
+            if widths is not None and (len(widths) != count or not all(isinstance(w, (int, float)) and w > 0 for w in widths)):
+                errors.append(f"step {i}: widths must list {count} positive numbers, one per column")
+            placed = [f for f in s.get("fields", []) if not f.get("wide")]
+            if any("column" in f for f in placed):
+                for f in placed:
+                    if f.get("column") not in range(1, count + 1):
+                        errors.append(f"step {i}: field {f.get('name')!r} needs a column from 1 to {count} (every field in a section that places fields)")
         if not step.get("fields"):
             errors.append(f"step {i}: fields (or sections) must list at least one field")
         for f in step.get("fields", []):
@@ -110,10 +133,12 @@ def load_spec(path: Path) -> dict:
                 errors.append(f"step {i}: field {name!r} has unknown type {f.get('type')!r}; use one of {', '.join(FIELD_TYPES)}")
             if not f.get("label"):
                 errors.append(f"step {i}: field {name!r} needs a label")
+            errors += [f"step {i}: {e}" for e in coach_theme.field_errors(f)]
             if f.get("type") in CHOICES:
                 f["options"] = [o if isinstance(o, dict) else {"value": str(o), "label": str(o)} for o in f.get("options") or []]
                 if not f["options"] or not all(o.get("value") for o in f["options"]):
                     errors.append(f"step {i}: field {name!r} ({f['type']}) needs options: a list of strings or {{\"value\", \"label\"}}")
+    errors += coach_theme.validate(spec, PROJECT)
     for name in (spec.get("confirmation") or {}).get("showFields", []):
         if name not in seen:
             errors.append(f"confirmation.showFields: unknown field {name!r}")
@@ -129,14 +154,26 @@ def fields(spec):
 # ---------------------------------------------------------------- coaches
 
 
-def header(title, intro):
-    return f'<style>{CSS}</style><div class="app-title">{title}</div>' + (f'<div class="app-intro">{intro}</div>' if intro else "")
+def header(spec, lay, title, intro, editable=True):
+    """The coach's Custom HTML header: styles, then the banner or a plain title, then the intro.
+    Built after the rest of the coach, so the theme can style every input on it; read-only coaches
+    (editable=False) get no field icons."""
+    style = CSS
+    if spec.get("theme"):
+        by_name = {f["name"]: f for f in fields(spec)}
+        prefix = f"tw.local.{spec['businessObject']['variable']}."
+        inputs = [(vid, by_name[b[len(prefix):]].get("type", "String"), by_name[b[len(prefix):]].get("icon"))
+                  for vid, b in (lay.bound if editable else []) if b.startswith(prefix) and b[len(prefix):] in by_name and not vid.startswith("Output_Text")]
+        widest = max((s.get("columns", 1) for step in spec["steps"] for s in step["sections"]), default=1)
+        style += coach_theme.css(spec["theme"], inputs, 1400 if widest > 3 else 960)
+    title_html = coach_theme.banner_html(spec["banner"], title) if spec.get("banner") else f'<div class="app-title">{title}</div>'
+    return lay.html(f"<style>{style}</style>{title_html}" + (f'<div class="app-intro">{intro}</div>' if intro else ""))
 
 
 def actions(lay, buttons):
-    """buttons: (event, label, primary). Returns the layout item and {event: button item id}."""
-    made = [(event, *lay.button(label, primary)) for event, label, primary in buttons]
-    return lay.view("Horizontal Layout", "Actions", children=[xml for _, _, xml in made], show_label=False), {e: i for e, i, _ in made}
+    """buttons: (event, label, colour style P, D or W). Returns the layout item and {event: button item id}."""
+    made = [(event, *lay.button(label, style)) for event, label, style in buttons]
+    return lay.view("Horizontal Layout", "Actions", children=[xml for _, _, xml in made], show_label=False, item_id="Action_Bar"), {e: i for e, i, _ in made}
 
 
 def choices(f):
@@ -152,17 +189,29 @@ def input_view(lay, var, f):
     return lay.view(kind, f["label"], binding=f"tw.local.{var}.{f['name']}", options=(REQUIRED if f.get("required") else []) + choices(f), help=f.get("help", ""))
 
 
-def columns(lay, var, fields, count):
-    """Lay fields out in count columns, left to right then down; a "wide" field takes the full width."""
+def column_widths(count, weights=None):
+    """Percent widths that leave a little room for the gaps: 2 columns are 49% each, 3 are 32.3%."""
+    weights = weights or [1] * count
+    return [f"{int((100 - count) * w / sum(weights) * 10) / 10}%" for w in weights]
+
+
+def columns(lay, var, fields, count, weights=None):
+    """Lay fields out in count columns; a "wide" field takes the full width.
+    Fields fill the columns row by row, unless they say which "column" they belong to."""
     if count <= 1:
         return [input_view(lay, var, f) for f in fields]
-    width = [("@width", json.dumps({"isResponsiveData": True, "values": [{"deviceConfigID": "LargeID", "value": COLUMN_WIDTH[count]}]}))]
+    widths = column_widths(count, weights)
+    width = lambda c: [("@width", json.dumps({"isResponsiveData": True, "values": [{"deviceConfigID": "LargeID", "value": widths[c]}]}))]
     out, run = [], []
 
     def flush():
         if run:
-            views = [input_view(lay, var, f) for f in run]
-            cols = [lay.view("Vertical Layout", f"Column {c + 1}", children=views[c::count], options=width, show_label=False) for c in range(min(count, len(views)))]
+            if any("column" in f for f in run):
+                groups = [[input_view(lay, var, f) for f in run if f["column"] == c + 1] for c in range(count)]
+            else:
+                views = [input_view(lay, var, f) for f in run]
+                groups = [views[c::count] for c in range(min(count, len(views)))]
+            cols = [lay.view("Vertical Layout", f"Column {c + 1}", children=g, options=width(c), show_label=False) for c, g in enumerate(groups)]
             out.append(lay.view("Horizontal Layout", "Columns", children=cols, show_label=False))
             run.clear()
 
@@ -178,7 +227,7 @@ def columns(lay, var, fields, count):
 
 def section(lay, var, s):
     intro = [lay.html(f'<div class="app-intro">{s["intro"]}</div>')] if s.get("intro") else []
-    return lay.view("Panel", s["title"], children=intro + columns(lay, var, s["fields"], s.get("columns", 1)))
+    return lay.view("Panel", s["title"], children=intro + columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths")))
 
 
 def sections(lay, var, step):
@@ -189,7 +238,7 @@ def tab_content(lay, var, step):
     """A tab shows its fields directly, or a panel per section when the step names sections."""
     s = step["sections"][0]
     if s.get("implicit"):
-        return columns(lay, var, s["fields"], s.get("columns", 1))
+        return columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"))
     return sections(lay, var, step)
 
 
@@ -197,11 +246,12 @@ def step_coach(spec, i):
     var, step, last = spec["businessObject"]["variable"], spec["steps"][i], i == len(spec["steps"]) - 1
     lay = Layout()
     forward = step.get("nextLabel") or ("Submit" if last and not spec.get("review", True) else "Next")
-    buttons = ([(f"back{i}", step.get("backLabel") or "Back", False)] if i else []) + [(f"next{i}", forward, True)]
+    buttons = ([(f"back{i}", step.get("backLabel") or "Back", "D")] if i else []) + [(f"next{i}", forward, "P")]
+    buttons += [(f"cancel{i}", step["cancelLabel"], "W")] if step.get("cancelLabel") else []
+    body = sections(lay, var, step)
     bar, events = actions(lay, buttons)
     count = f"Step {i + 1} of {len(spec['steps'])}: " if len(spec["steps"]) > 1 else ""
-    items = [lay.html(header(count + step["title"], step.get("intro", ""))), *sections(lay, var, step), bar]
-    return Layout.wrap(items), events
+    return Layout.wrap([header(spec, lay, count + step["title"], step.get("intro", "")), *body, bar]), events
 
 
 def form_coach(spec):
@@ -209,9 +259,11 @@ def form_coach(spec):
     var, form = spec["businessObject"]["variable"], spec.get("form") or {}
     lay = Layout()
     tabs = [lay.view("Vertical Layout", s["title"], children=tab_content(lay, var, s)) for s in spec["steps"]]
-    bar, events = actions(lay, [("next0", form.get("nextLabel") or ("Next" if spec.get("review", True) else "Submit"), True)])
-    items = [lay.html(header(form.get("title", spec["service"]["name"]), form.get("intro", ""))), lay.view("Tab Section", "Steps", children=tabs, show_label=False), bar]
-    return Layout.wrap(items), events
+    body = lay.view("Tab Section", "Steps", children=tabs, show_label=False)
+    buttons = [("next0", form.get("nextLabel") or ("Next" if spec.get("review", True) else "Submit"), "P")]
+    buttons += [("cancel0", form["cancelLabel"], "W")] if form.get("cancelLabel") else []
+    bar, events = actions(lay, buttons)
+    return Layout.wrap([header(spec, lay, form.get("title", spec["service"]["name"]), form.get("intro", "")), body, bar]), events
 
 
 def output(lay, var, f):
@@ -227,10 +279,9 @@ def review_coach(spec):
     review = review if isinstance(review, dict) else {}
     lay = Layout()
     panels = [lay.view("Panel", s["title"], children=[output(lay, var, f) for f in s["fields"]]) for s in spec["steps"]]
-    bar, events = actions(lay, [("backReview", "Back", False), ("submit", review.get("submitLabel") or "Submit", True)])
+    bar, events = actions(lay, [("backReview", "Back", "D"), ("submit", review.get("submitLabel") or "Submit", "P")])
     intro = review.get("intro", "Check your answers. Press Back to change them or Submit to send them.")
-    items = [lay.html(header(review.get("title", "Review and Submit"), intro)), *panels, bar]
-    return Layout.wrap(items), events
+    return Layout.wrap([header(spec, lay, review.get("title", "Review and Submit"), intro, editable=False), *panels, bar]), events
 
 
 def confirmation_coach(spec):
@@ -239,9 +290,9 @@ def confirmation_coach(spec):
     lay = Layout()
     outputs = [lay.view("Output Text", "Reference Number", binding=f"tw.local.{var}.{REFERENCE}")]
     outputs += [output(lay, var, by_name[n]) for n in conf.get("showFields", [])]
-    bar, events = actions(lay, [("done", "Done", True)])
-    items = [lay.html(header(conf.get("title", "Submitted"), conf.get("message", ""))), lay.view("Panel", "Summary", children=outputs), bar]
-    return Layout.wrap(items), events
+    summary = lay.view("Panel", "Summary", children=outputs)
+    bar, events = actions(lay, [("done", "Done", "P")])
+    return Layout.wrap([header(spec, lay, conf.get("title", "Submitted"), conf.get("message", ""), editable=False), summary, bar]), events
 
 
 # ---------------------------------------------------------------- flow
@@ -278,6 +329,8 @@ def flow(spec):
         flows.append((f"s{i}", target, f"next{i}", "rightCenter", "leftCenter"))
         if i:
             flows.append((f"s{i}", f"s{i - 1}", f"back{i}", "topCenter", "topCenter"))
+    cancels = [0] if tabs and (spec.get("form") or {}).get("cancelLabel") else [] if tabs else [i for i, s in enumerate(spec["steps"]) if s.get("cancelLabel")]
+    flows += [(f"s{i}", "end", f"cancel{i}", "bottomCenter", "bottomCenter") for i in cancels]
     if review:
         steps.append(("review", (review if isinstance(review, dict) else {}).get("title", "Review and Submit"), review_coach(spec)))
         flows += [("review", f"s{count - 1}", "backReview", "topCenter", "topCenter"), ("review", finish, "submit", "rightCenter", "leftCenter")]

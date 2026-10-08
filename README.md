@@ -13,6 +13,8 @@ An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com
 | `list_services` | Services users can launch, with run URLs |
 | `export_app` | Download a snapshot to `work/<ACR>-<snapshot>.twx` |
 | `view_image` | Show the agent an image from the project: a screenshot to build from, or one `test_service` took |
+| `image_colors` | Main colours of a screenshot or one region of it, as hex: the theme colours to build with |
+| `crop_image` | Cut a region out of a screenshot into `work/`, e.g. its logo for the banner |
 | `inspect_coaches` | Read every coach (sections, fields, buttons, flow) into an editable coach spec |
 | `create_app` | Build an installable `.twx` from an app spec; a new snapshot when the app exists |
 | `build_screens` | Compile the React screens; returns compiler errors with file and line |
@@ -35,7 +37,7 @@ Agent (Bob) ── writes ──▶ work/*.app.json, work/*.coaches.json, react-
                                         └──▶ verify-service.mjs (headless browser) ──▶ screenshots in work/
 ```
 
-- **App spec** (`app-specs/`): business object, steps or tabs (`"layout": "tabs"`), titled sections with 1-3 columns, fields (text, text area, date, checkbox, integer, decimal, dropdown, radio group; required markers and help text), button labels, review and confirmation. `create_app` turns it into a client-side human service exposed as a URL, built from standard UI Toolkit views. `example-equipment-request.json` is a simple multi-step form; `example-supplier-registration.json` was written from `screenshots/example-supplier-registration.png`.
+- **App spec** (`app-specs/`): business object, steps or tabs (`"layout": "tabs"`), titled sections with 1-6 columns (fields placed per column, relative column widths), fields (text, text area, date, checkbox, integer, decimal, dropdown, radio group; required markers and help text), button labels including Cancel, review and confirmation, and an optional `theme` (colours, font, shape, field icon boxes, width, button placement) and `banner` (header strip with title, product name, text and logo). `create_app` turns it into a client-side human service exposed as a URL, built from standard UI Toolkit views. `example-equipment-request.json` is a simple multi-step form; `example-supplier-registration.json` was written from `screenshots/example-supplier-registration.png`; `example-themed-quote.json` shows tabs, a theme, a banner, placed columns, field icons and Cancel.
 - **Coach spec**: written by `inspect_coaches` and refined by the agent: labels, required fields, patterns, examples. A coach with `"screen": "<name>"` shows a React screen the agent wrote in `react-coach/src/screens/<name>.jsx`; other coaches use a generic form. The legacy coach flow, scripts and buttons keep running underneath, and the React screen presses the coach's own buttons.
 - **Themes**: `brand` (a neutral palette; set `"brand": "Your Org"` in the coach spec and change the colours in `react-coach/src/styles.scss`) and `carbon` (IBM Carbon).
 
@@ -87,7 +89,7 @@ Settings are read from the environment first, then `.env`:
    Install it, test it and compare the result with the screenshot.
    ```
 
-   Bob reads the screen (sections, columns, labels, dropdowns, radio groups, required markers, buttons) with the screenshot-to-app skill, writes the app spec, builds and installs it, then compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
+   Bob reads the screen with the screenshot-to-app skill: its layout (tabs, sections, columns and their widths, which field sits where), its controls (labels, dropdowns, radio groups, checkboxes, required markers, help icons, buttons) and its look (colours sampled with `image_colors`, the header banner with the logo cut out by `crop_image`, field icons, shapes, button placement). It writes the app spec, builds and installs it, then compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
 
 Bob asks for approval before `create_app`, `modernize_app` and `install_app`; the read and test tools run without asking.
 

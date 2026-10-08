@@ -32,7 +32,8 @@
         <step>Write work/ACR.app.json</step>
         <step>create_app, then inspect_coaches on the result and check every step</step>
         <step>install_app, then test_service for the service; look at the screenshots</step>
-        <step>When built from screenshots: view_image each test screenshot, compare it with its original, fix the spec and rebuild with a new snapshot until sections, fields, controls, required markers and buttons match</step>
+        <step>When built from screenshots: sample the theme colours with image_colors and cut the logo out with crop_image before writing the spec</step>
+        <step>When built from screenshots: view_image each test screenshot, compare it with its original, fix the spec and rebuild with a new snapshot until the header, tabs, sections, column placement and widths, fields, controls, required markers, colours and buttons (labels, colours, position) match</step>
       </steps>
     </phase>
 
@@ -49,7 +50,7 @@
 
   <completion_criteria>
     <criterion>The app is installed and test_service reports "ok": true for its service</criterion>
-    <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built</criterion>
+    <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built, and the coaches use the screenshot's theme colours, header and column layout</criterion>
     <criterion>When a React UI was requested, both modernized services report "ok": true and every coach uses a screen you wrote</criterion>
     <criterion>The report lists the app, acronym, snapshots, run URLs, steps, field counts, screens written and screenshot folders</criterion>
   </completion_criteria>

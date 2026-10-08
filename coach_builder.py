@@ -55,6 +55,7 @@ class Layout:
 
     def __init__(self):
         self.counts = {}
+        self.bound = []  # (layout item id, binding) of every bound view, for styling them later
 
     def _item_id(self, kind):
         self.counts[kind] = self.counts.get(kind, 0) + 1
@@ -75,6 +76,7 @@ class Layout:
         xml += self._config(config) + f"<ns19:viewUUID>{view_uuid or VIEWS[kind]}</ns19:viewUUID>"
         if binding:
             xml += f"<ns19:binding>{binding}</ns19:binding>"
+            self.bound.append((item_id, binding))
         if children is not None:
             xml += f"<ns19:contentBoxContrib><ns19:id>{uid()}</ns19:id><ns19:contentBoxId>ContentBox1</ns19:contentBoxId>{''.join(children)}</ns19:contentBoxContrib>"
         return xml + f"</ns19:{tag}>"
@@ -84,9 +86,10 @@ class Layout:
         return (f'<ns19:{tag} xsi:type="ns19:CustomHTML" version="8550"><ns19:id>{uid()}</ns19:id><ns19:layoutItemId>{item_id}</ns19:layoutItemId>'
                 + self._config([("@customHTML.contentType", "TEXT"), ("@customHTML.textContent", content)]) + f"</ns19:{tag}>")
 
-    def button(self, label, primary=False):
+    def button(self, label, style="D"):
+        """style: the UI Toolkit colour style, P (primary), D (default) or W (warning)."""
         item_id = self._item_id("Button")
-        return item_id, self.view("Button", label, item_id=item_id, options=[("colorStyle", "P" if primary else "D")], show_label=False)
+        return item_id, self.view("Button", label, item_id=item_id, options=[("colorStyle", style)], show_label=False)
 
     @staticmethod
     def wrap(items):
