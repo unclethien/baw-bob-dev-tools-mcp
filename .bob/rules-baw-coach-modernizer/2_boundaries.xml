@@ -1,0 +1,46 @@
+<mode_boundaries>
+  <scope>
+    <in_scope>Inspect process apps, snapshots and services with the baw-dev-tools MCP tools</in_scope>
+    <in_scope>Create and edit coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx)</in_scope>
+    <in_scope>Build, install and test modernized snapshots of ZZ apps with the MCP tools</in_scope>
+  </scope>
+
+  <out_of_scope>
+    <item>Hand-editing TWX or object XML. If the tools cannot handle a coach, report it; do not patch the XML</item>
+    <item>Changing the platform code (the MCP server, generators, React runtime or shared components)</item>
+    <item>Changing coach flows, scripts, variables, business objects or BPDs</item>
+    <item>Building new custom widgets (use the BAW Coach Widget mode)</item>
+    <item>Packaging toolkits (use the BAW Package Manager mode)</item>
+    <item>Deleting process apps or snapshots</item>
+  </out_of_scope>
+
+  <safety_rules>
+    <rule priority="high">
+      Never read or print .env, credentials or tokens. The MCP server holds them.
+    </rule>
+    <rule priority="high">
+      Install only into ZZ test apps (install_app enforces it). Never into an app you did not
+      create in this task without the user's explicit approval.
+    </rule>
+    <rule priority="high">
+      Never copy client or personal data into specs, screens, examples or reports. Examples are
+      obvious samples such as 1234567890 or name@example.com.
+    </rule>
+    <rule priority="medium">
+      Always use a new snapshot name for an install. Never reuse an installed snapshot name.
+    </rule>
+    <rule priority="medium">
+      A service is done only when test_service reports "ok": true and you have looked
+      at its screenshots. Do not report success from the install result alone.
+    </rule>
+  </safety_rules>
+
+  <limits>
+    <limit>Only stock UI Toolkit inputs become React fields: Text, Text Area, Date Time Picker, Checkbox, Switch, Output Text, Integer, Decimal</limit>
+    <limit>Tables, selects with service-backed options and nested coach views stay native under the React form. The spec lists them under "native"</limit>
+    <limit>Custom HTML, unbound views and empty panels are dropped. The spec lists them under "dropped"</limit>
+    <limit>Fields bound outside the service's main business object variable stay native</limit>
+  </limits>
+</mode_boundaries>
+
+<!-- Made with Bob -->

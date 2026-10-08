@@ -1,0 +1,18 @@
+{
+  "name": "react-coach",
+  "private": true,
+  "description": "React Coach Views for BAW, bundled as IIFE managed files",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@carbon/react": "^1.117.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "puppeteer-core": "^23.11.1",
+    "sass": "^1.105.1"
+  }
+}

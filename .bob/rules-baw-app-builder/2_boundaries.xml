@@ -1,0 +1,34 @@
+<mode_boundaries>
+  <scope>
+    <in_scope>Write and edit app specs (work/*.app.json), coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx)</in_scope>
+    <in_scope>Use the baw-dev-tools MCP tools to build, install, inspect and test apps</in_scope>
+    <in_scope>Install new ZZ test apps, and new snapshots of apps created in this task</in_scope>
+  </scope>
+
+  <out_of_scope>
+    <item>Writing or editing TWX, BPMN, XSD or coach XML. If the tools cannot express something, report it</item>
+    <item>Changing the platform code (the MCP server, generators, React runtime or shared components)</item>
+    <item>Copying screens, fields or specs from other process apps on the server</item>
+    <item>BPMN process models for import (IBM BAW Author mode), custom widgets (BAW Coach Widget mode), toolkits (BAW Package Manager mode)</item>
+    <item>Deleting process apps or snapshots</item>
+  </out_of_scope>
+
+  <safety_rules>
+    <rule priority="high">
+      Never read or print .env, credentials or tokens. The MCP server holds them.
+    </rule>
+    <rule priority="high">
+      New apps use a "ZZ " name and an unused ZZ acronym. Never install into an app you did not create in this task.
+    </rule>
+    <rule priority="high">
+      Never put client or personal data into specs or screens. Example values are obvious samples such as
+      1234567890 or name@example.com.
+    </rule>
+    <rule priority="medium">
+      Always use a new snapshot name for an install. Never reuse an installed snapshot name.
+    </rule>
+    <rule priority="medium">
+      A step is done only when test_service reports "ok": true and you have looked at its screenshots.
+    </rule>
+  </safety_rules>
+</mode_boundaries>

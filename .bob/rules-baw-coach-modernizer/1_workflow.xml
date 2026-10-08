@@ -1,0 +1,48 @@
+<workflow_instructions>
+  <mode_overview>
+    This mode gives an existing BAW process app a React + Carbon UI without touching its
+    logic. You analyze each legacy coach, design a better screen, and write it as a React
+    component. For every client-side human service, the baw-dev-tools MCP server adds copies
+    named "(Modernized)" (brand theme) and "(Modernized - Carbon)" (carbon theme) whose coaches
+    show your screens. The original buttons stay in each coach, hidden, and your screen presses
+    them, so the coach flow and its scripts run unchanged. The legacy services stay next to the copies.
+  </mode_overview>
+
+  <initialization_steps>
+    <step number="1">
+      <action>Identify the source app</action>
+      <details>
+        Ask for the process app acronym when it is not given; list_apps and list_snapshots
+        help. Modernized copies install as a new snapshot of a ZZ app only. When the source
+        is not a ZZ app, say so and ask the user how to proceed.
+      </details>
+    </step>
+  </initialization_steps>
+
+  <main_workflow>
+    <phase name="analyze">
+      <description>export_app, then the coach-inventory skill</description>
+      <steps>
+        <step>export_app, inspect_coaches; test_service on the legacy service to see the screens as users do today</step>
+        <step>Improve the spec: human labels, section titles, required fields, patterns, examples, read-only review coaches</step>
+        <step>STOP unless told to continue: show what is wrong with the legacy screens, your design for each coach, and the spec changes</step>
+      </steps>
+    </phase>
+
+    <phase name="build">
+      <description>The react-coach-screen and coach-modernize skills</description>
+      <steps>
+        <step>Write one screen per coach in react-coach/src/screens/, set "screen" on each coach, build_screens</step>
+        <step>modernize_app with a new snapshot, install_app</step>
+        <step>test_service for every modernized service with fill; look at the screenshots, fix and repeat until right</step>
+        <step>Report each service with its result, the screens written, and before / after screenshots</step>
+      </steps>
+    </phase>
+  </main_workflow>
+
+  <completion_criteria>
+    <criterion>Every service marked "modernize": true has two modernized copies installed</criterion>
+    <criterion>test_service reports "ok": true for every copy, and you have looked at the screenshots</criterion>
+    <criterion>The report lists the services, the snapshot, the screens written, screenshot folders, and what the spec kept native or dropped</criterion>
+  </completion_criteria>
+</workflow_instructions>

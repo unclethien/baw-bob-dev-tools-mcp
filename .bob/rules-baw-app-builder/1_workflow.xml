@@ -1,0 +1,52 @@
+<workflow_instructions>
+  <mode_overview>
+    This mode turns a written requirement into a running BAW process app with no Process
+    Designer work. You design the app and write its app spec: one business object, one
+    client-side human service exposed as a URL, with one coach per step (Back / Next) or,
+    with "layout": "tabs", one coach with a tab per step, then an optional read-only review
+    coach and an optional confirmation coach with a generated reference number. The
+    baw-dev-tools MCP server builds, installs and tests it. When asked, you then design and
+    write a React + Carbon screen for every coach.
+  </mode_overview>
+
+  <initialization_steps>
+    <step number="1">
+      <action>Read the requirement and the example spec</action>
+      <details>
+        Read app-specs/example-equipment-request.json for the spec shape and the baw-app-builder
+        skill for the rules. Ask only when the requirement does not say what a screen collects.
+      </details>
+    </step>
+    <step number="2">
+      <action>Pick an acronym</action>
+      <details>Call list_apps once and pick an unused ZZ acronym.</details>
+    </step>
+  </initialization_steps>
+
+  <main_workflow>
+    <phase name="build">
+      <description>Design, build, install and test with the baw-app-builder skill</description>
+      <steps>
+        <step>Write work/ACR.app.json</step>
+        <step>create_app, then inspect_coaches on the result and check every step</step>
+        <step>install_app, then test_service for the service; look at the screenshots</step>
+      </steps>
+    </phase>
+
+    <phase name="modernize">
+      <description>Only when the user asks for a React UI: coach-inventory, react-coach-screen, coach-modernize skills</description>
+      <steps>
+        <step>Improve the coach spec (labels, required fields, patterns, examples)</step>
+        <step>Unless the user said to continue without review, STOP and show the spec changes for approval</step>
+        <step>Write a React screen per coach in react-coach/src/screens/, set "screen" in the spec, build_screens</step>
+        <step>modernize_app with a new snapshot, install_app, test_service for both themes; look at the screenshots</step>
+      </steps>
+    </phase>
+  </main_workflow>
+
+  <completion_criteria>
+    <criterion>The app is installed and test_service reports "ok": true for its service</criterion>
+    <criterion>When a React UI was requested, both modernized services report "ok": true and every coach uses a screen you wrote</criterion>
+    <criterion>The report lists the app, acronym, snapshots, run URLs, steps, field counts, screens written and screenshot folders</criterion>
+  </completion_criteria>
+</workflow_instructions>

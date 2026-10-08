@@ -1,0 +1,34 @@
+{
+  "app": { "name": "ZZ Equipment Request", "acronym": "ZZEQ", "snapshot": "1.0.0" },
+  "businessObject": { "name": "EquipmentRequest", "variable": "request" },
+  "service": { "name": "Equipment Request", "description": "Employees request a laptop or other equipment." },
+  "steps": [
+    {
+      "title": "Requester",
+      "intro": "Tell us who needs the equipment.",
+      "fields": [
+        { "name": "employeeName", "label": "Employee Name", "type": "String" },
+        { "name": "employeeEmail", "label": "Work Email", "type": "String" },
+        { "name": "department", "label": "Department", "type": "String" },
+        { "name": "startDate", "label": "Needed By", "type": "Date" }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "fields": [
+        { "name": "itemType", "label": "Item Type", "type": "String" },
+        { "name": "quantity", "label": "Quantity", "type": "Integer" },
+        { "name": "estimatedCost", "label": "Estimated Cost (USD)", "type": "Decimal" },
+        { "name": "replacement", "label": "This replaces existing equipment", "type": "Boolean" },
+        { "name": "justification", "label": "Business Justification", "type": "Text Area" }
+      ]
+    }
+  ],
+  "review": { "title": "Review and Submit" },
+  "confirmation": {
+    "title": "Request Submitted",
+    "message": "Your request was sent to IT. Keep the reference number for follow-up.",
+    "referencePrefix": "EQ-",
+    "showFields": ["employeeName", "itemType"]
+  }
+}

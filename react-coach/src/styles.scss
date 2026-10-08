@@ -1,0 +1,132 @@
+// Carbon styles scoped for embedding inside a BAW coach: a "pp" class prefix so
+// they never collide with BAW's own Carbon theme, no global reset, no web fonts.
+@use '@carbon/react/scss/config' with (
+  $prefix: 'pp',
+  $css--reset: false,
+  $css--font-face: false
+);
+@use '@carbon/react/scss/themes';
+@use '@carbon/react/scss/theme';
+@use '@carbon/react/scss/layout';
+@use '@carbon/react/scss/components/button';
+@use '@carbon/react/scss/components/checkbox';
+@use '@carbon/react/scss/components/text-input';
+@use '@carbon/react/scss/components/text-area';
+@use '@carbon/react/scss/components/date-picker';
+@use '@carbon/react/scss/components/tabs';
+@use '@carbon/react/scss/components/tile';
+@use '@carbon/react/scss/components/notification';
+@use '@carbon/react/scss/components/progress-indicator';
+@use '@carbon/react/scss/components/number-input';
+
+// The coach's original buttons stay in the coach so its flow wiring keeps working;
+// modernize_coaches.py puts them in this layout and the React screen presses them.
+[data-viewid='PPNativeActions'] { display: none !important; }
+
+.pp-app {
+  @include theme.theme(themes.$white);
+  box-sizing: border-box;
+  max-width: 1056px;
+  margin: 0 auto;
+  padding: 1rem;
+  background: var(--pp-background);
+  color: var(--pp-text-primary);
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+
+  *, *::before, *::after { box-sizing: inherit; }
+}
+
+// Brand theme: a neutral palette on top of the Carbon white theme. Change these values
+// (and the header colour below) to apply your organisation's colours.
+.pp-app.pp-theme-brand {
+  --pp-background: #f5f7fa;
+  --pp-layer-01: #ffffff;
+  --pp-field-01: #ffffff;
+  --pp-interactive: #2a6fdb;
+  --pp-focus: #2a6fdb;
+  --pp-link-primary: #173a6b;
+  --pp-border-interactive: #2a6fdb;
+  --pp-button-primary: #173a6b;
+  --pp-button-primary-hover: #10294d;
+  --pp-button-primary-active: #0b1d37;
+  --pp-button-secondary: #2a6fdb;
+  --pp-button-secondary-hover: #1f5bbd;
+  --pp-button-secondary-active: #184a9b;
+  --pp-text-primary: #1b1b1b;
+}
+
+.pp-header {
+  margin: -1rem -1rem 1.5rem;
+  padding: 1rem 1.5rem 0.5rem;
+  background: #173a6b;
+  color: #fff;
+
+  h1 { margin: 0.75rem 0 1rem; font-size: 1.5rem; font-weight: 400; }
+}
+
+.pp-brand { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.pp-brand-mark { font-size: 1rem; font-weight: 700; letter-spacing: 0.01em; }
+.pp-brand-sub { font-size: 0.875rem; opacity: 0.8; }
+
+// The progress indicator sits on the dark header, so its labels need light text.
+.pp-header .pp-progress {
+  --pp-text-primary: #ffffff;
+  --pp-text-secondary: #d0d6ff;
+  --pp-interactive: #8fb0ff;
+  --pp-border-subtle: rgba(255, 255, 255, 0.35);
+  --pp-icon-primary: #ffffff;
+  --pp-icon-secondary: #d0d6ff;
+  --pp-layer: transparent;
+  --pp-background: transparent;
+}
+
+.pp-app.pp-theme-carbon .pp-header { background: #161616; }
+.pp-app.pp-theme-carbon .pp-header .pp-progress { --pp-interactive: #78a9ff; --pp-text-secondary: #c6c6c6; --pp-icon-secondary: #c6c6c6; }
+
+.pp-lead { margin: 0 0 1rem; font-size: 0.875rem; line-height: 1.4; color: var(--pp-text-secondary); }
+
+.pp-panel { background: var(--pp-layer-01); }
+
+.pp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1.25rem 1.5rem;
+  padding: 1.5rem 0.5rem;
+}
+
+.pp-span { grid-column: 1 / -1; }
+
+.pp-review { display: grid; grid-template-columns: repeat(auto-fill, minmax(28rem, 1fr)); gap: 1rem; }
+
+.pp-review-tile {
+  h2 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; color: var(--pp-link-primary); }
+  dl { margin: 0; }
+}
+
+.pp-review-row {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--pp-border-subtle);
+  font-size: 0.875rem;
+
+  dt { flex: 0 0 45%; color: var(--pp-text-secondary); }
+  dd { margin: 0; flex: 1; font-weight: 500; overflow-wrap: anywhere; }
+}
+
+.pp-note { margin: 1rem 0 0; }
+
+.pp-stack { display: grid; gap: 1rem; }
+.pp-section { padding: 0.5rem 1rem 0; background: var(--pp-layer-01); }
+.pp-section-title { margin: 0.75rem 0 0; font-size: 1rem; font-weight: 600; color: var(--pp-link-primary); }
+
+.pp-reference { font-size: 1.25rem; color: var(--pp-link-primary); }
+
+.pp-app .pp--inline-notification { max-width: none; margin: 0 0 1rem; }
+
+.pp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}

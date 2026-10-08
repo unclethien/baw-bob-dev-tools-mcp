@@ -1,0 +1,17 @@
+# BAW server settings and credentials
+.env
+.env.*
+!.env.example
+
+# Bob's local MCP config holds machine-specific paths
+.bob/mcp.json
+
+# Working files: exports, specs, builds, screenshots
+work/
+
+# Screens written per project by the agent
+react-coach/src/screens/
+
+__pycache__/
+*.pyc
+.DS_Store
