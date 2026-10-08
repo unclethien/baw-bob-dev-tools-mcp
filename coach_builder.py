@@ -38,6 +38,8 @@ VIEWS = {
     "Button": "64.7133c7d4-1a54-45c8-89cd-a8e8fa4a8e36",
     "Integer": "64.a6946c4c-f73d-4ced-9216-90018985ca96",
     "Decimal": "64.e0ede0f2-f3af-408c-af7b-e7a58eb5e2b4",
+    "Single Select": "64.fd4da558-40d8-47be-92ca-c305708dc7b7",
+    "Radio Button Group": "64.bdddb841-6b07-4c08-bb5c-236a8da26b6a",
 }
 
 
@@ -66,9 +68,9 @@ class Layout:
             out.append(f"<ns19:configData><ns19:id>{uid()}</ns19:id><ns19:optionName>{name}</ns19:optionName>{val}</ns19:configData>")
         return "".join(out)
 
-    def view(self, kind, label="", binding=None, children=None, options=(), show_label=True, item_id=None, tag="contributions", view_uuid=None):
+    def view(self, kind, label="", binding=None, children=None, options=(), show_label=True, item_id=None, tag="contributions", view_uuid=None, help=""):
         item_id = item_id or self._item_id(kind)
-        config = [("@label", label), ("@helpText", ""), ("@labelVisibility", "SHOW" if show_label else "HIDE"), *options]
+        config = [("@label", label), ("@helpText", help), ("@labelVisibility", "SHOW" if show_label else "HIDE"), *options]
         xml = f'<ns19:{tag} xsi:type="ns19:ViewRef" version="8550"><ns19:id>{uid()}</ns19:id><ns19:layoutItemId>{item_id}</ns19:layoutItemId>'
         xml += self._config(config) + f"<ns19:viewUUID>{view_uuid or VIEWS[kind]}</ns19:viewUUID>"
         if binding:

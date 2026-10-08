@@ -1,0 +1,35 @@
+{
+  "app": { "name": "ZZ Supplier Registration", "acronym": "ZZSUP", "snapshot": "1.0.0" },
+  "businessObject": { "name": "SupplierRegistration", "variable": "supplier" },
+  "service": { "name": "Supplier Registration", "description": "Register a new supplier. Built from screenshots/example-supplier-registration.png" },
+  "steps": [
+    {
+      "title": "Supplier Registration",
+      "intro": "Register a new supplier. Fields marked * are required.",
+      "nextLabel": "Continue",
+      "sections": [
+        { "title": "Company", "columns": 2, "fields": [
+          { "name": "legalName", "label": "Legal Name", "required": true },
+          { "name": "taxId", "label": "Tax ID", "required": true },
+          { "name": "supplierType", "label": "Supplier Type", "type": "Select", "options": ["Manufacturer", "Distributor", "Service Provider"] },
+          { "name": "yearEstablished", "label": "Year Established", "type": "Integer" },
+          { "name": "businessSize", "wide": true, "label": "Business Size", "type": "Radio", "options": ["Small", "Medium", "Large"] }
+        ]},
+        { "title": "Primary Contact", "columns": 2, "fields": [
+          { "name": "contactName", "label": "Contact Name", "required": true },
+          { "name": "email", "label": "Email", "required": true },
+          { "name": "phone", "label": "Phone" },
+          { "name": "preferredContact", "label": "Preferred Contact Method", "type": "Radio", "options": ["Email", "Phone"] }
+        ]},
+        { "title": "Payment", "columns": 2, "fields": [
+          { "name": "paymentTerms", "label": "Payment Terms", "type": "Select", "options": ["Net 30", "Net 45", "Net 60"] },
+          { "name": "contractStart", "label": "Contract Start Date", "type": "Date" },
+          { "name": "notes", "wide": true, "label": "Notes", "type": "Text Area" },
+          { "name": "confirmed", "wide": true, "label": "I confirm the information above is accurate", "type": "Boolean" }
+        ]}
+      ]
+    }
+  ],
+  "review": { "title": "Review Supplier" },
+  "confirmation": { "title": "Supplier Registered", "message": "The supplier was registered.", "referencePrefix": "SUP-", "showFields": ["legalName", "supplierType", "contactName"] }
+}

@@ -28,7 +28,9 @@ XSI_TYPE = "{http://www.w3.org/2001/XMLSchema-instance}type"
 FIELD_TYPES = {
     "Text": "text", "Text Area": "textarea", "Date Time Picker": "date", "Checkbox": "checkbox", "Switch": "checkbox",
     "Output Text": "output", "Integer": "number", "Decimal": "number",
+    "Single Select": "select", "Radio Button Group": "radio",
 }
+CHOICE_VIEWS = {"Single Select", "Radio Button Group"}
 CONTAINERS = {"Panel", "Tab Section", "Vertical Layout", "Horizontal Layout", "Collapsible Panel", "Well"}
 BACKWARD = re.compile(r"\b(back|previous|prev|cancel|close)\b", re.I)
 
@@ -89,6 +91,7 @@ class CoachReader:
             "label": (config.get("@label") or "").strip(),
             "visibility": config.get("@visibility") or "",
             "colorStyle": config.get("colorStyle") or "",
+            "options": static_options(config),
             "binding": next((b.text for b in children(el, "binding")), "") or "",
             "children": kids,
         }
@@ -107,6 +110,19 @@ class CoachReader:
         else:
             self.sections[-1]["title"] = title
 
+    def columns(self, kids, in_tabs):
+        """Side-by-side columns: list their fields row by row, the order people read them."""
+        section = self.sections[-1]
+        runs = []
+        for kid in kids:
+            start = len(section["fields"])
+            self.walk(kid, in_tabs=in_tabs)
+            runs.append(section["fields"][start:])
+        if self.sections[-1] is section:  # no panel inside the columns started a new section
+            flat = [f for run in runs for f in run]
+            rows = [run[i] for i in range(max(map(len, runs))) for run in runs if i < len(run)]
+            section["fields"][len(section["fields"]) - len(flat):] = rows
+
     def walk(self, el, top=False, in_tabs=False):
         it = self.item(el)
         view = it["view"]
@@ -121,6 +137,8 @@ class CoachReader:
                     self.section(self.item(kid)["label"])
                     self.walk(kid, in_tabs=True)
                 self.section("")
+            elif view == "Horizontal Layout" and len(it["children"]) > 1 and all(self.item(k)["view"] == "Vertical Layout" for k in it["children"]):
+                self.columns(it["children"], in_tabs)
             elif not it["children"]:
                 self.dropped.append(f'{it["viewId"]} (empty {view} "{it["label"]}")')
             elif view in ("Panel", "Collapsible Panel", "Well") and it["label"] and not in_tabs:
@@ -138,10 +156,27 @@ class CoachReader:
             self.dropped.append(f'{it["viewId"]} ({view}{", no binding" if not it["binding"] else ""})')
 
 
+def static_options(config):
+    """A select's or radio group's fixed items as [{value, label}]; None when they come from a service or variable."""
+    if config.get("itemLookupMode") != "L" or not config.get("staticList"):
+        return None
+    try:
+        return [{"value": i["name"], "label": i.get("value") or i["name"]} for i in json.loads(config["staticList"])]
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def renderable(it):
+    """The React form renders this view: a known input, and a select or radio group only with fixed items."""
+    return it["view"] in FIELD_TYPES and (it["view"] not in CHOICE_VIEWS or bool(it["options"]))
+
+
 def field_spec(it, variable):
     path = it["binding"][len(f"tw.local.{variable}."):]
     kind = FIELD_TYPES[it["view"]]
     spec = {"path": path, "label": it["label"] or humanize(path), "type": kind}
+    if it["options"]:
+        spec["options"] = it["options"]
     if kind == "output" or "READONLY" in it["visibility"]:
         spec["readonly"] = True
     if "REQUIRED" in it["visibility"]:
@@ -197,7 +232,7 @@ def inventory_service(root, names):
         for section in reader.sections:
             kept = []
             for it in section["fields"]:
-                if it["view"] in FIELD_TYPES and it["binding"].startswith(f"tw.local.{variable}."):
+                if renderable(it) and it["binding"].startswith(f"tw.local.{variable}."):
                     kept.append(field_spec(it, variable))
                 else:
                     native.append({"viewId": it["viewId"], "view": it["view"], "label": it["label"], "binding": it["binding"]})

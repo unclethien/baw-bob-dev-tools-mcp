@@ -26,11 +26,13 @@ import zipfile
 from pathlib import Path
 
 from mcp.server import MCPServer
+from mcp.server.mcpserver import Image
 from mcp.server.mcpserver.exceptions import ToolError
 
 ROOT = Path(__file__).resolve().parent
 WORK = ROOT / "work"
 REACT = ROOT / "react-coach"
+IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 sys.path.insert(0, str(ROOT))
 
 from baw_ops import BawOps, ConfigError  # noqa: E402
@@ -38,7 +40,8 @@ from baw_ops import BawOps, ConfigError  # noqa: E402
 mcp = MCPServer("baw-dev-tools", instructions=(
     "Platform tools for IBM BAW on CP4BA. You design and write: app specs (work/<ACR>.app.json), "
     "coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx). "
-    "These tools build, install, inspect and test them. Paths are relative to the project root."))
+    "These tools build, install, inspect and test them; view_image shows a screenshot to build from "
+    "or to compare with. Paths are relative to the project root."))
 _ops = None
 
 
@@ -148,6 +151,18 @@ def export_app(acronym: str, snapshot: str | None = None) -> dict:
     dest = WORK / f"{acronym}-{re.sub(r'[^A-Za-z0-9.]+', '_', version['version_name'])}.twx"
     size = ops().export(acronym, version["version"], dest)
     return {"twx": rel(dest), "snapshot": version["version_name"], "bytes": size}
+
+
+@mcp.tool()
+def view_image(path: str) -> Image:
+    """Show an image file from the project: a screenshot of a UI to build an app from, or a
+    screenshot test_service took. Paths are relative to the project root, e.g. screenshots/form.png."""
+    image = local(path)
+    if image.suffix.lower() not in IMAGE_TYPES or not image.is_file():
+        raise ToolError(f"{path} is not a PNG, JPEG, GIF or WebP file in the project")
+    if image.stat().st_size > 8_000_000:
+        raise ToolError(f"{path} is larger than 8 MB; crop or compress it")
+    return Image(path=image)
 
 
 # ---------------------------------------------------------------- build

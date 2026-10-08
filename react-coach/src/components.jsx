@@ -1,6 +1,7 @@
 // Building blocks shared by the screens: the branded header and one input per field type.
 import {
-  Checkbox, DatePicker, DatePickerInput, NumberInput, ProgressIndicator, ProgressStep, TextArea, TextInput,
+  Checkbox, DatePicker, DatePickerInput, NumberInput, ProgressIndicator, ProgressStep, RadioButton, RadioButtonGroup,
+  Select, SelectItem, TextArea, TextInput,
 } from '@carbon/react';
 
 export function Header({ theme, brand, subtitle, title, steps, step }) {
@@ -22,19 +23,23 @@ export function Header({ theme, brand, subtitle, title, steps, step }) {
 
 export const toDate = (value) => (value instanceof Date ? value : value ? new Date(value) : null);
 
-// Field types come from a coach inventory spec (text, date, checkbox, textarea, number, output);
-// BAW type names (String, Date, Boolean, Text Area) are accepted too.
+// Field types come from a coach inventory spec (text, date, checkbox, textarea, number, select, radio, output);
+// BAW type names (String, Date, Boolean, Text Area) are accepted too. select and radio carry options: [{value, label}].
 export function fieldKind(field) {
   return {
     Boolean: 'checkbox', checkbox: 'checkbox', Date: 'date', date: 'date',
     'Text Area': 'textarea', textarea: 'textarea', number: 'number', output: 'output',
+    Select: 'select', select: 'select', Radio: 'radio', radio: 'radio',
   }[field.type] || 'text';
 }
+
+const optionLabel = (field, value) => (field.options || []).find((o) => o.value === value)?.label ?? value;
 
 export function formatValue(field, value) {
   const kind = fieldKind(field);
   if (kind === 'checkbox') return value ? 'Yes' : 'No';
   if (kind === 'date') return toDate(value)?.toLocaleDateString() || '—';
+  if (kind === 'select' || kind === 'radio') return optionLabel(field, value) || '—';
   return value === 0 ? '0' : value || '—';
 }
 
@@ -50,6 +55,20 @@ export function Field({ field: f, binding, error }) {
         <DatePicker datePickerType="single" value={toDate(binding.value) || undefined} readOnly={readOnly} onChange={([d]) => d && binding.set(d)}>
           <DatePickerInput id={id} labelText={f.label} placeholder="mm/dd/yyyy" {...invalid} />
         </DatePicker>
+      );
+    case 'select':
+      return (
+        <Select id={id} labelText={f.label} readOnly={readOnly} value={binding.value ?? ''} onChange={(e) => binding.set(e.target.value)} {...invalid}>
+          <SelectItem value="" text="Choose an option" />
+          {(f.options || []).map((o) => <SelectItem key={o.value} value={o.value} text={o.label} />)}
+        </Select>
+      );
+    case 'radio':
+      return (
+        <RadioButtonGroup legendText={f.label} name={id} valueSelected={binding.value ?? ''} readOnly={readOnly}
+          onChange={(value) => binding.set(value)} {...invalid}>
+          {(f.options || []).map((o) => <RadioButton key={o.value} id={`${id}-${o.value}`} value={o.value} labelText={o.label} />)}
+        </RadioButtonGroup>
       );
     case 'textarea':
       return <TextArea id={id} labelText={f.label} placeholder={f.example} rows={3} readOnly={readOnly} value={binding.value || ''} onChange={(e) => binding.set(e.target.value)} {...invalid} />;

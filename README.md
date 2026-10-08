@@ -1,6 +1,6 @@
 # BAW Bob Dev Tools MCP
 
-An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com) build and modernize IBM Business Automation Workflow (BAW) process apps end to end. The agent designs and writes: app specs, coach specs and React + Carbon screens. The server does the platform work: it packages TWX files, installs them over the BAW Operations REST API, inspects coaches, and tests every screen in a real browser.
+An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com) build and modernize IBM Business Automation Workflow (BAW) process apps end to end, from a written requirement or from screenshots of the screens. The agent designs and writes: app specs, coach specs and React + Carbon screens. The server does the platform work: it packages TWX files, installs them over the BAW Operations REST API, inspects coaches, and tests every screen in a real browser.
 
 > Not an official IBM project. Use it with test servers and test apps.
 
@@ -12,6 +12,7 @@ An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com
 | `list_snapshots` | Snapshots of an app, oldest first |
 | `list_services` | Services users can launch, with run URLs |
 | `export_app` | Download a snapshot to `work/<ACR>-<snapshot>.twx` |
+| `view_image` | Show the agent an image from the project: a screenshot to build from, or one `test_service` took |
 | `inspect_coaches` | Read every coach (sections, fields, buttons, flow) into an editable coach spec |
 | `create_app` | Build an installable `.twx` from an app spec; a new snapshot when the app exists |
 | `build_screens` | Compile the React screens; returns compiler errors with file and line |
@@ -34,7 +35,7 @@ Agent (Bob) ── writes ──▶ work/*.app.json, work/*.coaches.json, react-
                                         └──▶ verify-service.mjs (headless browser) ──▶ screenshots in work/
 ```
 
-- **App spec** (`app-specs/example-equipment-request.json`): business object, steps or tabs (`"layout": "tabs"`), fields, review and confirmation. `create_app` turns it into a client-side human service exposed as a URL.
+- **App spec** (`app-specs/`): business object, steps or tabs (`"layout": "tabs"`), titled sections with 1-3 columns, fields (text, text area, date, checkbox, integer, decimal, dropdown, radio group; required markers and help text), button labels, review and confirmation. `create_app` turns it into a client-side human service exposed as a URL, built from standard UI Toolkit views. `example-equipment-request.json` is a simple multi-step form; `example-supplier-registration.json` was written from `screenshots/example-supplier-registration.png`.
 - **Coach spec**: written by `inspect_coaches` and refined by the agent: labels, required fields, patterns, examples. A coach with `"screen": "<name>"` shows a React screen the agent wrote in `react-coach/src/screens/<name>.jsx`; other coaches use a generic form. The legacy coach flow, scripts and buttons keep running underneath, and the React screen presses the coach's own buttons.
 - **Themes**: `brand` (a neutral palette; set `"brand": "Your Org"` in the coach spec and change the colours in `react-coach/src/styles.scss`) and `carbon` (IBM Carbon).
 
@@ -66,18 +67,27 @@ Settings are read from the environment first, then `.env`:
 ## Use it with IBM Bob
 
 1. Open this folder as the workspace in Bob. It ships two modes (`.bob/custom_modes.yaml`) and their skills:
-   - **🏗️ BAW App Builder** turns a written requirement into a running app.
+   - **🏗️ BAW App Builder** turns a written requirement, or screenshots of the screens, into a running app.
    - **✨ BAW Coach Modernizer** gives an existing app a React UI that Bob writes.
 
    Both modes edit only `work/`, `app-specs/` and `react-coach/src/screens/`, and do everything else through the MCP tools.
 2. Copy `.bob/mcp.example.json` to `.bob/mcp.json` and set the absolute path to `baw_mcp.py`. To switch servers without editing `.env`, add an `"env": { "BAW_URL": "..." }` block there.
-3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 10 tools.
+3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 11 tools.
 4. Try it in BAW App Builder mode:
 
    ```
    Build a small ZZ app for an office supply request: one step with requester name,
    item, quantity and needed-by date, then a review screen. Install it and test it.
    ```
+
+   Or build from a screenshot. Attach one in the chat, or put it in `screenshots/` and name it:
+
+   ```
+   Build a ZZ app whose screen looks like screenshots/example-supplier-registration.png.
+   Install it, test it and compare the result with the screenshot.
+   ```
+
+   Bob reads the screen (sections, columns, labels, dropdowns, radio groups, required markers, buttons) with the screenshot-to-app skill, writes the app spec, builds and installs it, then compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
 
 Bob asks for approval before `create_app`, `modernize_app` and `install_app`; the read and test tools run without asking.
 

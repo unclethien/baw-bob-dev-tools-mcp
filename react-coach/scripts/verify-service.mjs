@@ -75,10 +75,11 @@ function inspectCoach() {
 }
 
 // --fill: type into the React form's empty editable fields (the field's example placeholder,
-// today's date for date pickers, or "Test") and tick unticked checkboxes. Returns the count.
+// today's date for date pickers, or "Test"), tick unticked checkboxes, pick the first option of
+// empty dropdowns and of radio groups with nothing chosen. Returns the count.
 async function fill(frame) {
   let count = 0;
-  for (const input of await frame.$$('.pp-app input:not([readonly]):not([type=checkbox]), .pp-app textarea:not([readonly])')) {
+  for (const input of await frame.$$('.pp-app input:not([readonly]):not([type=checkbox]):not([type=radio]), .pp-app textarea:not([readonly])')) {
     const { empty, placeholder, visible } = await input.evaluate((el) => ({ empty: !el.value, placeholder: el.placeholder, visible: !!el.offsetParent }));
     if (!empty || !visible) continue;
     const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
@@ -89,6 +90,19 @@ async function fill(frame) {
   for (const box of await frame.$$('.pp-app input[type=checkbox]:not(:checked):not([readonly])')) {
     await box.evaluate((el) => el.parentElement.querySelector('label')?.click());
     count++;
+  }
+  for (const select of await frame.$$('.pp-app select:not([disabled])')) {
+    const value = await select.evaluate((el) => (!el.value && el.offsetParent ? [...el.options].find((o) => o.value)?.value : null));
+    if (value) { await select.select(value); count++; }
+  }
+  for (const group of await frame.$$('.pp-app fieldset')) {
+    const picked = await group.evaluate((el) => {
+      const radios = [...el.querySelectorAll('input[type=radio]:not([readonly]):not([disabled])')];
+      if (!radios.length || radios.some((r) => r.checked) || !el.offsetParent) return false;
+      el.querySelector(`label[for="${radios[0].id}"]`)?.click();
+      return true;
+    });
+    if (picked) count++;
   }
   return count;
 }

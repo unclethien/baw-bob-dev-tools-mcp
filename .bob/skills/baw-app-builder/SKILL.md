@@ -9,7 +9,7 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 
 ## Steps
 
-1. **Write the spec** at `work/<ACRONYM>.app.json`. Copy the shape of `app-specs/example-equipment-request.json`:
+1. **Write the spec** at `work/<ACRONYM>.app.json`. Copy the shape of `app-specs/example-equipment-request.json` (simple steps) or `app-specs/example-supplier-registration.json` (sections, columns, dropdowns, radio groups, required fields):
 
    | Key | Rule |
    |---|---|
@@ -18,13 +18,17 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
    | `businessObject.name` / `.variable` | e.g. `LeaveRequest` / `leave` (JavaScript identifiers) |
    | `service.name` | What users see, e.g. "Leave Request" |
    | `layout` | `"steps"` (default): one screen per step with Back / Next. `"tabs"`: one screen with a tab per step, the user moves freely between tabs, then Next goes to the review |
-   | `form` | Only for `"tabs"`: optional `title` and `intro` of the tabbed screen (default title: `service.name`) |
-   | `steps[]` | In order: `title`, optional `intro` (`"steps"` layout only), `fields[]`. With `"tabs"` each step is one tab |
-   | `fields[]` | `name` (identifier, unique across all steps), `label`, `type`: `String`, `Text Area`, `Date`, `Boolean`, `Integer` or `Decimal` |
-   | `review` | `{ "title": ... }` for a read-only review screen, or `false` |
+   | `form` | Only for `"tabs"`: optional `title`, `intro` and `nextLabel` of the tabbed screen (default title: `service.name`) |
+   | `steps[]` | In order: `title`, optional `intro` (`"steps"` layout only), optional `nextLabel` / `backLabel` (button text), and either `fields[]` (one panel titled like the step, optional `columns`) or `sections[]`. With `"tabs"` each step is one tab |
+   | `sections[]` | Titled panels within a step: `title`, optional `intro`, `columns` (1, 2 or 3; fields fill left to right, row by row) and `fields[]` |
+   | `fields[]` | `name` (identifier, unique across all steps), `label`, `type`: `String`, `Text Area`, `Date`, `Boolean`, `Integer`, `Decimal`, `Select` (dropdown) or `Radio`. Optional: `required` (shows the required marker), `help` (text under the field), `wide` (full width in a multi-column section) |
+   | `options` | For `Select` and `Radio`: a list of strings, or of `{ "value": ..., "label": ... }` when the stored value differs from the text shown |
+   | `review` | `{ "title": ..., "submitLabel": ... }` for a read-only review screen, or `false` |
    | `confirmation` | Optional: `title`, `message`, `referencePrefix`, `showFields` (field names) |
 
-   Use only the fields the requirement names. A yes/no question is `Boolean`; long free text is `Text Area`; money and percentages are `Decimal`; counts are `Integer`. Address parts are separate `String` fields.
+   Use only the fields the requirement names. A yes/no question is `Boolean`; a choice from a short fixed list is `Radio` (up to about 4 options) or `Select`; long free text is `Text Area`; money and percentages are `Decimal`; counts are `Integer`. Address parts are separate `String` fields. Group more than about six fields into titled `sections`.
+
+   To build from a screenshot or mockup instead of a written requirement, use the screenshot-to-app skill.
 
 2. **Build:** `create_app` with the spec path. It validates the spec first and lists every problem; fix the spec and call it again. If the app already exists on the server, the build becomes a new snapshot of it, so bump `app.snapshot` for every change.
 

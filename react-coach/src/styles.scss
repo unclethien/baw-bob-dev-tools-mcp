@@ -18,6 +18,9 @@
 @use '@carbon/react/scss/components/notification';
 @use '@carbon/react/scss/components/progress-indicator';
 @use '@carbon/react/scss/components/number-input';
+@use '@carbon/react/scss/components/select';
+@use '@carbon/react/scss/components/radio-button';
+@use '@carbon/react/scss/components/form';
 
 // The coach's original buttons stay in the coach so its flow wiring keeps working;
 // modernize_coaches.py puts them in this layout and the React screen presses them.

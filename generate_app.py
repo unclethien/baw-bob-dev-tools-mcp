@@ -9,6 +9,8 @@ The app holds one client-side human service, exposed as a URL, with one coach pe
                               and so is the confirmation (with its generated reference number).
 
 With "layout": "tabs" the steps become tabs of one form coach instead (Next goes to Review).
+A step lists its fields, or "sections" of fields, each a titled panel; "columns": 2 or 3 lays the
+fields out side by side ("wide": true keeps a field full width). Fields of type Select (dropdown) and Radio take a list of "options".
 
 Every coach is built from standard UI Toolkit views bound to one business object, so the
 result runs as soon as it is installed and can be inventoried and modernized like any app.
@@ -37,10 +39,18 @@ FIELD_TYPES = {  # spec type -> (business object type, input view)
     "Boolean": ("Boolean", "Checkbox"),
     "Integer": ("Integer", "Integer"),
     "Decimal": ("Decimal", "Decimal"),
+    "Select": ("String", "Single Select"),
+    "Radio": ("String", "Radio Button Group"),
 }
+CHOICES = {"Select", "Radio"}
+COLUMN_WIDTH = {2: "49%", 3: "32%"}
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 REFERENCE = "referenceNumber"
-READ_ONLY = [("@visibility", '{"isResponsiveData":true,"values":[{"deviceConfigID":"LargeID","value":"READONLY"}]}')]
+def visibility(value):
+    return [("@visibility", json.dumps({"isResponsiveData": True, "values": [{"deviceConfigID": "LargeID", "value": value}]}))]
+
+
+READ_ONLY, REQUIRED = visibility("READONLY"), visibility("REQUIRED")
 CSS = """
 div.body { max-width: 960px; margin: 0 auto !important; padding: 16px 24px !important; }
 .app-title { font-size: 22px; font-weight: 600; margin: 8px 0 4px 0; }
@@ -77,8 +87,18 @@ def load_spec(path: Path) -> dict:
     for i, step in enumerate(steps, 1):
         if not step.get("title"):
             errors.append(f"step {i}: title is required")
+        if step.get("sections"):
+            step["fields"] = [f for s in step["sections"] for f in s.get("fields", [])]
+            for j, s in enumerate(step["sections"], 1):
+                if not s.get("fields"):
+                    errors.append(f"step {i} section {j}: fields must list at least one field")
+        else:
+            step["sections"] = [{"title": step.get("title", ""), "columns": step.get("columns", 1), "fields": step.get("fields", []), "implicit": True}]
+        for s in step["sections"]:
+            if s.get("columns", 1) not in (1, *COLUMN_WIDTH):
+                errors.append(f"step {i}: columns must be 1, 2 or 3")
         if not step.get("fields"):
-            errors.append(f"step {i}: fields must list at least one field")
+            errors.append(f"step {i}: fields (or sections) must list at least one field")
         for f in step.get("fields", []):
             name = f.get("name", "")
             if not IDENTIFIER.match(name):
@@ -90,6 +110,10 @@ def load_spec(path: Path) -> dict:
                 errors.append(f"step {i}: field {name!r} has unknown type {f.get('type')!r}; use one of {', '.join(FIELD_TYPES)}")
             if not f.get("label"):
                 errors.append(f"step {i}: field {name!r} needs a label")
+            if f.get("type") in CHOICES:
+                f["options"] = [o if isinstance(o, dict) else {"value": str(o), "label": str(o)} for o in f.get("options") or []]
+                if not f["options"] or not all(o.get("value") for o in f["options"]):
+                    errors.append(f"step {i}: field {name!r} ({f['type']}) needs options: a list of strings or {{\"value\", \"label\"}}")
     for name in (spec.get("confirmation") or {}).get("showFields", []):
         if name not in seen:
             errors.append(f"confirmation.showFields: unknown field {name!r}")
@@ -115,22 +139,68 @@ def actions(lay, buttons):
     return lay.view("Horizontal Layout", "Actions", children=[xml for _, _, xml in made], show_label=False), {e: i for e, i, _ in made}
 
 
-def input_views(lay, var, step):
-    return [lay.view(FIELD_TYPES[f.get("type", "String")][1], f["label"], binding=f"tw.local.{var}.{f['name']}") for f in step["fields"]]
+def choices(f):
+    """Single Select / Radio Button Group with a static list: name is the stored value, value the text shown."""
+    if f.get("type") not in CHOICES:
+        return []
+    items = [{"name": o["value"], "value": o.get("label") or o["value"]} for o in f["options"]]
+    return [("itemLookupMode", "L"), ("staticList", json.dumps(items))]
 
 
-def inputs(lay, var, step):
-    return lay.view("Panel", step["title"], children=input_views(lay, var, step))
+def input_view(lay, var, f):
+    kind = FIELD_TYPES[f.get("type", "String")][1]
+    return lay.view(kind, f["label"], binding=f"tw.local.{var}.{f['name']}", options=(REQUIRED if f.get("required") else []) + choices(f), help=f.get("help", ""))
+
+
+def columns(lay, var, fields, count):
+    """Lay fields out in count columns, left to right then down; a "wide" field takes the full width."""
+    if count <= 1:
+        return [input_view(lay, var, f) for f in fields]
+    width = [("@width", json.dumps({"isResponsiveData": True, "values": [{"deviceConfigID": "LargeID", "value": COLUMN_WIDTH[count]}]}))]
+    out, run = [], []
+
+    def flush():
+        if run:
+            views = [input_view(lay, var, f) for f in run]
+            cols = [lay.view("Vertical Layout", f"Column {c + 1}", children=views[c::count], options=width, show_label=False) for c in range(min(count, len(views)))]
+            out.append(lay.view("Horizontal Layout", "Columns", children=cols, show_label=False))
+            run.clear()
+
+    for f in fields:
+        if f.get("wide"):
+            flush()
+            out.append(input_view(lay, var, f))
+        else:
+            run.append(f)
+    flush()
+    return out
+
+
+def section(lay, var, s):
+    intro = [lay.html(f'<div class="app-intro">{s["intro"]}</div>')] if s.get("intro") else []
+    return lay.view("Panel", s["title"], children=intro + columns(lay, var, s["fields"], s.get("columns", 1)))
+
+
+def sections(lay, var, step):
+    return [section(lay, var, s) for s in step["sections"]]
+
+
+def tab_content(lay, var, step):
+    """A tab shows its fields directly, or a panel per section when the step names sections."""
+    s = step["sections"][0]
+    if s.get("implicit"):
+        return columns(lay, var, s["fields"], s.get("columns", 1))
+    return sections(lay, var, step)
 
 
 def step_coach(spec, i):
     var, step, last = spec["businessObject"]["variable"], spec["steps"][i], i == len(spec["steps"]) - 1
     lay = Layout()
-    forward = "Submit" if last and not spec.get("review", True) else "Next"
-    buttons = ([(f"back{i}", "Back", False)] if i else []) + [(f"next{i}", forward, True)]
+    forward = step.get("nextLabel") or ("Submit" if last and not spec.get("review", True) else "Next")
+    buttons = ([(f"back{i}", step.get("backLabel") or "Back", False)] if i else []) + [(f"next{i}", forward, True)]
     bar, events = actions(lay, buttons)
     count = f"Step {i + 1} of {len(spec['steps'])}: " if len(spec["steps"]) > 1 else ""
-    items = [lay.html(header(count + step["title"], step.get("intro", ""))), inputs(lay, var, step), bar]
+    items = [lay.html(header(count + step["title"], step.get("intro", ""))), *sections(lay, var, step), bar]
     return Layout.wrap(items), events
 
 
@@ -138,8 +208,8 @@ def form_coach(spec):
     """layout "tabs": every step is a tab of one screen; Next leaves the screen."""
     var, form = spec["businessObject"]["variable"], spec.get("form") or {}
     lay = Layout()
-    tabs = [lay.view("Vertical Layout", s["title"], children=input_views(lay, var, s)) for s in spec["steps"]]
-    bar, events = actions(lay, [("next0", "Next" if spec.get("review", True) else "Submit", True)])
+    tabs = [lay.view("Vertical Layout", s["title"], children=tab_content(lay, var, s)) for s in spec["steps"]]
+    bar, events = actions(lay, [("next0", form.get("nextLabel") or ("Next" if spec.get("review", True) else "Submit"), True)])
     items = [lay.html(header(form.get("title", spec["service"]["name"]), form.get("intro", ""))), lay.view("Tab Section", "Steps", children=tabs, show_label=False), bar]
     return Layout.wrap(items), events
 
@@ -149,7 +219,7 @@ def output(lay, var, f):
     binding = f"tw.local.{var}.{f['name']}"
     if kind in ("Text", "Text Area"):
         return lay.view("Output Text", f["label"], binding=binding)
-    return lay.view(kind, f["label"], binding=binding, options=READ_ONLY)
+    return lay.view(kind, f["label"], binding=binding, options=READ_ONLY + choices(f))
 
 
 def review_coach(spec):
@@ -157,7 +227,7 @@ def review_coach(spec):
     review = review if isinstance(review, dict) else {}
     lay = Layout()
     panels = [lay.view("Panel", s["title"], children=[output(lay, var, f) for f in s["fields"]]) for s in spec["steps"]]
-    bar, events = actions(lay, [("backReview", "Back", False), ("submit", "Submit", True)])
+    bar, events = actions(lay, [("backReview", "Back", False), ("submit", review.get("submitLabel") or "Submit", True)])
     intro = review.get("intro", "Check your answers. Press Back to change them or Submit to send them.")
     items = [lay.html(header(review.get("title", "Review and Submit"), intro)), *panels, bar]
     return Layout.wrap(items), events

@@ -1,7 +1,7 @@
 <workflow_instructions>
   <mode_overview>
-    This mode turns a written requirement into a running BAW process app with no Process
-    Designer work. You design the app and write its app spec: one business object, one
+    This mode turns a written requirement, or screenshots of the screens, into a running BAW
+    process app with no Process Designer work. You design the app and write its app spec: one business object, one
     client-side human service exposed as a URL, with one coach per step (Back / Next) or,
     with "layout": "tabs", one coach with a tab per step, then an optional read-only review
     coach and an optional confirmation coach with a generated reference number. The
@@ -15,6 +15,8 @@
       <details>
         Read app-specs/example-equipment-request.json for the spec shape and the baw-app-builder
         skill for the rules. Ask only when the requirement does not say what a screen collects.
+        When the user attaches or names screenshots, follow the screenshot-to-app skill instead:
+        view_image opens a screenshot file in the project.
       </details>
     </step>
     <step number="2">
@@ -30,6 +32,7 @@
         <step>Write work/ACR.app.json</step>
         <step>create_app, then inspect_coaches on the result and check every step</step>
         <step>install_app, then test_service for the service; look at the screenshots</step>
+        <step>When built from screenshots: view_image each test screenshot, compare it with its original, fix the spec and rebuild with a new snapshot until sections, fields, controls, required markers and buttons match</step>
       </steps>
     </phase>
 
@@ -46,6 +49,7 @@
 
   <completion_criteria>
     <criterion>The app is installed and test_service reports "ok": true for its service</criterion>
+    <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built</criterion>
     <criterion>When a React UI was requested, both modernized services report "ok": true and every coach uses a screen you wrote</criterion>
     <criterion>The report lists the app, acronym, snapshots, run URLs, steps, field counts, screens written and screenshot folders</criterion>
   </completion_criteria>

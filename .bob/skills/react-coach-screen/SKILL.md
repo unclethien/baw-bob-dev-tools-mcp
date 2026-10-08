@@ -61,11 +61,11 @@ registerScreen('zzeq-requester', Requester);
 | `read(path)` | Current value. Dates are `Date` objects, numbers are numbers, checkboxes are booleans |
 | `fire(viewId)` | Presses the coach's own button; the coach flow moves on exactly as the legacy coach did |
 | `options.theme` | `"brand"` or `"carbon"`; pass it and `spec.brand` to `Header`, which draws the matching header |
-| `options.spec` | `app`, `brand`, `title`, `intro`, `steps[]`, `step`, `sections[].fields[]` (`path`, `label`, `type`, `required`, `pattern`, `message`, `example`, `readonly`) and `buttons[]` (`label`, `viewId`, `primary`) |
+| `options.spec` | `app`, `brand`, `title`, `intro`, `steps[]`, `step`, `sections[].fields[]` (`path`, `label`, `type`, `options`, `required`, `pattern`, `message`, `example`, `readonly`) and `buttons[]` (`label`, `viewId`, `primary`) |
 
 ### Building blocks
 
-- `../components.jsx`: `Header`, `Field` (`field`, `binding`, `error`; picks the Carbon input from `type`: `text`, `textarea`, `date`, `checkbox`, `number`), `formatValue(field, value)` for read-only display.
+- `../components.jsx`: `Header`, `Field` (`field`, `binding`, `error`; picks the Carbon input from `type`: `text`, `textarea`, `date`, `checkbox`, `number`, `select`, `radio`; `select` and `radio` need `options: [{ value, label }]` from the spec), `formatValue(field, value)` for read-only display (shows an option's label).
 - Any `@carbon/react` component (Tabs, Tile, Accordion, ProgressIndicator, InlineNotification, StructuredList…).
 - Layout classes: `pp-section`, `pp-section-title`, `pp-grid` (two-column field grid), `pp-span` (full-width cell), `pp-panel`, `pp-stack`, `pp-lead`, `pp-note`, `pp-review-tile`, `pp-review-row`, `pp-actions`. For anything else use inline `style`.
 

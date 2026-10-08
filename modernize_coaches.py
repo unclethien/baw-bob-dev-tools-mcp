@@ -37,7 +37,7 @@ THEME_SUFFIX = {"brand": " (Modernized)", "carbon": " (Modernized - Carbon)"}
 DESIGNER_NS = "http://www.ibm.com/bpm/CoachDesignerNG"
 XSI_NS = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
 REACT_ITEM, ACTIONS_ITEM = "PPReactScreen1", "PPNativeActions"
-SPEC_KEYS = ("path", "label", "type", "readonly", "required", "pattern", "message", "example")
+SPEC_KEYS = ("path", "label", "type", "readonly", "required", "pattern", "message", "example", "options")
 
 
 def uid():
