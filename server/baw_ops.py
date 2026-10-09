@@ -9,6 +9,7 @@ Tokens are kept in memory and never printed.
 Examples:
     python3 server/baw_ops.py list
     python3 server/baw_ops.py export HSS RHSV180 hss.twx
+    python3 server/baw_ops.py export HSS RHSV180 hss.twx --no-toolkits   # as a --base for generate_app.py
     python3 server/baw_ops.py install clone.twx
     python3 server/baw_ops.py versions ZZHSS
     python3 server/baw_ops.py services ZZEQ         # exposed services of the tip snapshot, with run URLs
@@ -33,8 +34,8 @@ class ConfigError(Exception):
     pass
 
 
-def load_env():
-    """Environment first, then .env for anything not set. Fails when a setting is missing."""
+def missing_settings():
+    """Environment first, then .env for anything not set. Returns the settings still missing."""
     if ENV_FILE.exists():
         for line in ENV_FILE.read_text().splitlines():
             if "=" in line and not line.lstrip().startswith("#"):
@@ -44,6 +45,16 @@ def load_env():
     missing = [k for k in ("BAW_URL", "BAW_USER") if not os.environ.get(k)]
     if not (os.environ.get("BAW_PASSWORD") or os.environ.get("BAW_APIKEY")):
         missing.append("BAW_PASSWORD or BAW_APIKEY")
+    return missing
+
+
+def configured() -> bool:
+    """Whether a BAW server is set up. Without one, apps can still be built and imported by hand."""
+    return not missing_settings()
+
+
+def load_env():
+    missing = missing_settings()
     if missing:
         raise ConfigError(f"Missing BAW settings: {', '.join(missing)}. Set them in {ENV_FILE} or in the environment.")
 
@@ -86,8 +97,10 @@ class BawOps:
     def versions(self, container):
         return self.get(f"/bas/ops/std/bpm/containers/{container}/versions")
 
-    def export(self, container, version, dest: Path):
-        data, _ = self.get(f"/bas/ops/std/bpm/containers/{container}/versions/{version}/export", accept="application/octet-stream", raw=True)
+    def export(self, container, version, dest: Path, toolkits=True):
+        """toolkits=False leaves out the system toolkits, which every server already has."""
+        query = "" if toolkits else "?format=twxWithoutToolkits"
+        data, _ = self.get(f"/bas/ops/std/bpm/containers/{container}/versions/{version}/export{query}", accept="application/octet-stream", raw=True)
         dest.write_bytes(data)
         return len(data)
 
@@ -126,6 +139,7 @@ def main():
     sub.add_parser("list")
     p = sub.add_parser("versions"); p.add_argument("container")
     p = sub.add_parser("export"); p.add_argument("container"); p.add_argument("version"); p.add_argument("dest", type=Path)
+    p.add_argument("--no-toolkits", action="store_true", help="Leave out the system toolkits (twxWithoutToolkits)")
     p = sub.add_parser("install"); p.add_argument("twx", type=Path)
     p = sub.add_parser("services"); p.add_argument("container"); p.add_argument("--snapshot")
     args = parser.parse_args()
@@ -140,7 +154,7 @@ def main():
     elif args.cmd == "versions":
         print(json.dumps(ops.versions(args.container), indent=2))
     elif args.cmd == "export":
-        print(f"Exported {ops.export(args.container, args.version, args.dest)} bytes to {args.dest}")
+        print(f"Exported {ops.export(args.container, args.version, args.dest, not args.no_toolkits)} bytes to {args.dest}")
     elif args.cmd == "services":
         for item in ops.services(args.container, args.snapshot):
             print(f"{item.get('display')}\t{item.get('runURL')}")

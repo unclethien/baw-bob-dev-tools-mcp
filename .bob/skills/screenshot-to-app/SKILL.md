@@ -95,7 +95,8 @@ Build only the screens in the screenshots, plus what they clearly lead to. If th
 
 ## 5. Build, install, compare
 
-1. `create_app` with the spec. Fix every problem it lists.
+1. `create_app` with the spec. Fix every problem it lists. For a new app, ask the user which installed app to match and pass it as `base`, as in the baw-app-builder skill.
+   If it returns `install`, there is no BAW server: stop here, give the user the `.twx` and its import steps, and ask them to compare the screens with the screenshots after importing.
 2. `install_app` with the returned `.twx`. Continue only when `"ok": true`.
 3. `test_service` with `fill: false`. It returns a screenshot for each coach.
 4. **Compare.** `view_image` each test screenshot next to its original and check, in order:

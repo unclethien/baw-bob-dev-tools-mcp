@@ -21,7 +21,9 @@
     </step>
     <step number="2">
       <action>Pick an acronym</action>
-      <details>Call list_apps once and pick an unused ZZ acronym.</details>
+      <details>Call list_apps once and pick an unused ZZ acronym. For a new app, ask the user which installed app
+        to match (create_app base) or whether to use the built-in template. When list_apps reports that no BAW
+        server is configured, ask the user for the acronym and build without a server.</details>
     </step>
   </initialization_steps>
 
@@ -49,7 +51,7 @@
   </main_workflow>
 
   <completion_criteria>
-    <criterion>The app is installed and test_service reports "ok": true for its service</criterion>
+    <criterion>The app is installed and test_service reports "ok": true for its service; without a BAW server, the .twx is built, inspect_coaches shows every step, and the user has the import steps</criterion>
     <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built, and the coaches use the screenshot's theme colours, header and column layout</criterion>
     <criterion>When a React UI was requested, both modernized services report "ok": true and every coach uses a screen you wrote</criterion>
     <criterion>The report lists the app, acronym, snapshots, run URLs, steps, field counts, screens written and screenshot folders</criterion>

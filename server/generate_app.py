@@ -20,23 +20,25 @@ list of "options". "cancelLabel" on a step or on "form" adds a button that ends 
 Every coach is built from standard UI Toolkit views bound to one business object, so the
 result runs as soon as it is installed and can be inventoried and modernized like any app.
 
-Packaging metadata and the System Data / UI Toolkit dependencies come from an exported base
-app. When --base does not exist yet, the Hiring Sample (HSS) is exported from the server.
+The .twx is built from the template in app_template.py, so no server is needed: install it with
+baw_ops.py, or import it in Workflow Center. --base takes an app exported from the target server
+(any app; export it without toolkits) to match that server's BAW build and toolkit versions. When
+the base is the app itself (same acronym), the build becomes a new snapshot of it.
 
 Example:
     python3 server/generate_app.py app-specs/example-equipment-request.json work/ZZEQ.twx
     python3 server/baw_ops.py install work/ZZEQ.twx
+    python3 server/generate_app.py my-app.json work/ZZEQ-1.1.0.twx --base work/ZZEQ-1.0.0.twx   # new snapshot of ZZEQ
 """
 
 import argparse
 import json
 import re
-import tempfile
 from pathlib import Path
 
+import app_template
 import coach_theme
 from coach_builder import SYSTEM_TYPES, Layout, coachflow, uid, write_twx
-from twx_clone import clone
 
 FIELD_TYPES = {  # spec type -> (business object type, input view)
     "String": ("String", "Text"),
@@ -343,41 +345,27 @@ def flow(spec):
 # ---------------------------------------------------------------- package
 
 
-def ensure_base(base: Path) -> Path:
-    """Export the Hiring Sample once; it supplies packaging metadata and the toolkit dependencies."""
-    if not base.exists():
-        from baw_ops import BawOps
-        ops = BawOps()
-        versions = [v for v in ops.get("/bas/ops/std/bpm/containers/HSS/versions")["versions"] if not v.get("archived")]
-        base.parent.mkdir(parents=True, exist_ok=True)
-        ops.export("HSS", versions[0]["version"], base)
-        print(f"Exported base app HSS {versions[0]['version_name']} to {base}")
-    return base
-
-
-def generate(spec: dict, base: Path, dest: Path):
-    bo, svc = spec["businessObject"], spec["service"]
+def generate(spec: dict, dest: Path, base: Path | None = None):
+    bo, svc, app = spec["businessObject"], spec["service"], spec["app"]
     props = [(f["name"], FIELD_TYPES[f.get("type", "String")][0]) for f in fields(spec)]
     if spec.get("confirmation"):
         props.append((REFERENCE, "String"))
     steps, flows = flow(spec)
     service = {"name": svc["name"], "description": svc.get("description", svc["name"])}
     services = [("1." + uid(), uid(), "2056." + uid(), service, lambda b, v: coachflow(service, steps, flows, b, v, bo["variable"]))]
-    with tempfile.TemporaryDirectory() as tmp:
-        raw = Path(tmp) / "app.twx"
-        write_twx(base, raw, {"id": "12." + uid(), "version": uid(), "name": bo["name"], "props": props}, bo["variable"], services, "generate_app")
-        app = spec["app"]
-        clone(raw, dest, app["name"], app["acronym"], app.get("snapshot", "1.0.0"))
+    write_twx(dest, {"name": app["name"], "acronym": app["acronym"], "snapshot": app.get("snapshot", "1.0.0")},
+              {"id": "12." + uid(), "version": uid(), "name": bo["name"], "props": props}, bo["variable"], services, "generate_app",
+              app_template.read_base(base) if base else None)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("spec", type=Path, help="App spec JSON (see app-specs/example-equipment-request.json)")
     parser.add_argument("dest", type=Path, help="Output .twx")
-    parser.add_argument("--base", type=Path, default=Path("work/base-HSS.twx"), help="Exported base app; exported from HSS when missing")
+    parser.add_argument("--base", type=Path, help="An app exported from the target server, to match its BAW build; the app itself to add a snapshot to it")
     args = parser.parse_args()
     spec = load_spec(args.spec)
-    generate(spec, ensure_base(args.base), args.dest)
+    generate(spec, args.dest, args.base)
     app = spec["app"]
     print(f"Wrote {args.dest}: app {app['name']} ({app['acronym']}), snapshot {app.get('snapshot', '1.0.0')}")
     print(f"Service: {spec['service']['name']}, {len(spec['steps'])} step(s) as {'tabs' if spec.get('layout') == 'tabs' else 'screens'}, {len(fields(spec))} field(s)"

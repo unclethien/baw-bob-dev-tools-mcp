@@ -31,7 +31,7 @@ from xml.sax.saxutils import escape
 from coach_inventory import view_names
 from coach_builder import SYSTEM_TYPES
 from react_coach_view import react_assets, react_view
-from twx_clone import UUID_RE, collect_toolkit_uuids
+from twx_clone import UUID_RE, foreign_uuids
 
 THEME_SUFFIX = {"brand": " (Modernized)", "carbon": " (Modernized - Carbon)"}
 DESIGNER_NS = "http://www.ibm.com/bpm/CoachDesignerNG"
@@ -141,7 +141,7 @@ def system_data_ref(package):
 def owned_uuids(twx, package, service_id):
     """UUIDs used only inside this service's file: the copy gets fresh ones; references to other objects stay."""
     text = twx.read(f"objects/{service_id}.xml").decode("utf-8")
-    elsewhere = collect_toolkit_uuids(twx)
+    elsewhere = foreign_uuids(twx)
     elsewhere.update(UUID_RE.findall("\n".join(l for l in package.splitlines() if service_id not in l)))
     for name in twx.namelist():
         if name.startswith("objects/") and name != f"objects/{service_id}.xml":

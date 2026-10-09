@@ -13,7 +13,7 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 
    | Key | Rule |
    |---|---|
-   | `app.name`, `app.acronym` | New app: name starts with "ZZ ", acronym 2-8 upper-case letters or digits, not used on the server (`list_apps`) |
+   | `app.name`, `app.acronym` | New app: name starts with "ZZ ", acronym 2-8 upper-case letters or digits, not used on the server (`list_apps`; without a server, ask the user) |
    | `app.snapshot` | `1.0.0` for a new app |
    | `businessObject.name` / `.variable` | e.g. `LeaveRequest` / `leave` (JavaScript identifiers) |
    | `service.name` | What users see, e.g. "Leave Request" |
@@ -34,6 +34,8 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 
 2. **Build:** `create_app` with the spec path. It validates the spec first and lists every problem; fix the spec and call it again. If the app already exists on the server, the build becomes a new snapshot of it, so bump `app.snapshot` for every change.
 
+   The package comes from a built-in template, so no app has to be downloaded first. For a **new** app on a server, ask the user once which installed app to match (show them `list_apps`): any app works, its export only supplies the server's BAW build and toolkit versions. Pass its acronym as `base`, or no `base` to use the built-in template (BAW 26.0.0). An app that already exists is its own base.
+
 3. **Check the flow:** `inspect_coaches` on the returned `.twx`. Every step must show its fields and a button leading to the next coach. With `"tabs"` the first coach shows one section per tab and `sectionStyle: "tabs"`.
 
 4. **Install:** `install_app`. Continue only when `"ok": true`.
@@ -41,6 +43,15 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 5. **Test:** `test_service` with the app acronym and `service.name` (`fill: false` for the legacy screens). `"ok": true` means every coach rendered and every button moved on. Look at the screenshots.
 
 6. **Report** the app, acronym, snapshot, the run URL (`list_services`), the steps and field counts, and the screenshot folder.
+
+### Without a BAW server
+
+When `create_app` returns `install`, no server is configured: the server tools (`list_apps`, `install_app`, `test_service`, ...) are not available. Do steps 1 to 3, then stop and give the user:
+
+- the `.twx` path and the import steps from `install`;
+- the app name, acronym and snapshot, and that the snapshot name must be new in that app;
+- to add a snapshot to an app they already have, rebuild with `base` set to a `.twx` they exported from it (same acronym);
+- what to check when they run the service: each step, the buttons, the review and the confirmation.
 
 To give the app a React + Carbon UI next, continue with the coach-inventory skill (step 3 already wrote the coach spec), then the coach-modernize skill.
 
@@ -50,6 +61,7 @@ To give the app a React + Carbon UI next, continue with the coach-inventory skil
 |---|---|
 | `Invalid app spec` | Fix each listed problem in the spec |
 | `Snapshot … already exists` | Bump `app.snapshot` |
+| `No BAW server is configured` | Continue without a server (see above) |
 | Install fails | Read the error; an acronym already in use by another app means pick another one |
 | `stuck ...` in the test report | Report it with the screenshot; it is a generator bug, do not patch XML |
 | `no coach rendered` | Report it with `00-no-coach.png` and the page errors |

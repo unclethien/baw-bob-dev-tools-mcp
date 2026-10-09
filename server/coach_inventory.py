@@ -24,6 +24,8 @@ from collections import Counter
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from app_template import SYSTEM_VIEWS
+
 XSI_TYPE = "{http://www.w3.org/2001/XMLSchema-instance}type"
 FIELD_TYPES = {
     "Text": "text", "Text Area": "textarea", "Date Time Picker": "date", "Checkbox": "checkbox", "Switch": "checkbox",
@@ -48,8 +50,9 @@ def first(el, name):
 
 
 def view_names(twx: zipfile.ZipFile):
-    """Coach View ID -> name, for the app's own views and those in its toolkits."""
-    names = {}
+    """Coach View ID -> name, for the app's own views and those in its toolkits.
+    The system toolkits' views come from app_template when the app was exported without them."""
+    names = dict(SYSTEM_VIEWS)
 
     def scan(z):
         for n in z.namelist():
