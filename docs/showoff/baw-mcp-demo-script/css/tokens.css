@@ -1,0 +1,72 @@
+/* Design tokens, mapped to the IBM Carbon Design System (White and Gray 100 themes).
+   Every colour, size, space and easing in the page comes from here.
+   light-dark() picks the value for the active colour scheme; main.js sets data-theme. */
+:root {
+  color-scheme: light dark;
+
+  /* colour: Carbon theme tokens, White (light) and Gray 100 (dark) */
+  --paper:      light-dark(#ffffff, #161616);   /* background */
+  --paper-2:    light-dark(#f4f4f4, #262626);   /* layer-01 */
+  --paper-3:    light-dark(#e0e0e0, #393939);   /* layer-accent-01 */
+  --ink:        light-dark(#161616, #f4f4f4);   /* text-primary */
+  --ink-2:      light-dark(#525252, #c6c6c6);   /* text-secondary */
+  --rule:       light-dark(#e0e0e0, #393939);   /* border-subtle */
+  --rule-strong:light-dark(#8d8d8d, #6f6f6f);   /* border-strong */
+  --accent:     light-dark(#0f62fe, #78a9ff);   /* interactive / link-primary */
+  --accent-soft:light-dark(#edf5ff, #001d6c);   /* support-info background */
+  --on-accent:  light-dark(#ffffff, #161616);
+  --focus:      light-dark(#0f62fe, #ffffff);
+  --btn-primary:       #0f62fe;                 /* button-primary, same in both themes */
+  --btn-primary-hover: #0050e6;
+  --btn-primary-active:#002d9c;
+  --hover:      light-dark(#e8e8e8, #333333);   /* layer-hover-01 */
+  --selected:   light-dark(#e0e0e0, #393939);   /* layer-selected-01 */
+  --shell:      #161616;                        /* UI shell header, Gray 100 in both themes */
+  --shell-hover:#2e2e2e;
+  --shell-text: #f4f4f4;
+  --shell-text-2:#c6c6c6;
+  --shell-rule: #393939;
+
+  /* type: IBM Plex, Carbon type tokens */
+  --font-display: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-code: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --display-stretch: 100%;
+
+  /* Carbon fluid scale: body-02, heading-03/04, fluid-heading-05, fluid-display-01 */
+  --t-xs: 0.75rem;
+  --t-sm: 0.875rem;
+  --t-base: 1rem;
+  --t-md: clamp(1.125rem, 0.4vmin + 1rem, 1.25rem);
+  --t-lg: clamp(1.25rem, 0.8vmin + 1rem, 1.75rem);
+  --t-xl: clamp(2rem, 1.6vmin + 1.4rem, 2.625rem);
+  --t-display: clamp(2.625rem, 3.6vmin + 1.6rem, 4.75rem);
+
+  /* Carbon spacing scale */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-6: 24px;
+  --s-8: 32px; --s-12: 48px; --s-16: 64px; --s-24: 96px;
+
+  /* shape and depth: square corners, hairlines only */
+  --radius: 0;
+  --hairline: 1px solid var(--rule);
+  --hairline-strong: 1px solid var(--rule-strong);
+
+  /* Carbon motion: productive and expressive curves, duration tokens */
+  --ease-out-quart: cubic-bezier(0.2, 0, 0.38, 0.9);   /* productive standard */
+  --ease-out-expo: cubic-bezier(0.4, 0.14, 0.3, 1);    /* expressive standard */
+  --d-press: 70ms;    /* fast-01 */
+  --d-state: 110ms;   /* fast-02 */
+  --d-layout: 240ms;  /* moderate-02 */
+  --d-enter: 400ms;   /* slow-01 */
+
+  /* chrome */
+  --header-h: 48px;
+  --rail-w: 160px;
+  --measure: 62ch;
+  --z-rail: 20;
+  --z-header: 30;
+  --z-toast: 50;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }

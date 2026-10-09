@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BAW REST APIs → BAW Dev Tools MCP · API Usage Reference</title>
+<link rel="preconnect" href="https://1.www.s81c.com" crossorigin>
+<style>
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-Regular-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:600;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-SemiBold-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2) format("woff2")}
+:root{
+  color-scheme:light;
+  --white:#ffffff; --layer-01:#f4f4f4; --layer-02:#ffffff; --layer-accent:#e0e0e0;
+  --border-subtle:#e0e0e0; --border-strong:#8d8d8d;
+  --text-primary:#161616; --text-secondary:#525252; --text-helper:#6f6f6f; --text-on-color:#ffffff;
+  --link:#0f62fe; --blue-60:#0f62fe; --blue-70:#0043ce; --blue-10:#edf5ff;
+  --gray-100:#161616; --gray-90:#262626; --gray-80:#393939; --gray-10:#f4f4f4;
+  --red-60:#da1e28; --red-10:#fff1f1; --green-50:#24a148; --green-10:#defbe6;
+  --yellow-30:#f1c21b; --yellow-10:#fcf4d6; --purple-60:#8a3ffc; --purple-10:#f6f2ff;
+  --s03:8px; --s04:12px; --s05:16px; --s06:24px; --s07:32px; --s08:40px; --s09:48px; --s10:64px;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--white);color:var(--text-primary);font-family:var(--sans);
+  font-size:14px;line-height:1.43;letter-spacing:.16px;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+.shell{max-width:1120px;margin:0 auto;padding:0 var(--s05)}
+
+/* header */
+.masthead{background:var(--gray-100);color:var(--text-on-color);
+  padding-top:env(safe-area-inset-top,0px)}
+.masthead .shell{display:flex;align-items:center;gap:var(--s05);height:48px}
+.masthead .brand{font-weight:600;letter-spacing:.1px}
+.masthead .divider{width:1px;height:20px;background:var(--gray-80)}
+.masthead .ctx{color:#c6c6c6;font-size:13px}
+.masthead .spacer{flex:1}
+#theme-toggle{display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;padding:0;border:0;background:none;color:#f4f4f4;cursor:pointer}
+#theme-toggle:hover{background:#353535}
+#theme-toggle:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+#theme-toggle svg{display:block;flex:none}
+
+/* title block */
+.title{background:var(--layer-01);border-bottom:1px solid var(--border-subtle);
+  padding:var(--s09) 0 var(--s07)}
+h1{margin:0 0 var(--s04);font-size:clamp(28px,4.2vw,42px);line-height:1.18;font-weight:400;letter-spacing:0}
+.lede{margin:0;max-width:62ch;color:var(--text-secondary);font-size:16px;line-height:1.5}
+.tags{display:flex;flex-wrap:wrap;gap:var(--s03);margin-top:var(--s06)}
+.tag{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;
+  font-size:12px;font-weight:600;letter-spacing:.32px;white-space:nowrap}
+.tag-blue{background:var(--blue-10);color:var(--blue-70)}
+.tag-green{background:var(--green-10);color:#0e6027}
+.tag-red{background:var(--red-10);color:#a2191f}
+.tag-yellow{background:var(--yellow-10);color:#684e00}
+.tag-purple{background:var(--purple-10);color:#6929c4}
+.tag-gray{background:var(--layer-accent);color:var(--gray-90)}
+
+/* sections */
+main{padding-bottom:var(--s10)}
+section{padding-top:var(--s09);scroll-margin-top:var(--s06)}
+h2{margin:0 0 var(--s05);font-size:24px;line-height:1.33;font-weight:400;letter-spacing:0}
+h3{margin:var(--s07) 0 var(--s04);font-size:16px;line-height:1.5;font-weight:600;letter-spacing:0}
+h4{margin:var(--s06) 0 var(--s03);font-size:14px;font-weight:600}
+p{margin:0 0 var(--s05);max-width:76ch}
+ul,ol{margin:0 0 var(--s05);padding-left:var(--s06);max-width:76ch}
+li{margin-bottom:6px}
+a{color:var(--link)}
+code{font-family:var(--mono);font-size:.9em;background:var(--layer-01);padding:1px 5px;
+  border-radius:2px;word-break:break-word}
+pre{font-family:var(--mono);font-size:13px;line-height:1.5;background:var(--gray-100);
+  color:#f4f4f4;padding:var(--s05);border-radius:2px;overflow-x:auto;margin:0 0 var(--s05)}
+pre code{background:none;color:inherit;padding:0}
+.rule{height:1px;background:var(--border-subtle);border:0;margin:var(--s08) 0 0}
+
+/* notifications */
+.note{display:flex;gap:var(--s04);padding:var(--s05);margin:0 0 var(--s05);
+  border-left:3px solid var(--blue-60);background:var(--blue-10)}
+.note.warn{border-left-color:var(--yellow-30);background:var(--yellow-10)}
+.note.err{border-left-color:var(--red-60);background:var(--red-10)}
+.note.ok{border-left-color:var(--green-50);background:var(--green-10)}
+.note .body{max-width:74ch}
+.note .body :last-child{margin-bottom:0}
+.note strong{display:block;margin-bottom:4px}
+
+/* table */
+.tablewrap{overflow-x:auto;margin:0 0 var(--s05);border:1px solid var(--border-subtle)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+thead th{background:var(--layer-01);text-align:left;font-weight:600;padding:10px var(--s05);
+  border-bottom:1px solid var(--border-subtle);white-space:nowrap}
+tbody td{padding:10px var(--s05);border-bottom:1px solid var(--border-subtle);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#f9f9f9}
+td .mono,th .mono{font-family:var(--mono);font-size:12.5px}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;
+  background:var(--border-subtle);border:1px solid var(--border-subtle);margin-bottom:var(--s05)}
+.card{background:var(--white);padding:var(--s05)}
+.card h3{margin:0 0 var(--s03);font-size:14px}
+.card p{margin:0;font-size:13px;color:var(--text-secondary)}
+.kv{display:flex;justify-content:space-between;gap:var(--s05);padding:7px 0;
+  border-bottom:1px solid var(--border-subtle);font-size:13px}
+.kv:last-child{border-bottom:0}
+.kv dt{color:var(--text-secondary)}
+.kv dd{margin:0;font-family:var(--mono);font-size:12.5px;text-align:right}
+dl{margin:0}
+
+/* option blocks */
+.opt{border:1px solid var(--border-subtle);border-left:3px solid var(--border-strong);
+  padding:var(--s05);margin-bottom:var(--s04);background:var(--white)}
+.opt.rec{border-left-color:var(--green-50);background:#fbfffc}
+.opt.dead{border-left-color:var(--red-60)}
+.opt.future{border-left-color:var(--purple-60)}
+.opt .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s03);margin-bottom:var(--s03)}
+.opt .head h3{margin:0;font-size:15px}
+.opt ul{margin-bottom:0}
+.verdict{font-size:13px;color:var(--text-secondary);margin-top:var(--s03)}
+
+/* a11y: visible keyboard focus, Carbon style */
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.tablewrap:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.skip{position:absolute;left:-9999px;top:0;z-index:10;background:var(--link);color:#fff;
+  padding:var(--s04) var(--s05);font-weight:600;text-decoration:none}
+.skip:focus{left:0}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+
+/* Dark theme. System preference by default; an explicit choice on the root wins. */
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root:not([data-theme="light"]) .tag-gray{background:#393939;color:#f4f4f4}
+:root:not([data-theme="light"]) .tag-green{color:#42be65}
+:root:not([data-theme="light"]) .tag-red{color:#ff8389}
+:root:not([data-theme="light"]) .tag-yellow{color:#f1c21b}
+:root:not([data-theme="light"]) .tag-purple{color:#be95ff}
+:root:not([data-theme="light"]) .opt.rec{background:#0a1a0d}
+:root:not([data-theme="light"]) tbody tr:hover{background:#1f1f1f}
+:root:not([data-theme="light"]) pre{background:#000}
+}
+:root[data-theme="dark"]{color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root[data-theme="dark"] .tag-gray{background:#393939;color:#f4f4f4}
+:root[data-theme="dark"] .tag-green{color:#42be65}
+:root[data-theme="dark"] .tag-red{color:#ff8389}
+:root[data-theme="dark"] .tag-yellow{color:#f1c21b}
+:root[data-theme="dark"] .tag-purple{color:#be95ff}
+:root[data-theme="dark"] .opt.rec{background:#0a1a0d}
+:root[data-theme="dark"] tbody tr:hover{background:#1f1f1f}
+:root[data-theme="dark"] pre{background:#000}
+
+footer{border-top:1px solid var(--border-subtle);margin-top:var(--s09);padding:var(--s06) 0 var(--s09);
+  color:var(--text-helper);font-size:12px;padding-bottom:calc(var(--s09) + env(safe-area-inset-bottom,0px))}
+footer p{max-width:76ch;margin-bottom:6px}
+.crumb{margin:0 0 var(--s04);font-size:13px;max-width:none}
+.crumb a{text-decoration:none}
+.crumb a:hover{text-decoration:underline}
+.masthead .ctx{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="masthead">
+  <div class="shell">
+    <span class="brand">IBM</span>
+    <span class="divider" aria-hidden="true"></span>
+    <span class="ctx">BAW Dev Tools MCP · REST API Usage</span>
+    <span class="spacer" aria-hidden="true"></span>
+    <button type="button" id="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M13.5 2c-1.7 0-3.4.4-4.9 1.2 3.6 1.9 6.1 5.6 6.1 9.9s-2.5 8-6.1 9.9c1.5.8 3.2 1.2 4.9 1.2 6.1 0 11.1-5 11.1-11.1S19.6 2 13.5 2z" transform="translate(4 3)"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div class="title">
+  <div class="shell">
+    <p class="crumb"><a href="index.html">BAW Dev Tools MCP docs</a></p>
+    <h1>BAW REST APIs → BAW Dev Tools MCP</h1>
+    <p class="lede">Which IBM Business Automation Workflow REST endpoints the MCP server calls, what it
+      reads from each one, and how the published OpenAPI explorers and live checks led to that set.</p>
+    <div class="tags">
+      <span class="tag tag-blue">CP4BA · BAW 26.0.0</span>
+      <span class="tag tag-gray">Swagger 2.0</span>
+      <span class="tag tag-gray">gateway /bas</span>
+      <span class="tag tag-green">8 endpoints used</span>
+      <span class="tag tag-yellow">6 of 200 documented operations</span>
+      <span class="tag tag-purple">8 October 2026</span>
+    </div>
+  </div>
+</div>
+
+<main class="shell" id="main">
+
+<section id="service">
+  <h2>Service and interface</h2>
+  <p>On Cloud Pak for Business Automation, BAW exposes its REST interfaces under the <code>/bas</code>
+  gateway path of the Cloud Pak URL. The API explorer at <code>/bas/bpm/explorer</code> is Swagger UI:
+  it reads the specification named in its <code>?url=</code> query parameter and otherwise loads
+  <code>/bas/bpm/docs</code>. The three explorer links therefore point at three Swagger 2.0 documents,
+  which can be fetched directly as JSON by an authenticated caller.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Operations REST · <a href="api-specs/baw-ops-rest-swagger-2.0.json">spec file</a></h3>
+      <dl>
+        <div class="kv"><dt>Explorer</dt><dd>/bas/bpm/explorer/?url=/bas/ops/docs</dd></div>
+        <div class="kv"><dt>Spec</dt><dd>/bas/ops/docs</dd></div>
+        <div class="kv"><dt>Base path</dt><dd>/bas/ops</dd></div>
+        <div class="kv"><dt>Paths / operations</dt><dd>130 / 156</dd></div>
+        <div class="kv"><dt>Used</dt><dd>4 operations</dd></div>
+      </dl>
+    </div>
+    <div class="card">
+      <h3>BPM REST · <a href="api-specs/baw-bpm-rest-swagger-2.0.json">spec file</a></h3>
+      <dl>
+        <div class="kv"><dt>Explorer</dt><dd>/bas/bpm/explorer</dd></div>
+        <div class="kv"><dt>Spec</dt><dd>/bas/bpm/docs</dd></div>
+        <div class="kv"><dt>Base path</dt><dd>/bas/bpm</dd></div>
+        <div class="kv"><dt>Paths / operations</dt><dd>9 / 11</dd></div>
+        <div class="kv"><dt>Used</dt><dd>1 operation</dd></div>
+      </dl>
+    </div>
+    <div class="card">
+      <h3>Case REST · <a href="api-specs/baw-case-rest-swagger-2.0.json">spec file</a></h3>
+      <dl>
+        <div class="kv"><dt>Explorer</dt><dd>/bas/bpm/explorer/?url=/bas/case/docs</dd></div>
+        <div class="kv"><dt>Spec</dt><dd>/bas/case/docs</dd></div>
+        <div class="kv"><dt>Base path</dt><dd>/bas/CaseManager/CASEREST/v2</dd></div>
+        <div class="kv"><dt>Paths / operations</dt><dd>32 / 33</dd></div>
+        <div class="kv"><dt>Used</dt><dd>none</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="note">
+    <div class="body">
+      <strong>Two endpoints come from outside the explorers.</strong>
+      <p>The bearer token comes from the Cloud Pak Platform API (<code>/icp4d-api/v1/authorize</code>),
+      and service run URLs come from the older BPM REST API under <code>/bas/rest/bpm/wle/v1</code>.
+      Neither is described in the three documents above. The <a href="#discovery">discovery</a> section
+      explains why each was needed.</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Vendor source documents</h3>
+      <p><a href="api-specs/baw-ops-rest-swagger-2.0.json" download>baw-ops-rest-swagger-2.0.json</a> ·
+      <a href="api-specs/baw-bpm-rest-swagger-2.0.json" download>baw-bpm-rest-swagger-2.0.json</a> ·
+      <a href="api-specs/baw-case-rest-swagger-2.0.json" download>baw-case-rest-swagger-2.0.json</a><br>
+      Exactly as served by this server on 8 October 2026, kept so every claim on this page can be checked.</p>
+    </div>
+    <div class="card">
+      <h3>Where the calls live</h3>
+      <p><code>baw_ops.py</code> holds every REST call the MCP tools make.
+      <code>react-coach/scripts/verify-service.mjs</code> repeats the login and service lookup for the
+      browser test, and <code>generate_app.py</code> exports the Hiring Sample base app.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="used">
+  <h2>Endpoints used</h2>
+  <p>Eight endpoints in total. All of them read data except install, which the server only allows for apps
+  whose name and acronym start with <code>ZZ</code>.</p>
+
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Endpoints used by the MCP server, scrollable">
+    <table>
+      <thead><tr><th scope="col">#</th><th scope="col">Endpoint</th><th scope="col">Source</th><th scope="col">MCP tools</th><th scope="col">Code</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td class="mono">POST /icp4d-api/v1/authorize</td><td>Cloud Pak Platform API</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:64<br>verify-service.mjs:47</td></tr>
+        <tr><td>2</td><td class="mono">POST /bas/bpm/system/login</td><td>BPM REST · System</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:69</td></tr>
+        <tr><td>3</td><td class="mono">GET /bas/ops/std/bpm/containers</td><td>Ops REST · Container</td><td><code>list_apps</code></td><td class="mono">baw_ops.py:83</td></tr>
+        <tr><td>4</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions</td><td>Ops REST · Version</td><td><code>list_snapshots</code>, <code>export_app</code>, <code>create_app</code>, <code>modernize_app</code>, <code>install_app</code></td><td class="mono">baw_ops.py:86<br>generate_app.py:351</td></tr>
+        <tr><td>5</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions/{version}/export</td><td>Ops REST · Version</td><td><code>export_app</code>, <code>create_app</code></td><td class="mono">baw_ops.py:89</td></tr>
+        <tr><td>6</td><td class="mono">POST /bas/ops/std/bpm/containers/install</td><td>Ops REST · Container</td><td><code>install_app</code></td><td class="mono">baw_ops.py:100</td></tr>
+        <tr><td>7</td><td class="mono">GET /bas/ops/system/queue/{id}</td><td>Ops REST · System</td><td><code>install_app</code> (status polling)</td><td class="mono">baw_ops.py:113</td></tr>
+        <tr><td>8</td><td class="mono">GET /bas/rest/bpm/wle/v1/exposed/service</td><td>BPM REST, older API</td><td><code>list_services</code>, <code>test_service</code></td><td class="mono">baw_ops.py:94<br>verify-service.mjs:54</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>After step 8, <code>test_service</code> opens the service's <code>runURL</code>
+  (<code>/bas/teamworks/executecf?modelID=…&amp;branchID=…</code>) in headless Chrome. It is a page load,
+  not a REST call, and is authenticated with the same bearer token set as the
+  <code>ibm-private-cloud-session</code> cookie.</p>
+
+  <h3>Fields read from each response</h3>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Response fields read, scrollable">
+    <table>
+      <thead><tr><th scope="col">Endpoint</th><th scope="col">Fields read</th><th scope="col">Used for</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">/icp4d-api/v1/authorize</td><td class="mono">token</td><td>Bearer token on every later call and browser cookie</td></tr>
+        <tr><td class="mono">/system/login</td><td class="mono">csrf_token</td><td><span class="mono">BPMCSRFToken</span> header on every later call</td></tr>
+        <tr><td class="mono">/containers</td><td class="mono">container, container_name, toolkit, archived</td><td>App list; archived apps are hidden</td></tr>
+        <tr><td class="mono">/versions</td><td class="mono">version, version_name, creation_date, archived</td><td>Snapshot list sorted oldest first, newest-snapshot pick, duplicate-name guard</td></tr>
+        <tr><td class="mono">/export</td><td>binary body</td><td>Written to <span class="mono">work/&lt;ACR&gt;-&lt;snapshot&gt;.twx</span></td></tr>
+        <tr><td class="mono">/containers/install</td><td class="mono">url</td><td>Address of the queue entry to poll</td></tr>
+        <tr><td class="mono">/system/queue/{id}</td><td class="mono">state, result</td><td>Install outcome returned to the agent</td></tr>
+        <tr><td class="mono">/exposed/service</td><td class="mono">processAppAcronym, display, snapshotName, tip, runURL</td><td>Find a service by app, name and snapshot (or tip) and get its run URL</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="surface">
+  <h2>API surface and what is out of scope</h2>
+  <p>The three documents describe 200 operations. The MCP server needs to list apps, export, install and
+  run; everything else is either runtime instance management or a destructive call that the server
+  deliberately does not expose.</p>
+
+  <div class="tablewrap" role="region" tabindex="0" aria-label="API surface by group, scrollable">
+    <table>
+      <thead><tr><th scope="col">API · group</th><th scope="col">Ops</th><th scope="col">Status</th><th scope="col">Why</th></tr></thead>
+      <tbody>
+        <tr><td>Ops · Container</td><td>19</td><td><span class="tag tag-green">2 used</span></td><td>List and install. <span class="mono">DELETE /containers/{container}</span> exists and is intentionally not wrapped: there is no delete tool.</td></tr>
+        <tr><td>Ops · Version</td><td>28</td><td><span class="tag tag-green">2 used</span></td><td>List and export snapshots. Activate, archive, deactivate, delete, migrate and team-binding routes are not needed to build or test an app.</td></tr>
+        <tr><td>Ops · System</td><td>8</td><td><span class="tag tag-green">1 used</span></td><td>The async queue for install status. Its <span class="mono">/system/login</span> works too; the BPM copy is used instead.</td></tr>
+        <tr><td>BPM · System</td><td>1</td><td><span class="tag tag-green">used</span></td><td>CSRF token.</td></tr>
+        <tr><td>BPM · Exposed Service</td><td>1</td><td><span class="tag tag-red">rejected</span></td><td>Returns REST services only, with no run URL. See below.</td></tr>
+        <tr><td>BPM · Process, User Task</td><td>9</td><td><span class="tag tag-gray">not used</span></td><td>Start and complete process instances and tasks. Testing drives the real UI instead.</td></tr>
+        <tr><td>Case · all groups</td><td>33</td><td><span class="tag tag-gray">not used</span></td><td>Case solutions, cases, activities and stages. The tools build process apps with client-side human services, not case solutions.</td></tr>
+        <tr><td>Ops · Process Instance Move, Health Management, Event Manager, Logging, User Management, Federated Data Repository, and others</td><td>101</td><td><span class="tag tag-gray">not used</span></td><td>Server administration, outside the build-and-test loop.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="discovery">
+  <h2>How we got there</h2>
+  <p>The endpoint set came from reading the three specifications against what each MCP tool needs, then
+  checking the doubtful points with read-only calls against this cluster.</p>
+
+  <h3>1 · Read the specs, not the explorer page</h3>
+  <p>The explorer HTML is a generic Swagger UI shell: its script reads <code>?url=</code> or falls back to
+  <code>&lt;context&gt;/docs</code>. Fetching <code>/bas/ops/docs</code>, <code>/bas/bpm/docs</code> and
+  <code>/bas/case/docs</code> with a bearer token returns the raw Swagger 2.0 JSON, which is what the tables
+  on this page are counted from.</p>
+
+  <h3>2 · Authentication: bearer token instead of the documented basic auth</h3>
+  <p>All three specs declare only HTTP basic authentication. On Cloud Pak, the <code>/bas</code> gateway also
+  accepts a Cloud Pak bearer token, and <code>POST /icp4d-api/v1/authorize</code> issues one from either
+  a password or a Platform API key. We chose the bearer token because:</p>
+  <ul>
+    <li>it supports <code>BAW_APIKEY</code>, which basic auth cannot;</li>
+    <li>the same token works as the <code>ibm-private-cloud-session</code> cookie, so the browser test logs
+      in without going through the Cloud Pak login page.</li>
+  </ul>
+  <p>Basic auth with a password also returned <code>201</code> from <code>/bas/ops/system/login</code> on
+  this cluster, so it remains an option for password-only setups.</p>
+
+  <h3>3 · CSRF token from <code>/system/login</code></h3>
+  <p>Every Ops and BPM operation lists a required <code>BPMCSRFToken</code> header. The token comes from
+  <code>POST /system/login</code>, which exists in both the Ops and BPM specs and returns
+  <code>{csrf_token, expiration}</code>. We request the documented maximum lifetime of 7200 seconds and send
+  the token on every call. A <code>GET /containers</code> without the header still returned <code>200</code>
+  here, but the header is documented as required, so we always send it.</p>
+
+  <h3>4 · Apps and snapshots from the Ops <code>containers</code> routes</h3>
+  <p><code>GET /std/bpm/containers</code> lists process apps and toolkits (80 on this server).
+  <code>GET /std/bpm/containers/{container}/versions</code> lists snapshots. The <code>{version}</code> path
+  parameter of the export route is documented as "the acronym of the snapshot", which is the
+  <code>version</code> field, not the display name in <code>version_name</code>. That is why the tools
+  accept either value from the user but always pass <code>version</code> to the API.</p>
+
+  <h3>5 · Export with the system toolkits included</h3>
+  <p>The export route returns the <code>.twx</code> as <code>application/octet-stream</code>. Its
+  <code>format</code> parameter can skip system toolkits (<code>twxWithoutToolkits</code>); we deliberately
+  leave it unset. The generators reuse the bundled <code>toolkits/*.zip</code> of an export: the Hiring
+  Sample (HSS) export supplies the packaging metadata and System Data / UI Toolkit dependencies for new apps,
+  and <code>twx_clone.py</code> uses the toolkit UUIDs to know which IDs it must not rewrite.</p>
+
+  <h3>6 · Install is asynchronous</h3>
+  <p><code>POST /std/bpm/containers/install</code> takes the file as the multipart form field
+  <code>install_file</code> and answers <code>202</code> with a <code>url</code> pointing at
+  <code>/system/queue/{id}</code> (with its authorization <code>key</code> query parameter). The code rebases
+  that URL onto the <code>/bas/ops</code> gateway path and polls it every 5 seconds for up to 15 minutes
+  until <code>state</code> leaves pending/running. The spec lists the final states as
+  <code>success</code> and <code>failure</code>.</p>
+
+  <h3>7 · Run URLs: why the older BPM REST API</h3>
+  <div class="opt dead">
+    <div class="head"><h3>Documented · <code>GET /bas/bpm/exposed-services</code></h3><span class="tag tag-red">Does not fit</span></div>
+    <ul>
+      <li>The <code>type</code> parameter is required, and its only allowed value is <code>rest</code>.
+        Omitting it returns <code>400 CWTBG0011E</code>.</li>
+      <li>With <code>type=rest</code> it returned 5 items with only <code>name, description, type, container,
+        definitionUrl</code>: no run URL, no snapshot, and no human services.</li>
+    </ul>
+  </div>
+  <div class="opt rec">
+    <div class="head"><h3>Used · <code>GET /bas/rest/bpm/wle/v1/exposed/service</code></h3><span class="tag tag-green">Current design</span></div>
+    <ul>
+      <li>Returned 144 exposed items (140 URL services, 4 dashboards) across all apps and snapshots.</li>
+      <li>Each item carries <code>processAppAcronym</code>, <code>display</code>, <code>snapshotName</code>,
+        <code>tip</code> and <code>runURL</code>, which is exactly what <code>list_services</code> and
+        <code>test_service</code> need.</li>
+      <li>It is the older BPM REST API, so it is not in any explorer document.</li>
+    </ul>
+    <p class="verdict">Kept until the documented API can list human services with run URLs.</p>
+  </div>
+
+  <h3>8 · Case REST reviewed and not used</h3>
+  <p>The Case API deploys and operates case solutions. The MCP tools only build and modernize process apps.
+  Ops <code>containers/install</code> already covers case solutions too (through its <code>caseDosName</code>,
+  <code>caseProjectArea</code> and <code>caseOverwrite</code> parameters), so a future case feature would
+  not need a separate install route.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="auth">
+  <h2>Authentication flow</h2>
+
+<pre><code>POST /icp4d-api/v1/authorize      { username, password | api_key }
+     →  { token }                                 # Cloud Pak bearer token
+
+POST /bas/bpm/system/login        Authorization: Bearer &lt;token&gt;
+                                  { requested_lifetime: 7200 }
+     →  201 { csrf_token, expiration }
+
+every REST call                   Authorization: Bearer &lt;token&gt;
+                                  BPMCSRFToken: &lt;csrf_token&gt;
+
+browser (test_service)            cookie ibm-private-cloud-session=&lt;token&gt;
+                                  + Authorization: Bearer &lt;token&gt;</code></pre>
+
+  <ul>
+    <li>Settings come from the environment first, then <code>.env</code>. Tokens stay in the server process
+      and are never returned to the agent.</li>
+    <li>The <code>login_request</code> schema marks <code>refresh_groups</code> as required. We send only
+      <code>requested_lifetime</code>, and the server still answers <code>201</code>. Adding
+      <code>"refresh_groups": false</code> would match the documented contract.</li>
+    <li>The MCP server logs in once, on the first tool call that needs the server, and reuses the tokens for
+      the life of the process. The CSRF token lasts at most 7200 seconds.</li>
+  </ul>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="guards">
+  <h2>Guard rails on top of the API</h2>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Guard rails, scrollable">
+    <table>
+      <thead><tr><th scope="col">Guard</th><th scope="col">API basis</th></tr></thead>
+      <tbody>
+        <tr><td>Install only <code>ZZ</code> apps (name and acronym)</td><td>Target read from <span class="mono">META-INF/package.xml</span> inside the <span class="mono">.twx</span> before <span class="mono">containers/install</span> is called.</td></tr>
+        <tr><td>Refuse a snapshot name that already exists</td><td>Checked against <span class="mono">versions</span> (both <span class="mono">version</span> and <span class="mono">version_name</span>) before build and install, because BAW would keep the old content.</td></tr>
+        <tr><td>No delete tool</td><td>The documented <span class="mono">DELETE</span> container and version routes are never called.</td></tr>
+        <tr><td>Paths limited to the project</td><td>Exports and installs read and write only inside the repository.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <div class="body">
+      <strong>Certificate verification is off.</strong>
+      <p>Both <code>baw_ops.py</code> and <code>verify-service.mjs</code> skip TLS verification so they work
+      against test clusters with self-signed certificates. That is acceptable for a TechZone test server and
+      not for production.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="next">
+  <h2>Outstanding actions</h2>
+  <ol>
+    <li><strong>Re-authenticate on expiry.</strong> The cached tokens are never refreshed, so a long-running
+      MCP session will start failing after the CSRF token's 2-hour lifetime. Retrying once with a fresh login
+      on 401/403 would fix it.</li>
+    <li><strong>Follow <code>next</code> on paged lists.</strong> <code>containers</code> and
+      <code>versions</code> return <code>next</code>/<code>previous</code> links; the code reads only the first
+      page. All 80 apps came back in one page here, but a larger server could hide apps or snapshots.</li>
+    <li><strong>Send <code>refresh_groups: false</code></strong> in the login body to match the documented
+      schema.</li>
+    <li><strong>Track the run-URL dependency.</strong> <code>/bas/rest/bpm/wle/v1/exposed/service</code> is
+      outside the published specs; check it on each BAW upgrade, or move to a documented route if one starts
+      returning human services with run URLs.</li>
+    <li><strong>Settle certificate trust</strong> before pointing the tools at anything other than a test
+      cluster.</li>
+  </ol>
+</section>
+
+</main>
+
+<footer class="shell">
+  <p>Route definitions from the Swagger 2.0 documents served at <code>/bas/ops/docs</code>,
+  <code>/bas/bpm/docs</code> and <code>/bas/case/docs</code> on 8 October 2026. Observations come from read-only
+  calls against the same CP4BA cluster; response shapes may differ on other BAW versions.</p>
+</footer>
+
+
+<script>
+(function () {
+  var root = document.documentElement,
+      btn  = document.getElementById('theme-toggle'),
+      mq   = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function isDark() {
+    var set = root.getAttribute('data-theme');
+    return set ? set === 'dark' : mq.matches;
+  }
+  function sync() {
+    var dark = isDark();
+    btn.setAttribute('aria-pressed', String(dark));
+    btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  try {
+    var saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  sync();
+
+  btn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    sync();
+  });
+  // follow the system only while the reader has not chosen
+  mq.addEventListener('change', function () { if (!root.hasAttribute('data-theme')) sync(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Export and import BAW apps from the terminal · Step-by-step guide</title>
+<link rel="preconnect" href="https://1.www.s81c.com" crossorigin>
+<style>
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-Regular-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:600;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-SemiBold-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2) format("woff2")}
+:root{
+  color-scheme:light;
+  --white:#ffffff; --layer-01:#f4f4f4; --layer-02:#ffffff; --layer-accent:#e0e0e0;
+  --border-subtle:#e0e0e0; --border-strong:#8d8d8d;
+  --text-primary:#161616; --text-secondary:#525252; --text-helper:#6f6f6f; --text-on-color:#ffffff;
+  --link:#0f62fe; --blue-60:#0f62fe; --blue-70:#0043ce; --blue-10:#edf5ff;
+  --gray-100:#161616; --gray-90:#262626; --gray-80:#393939; --gray-10:#f4f4f4;
+  --red-60:#da1e28; --red-10:#fff1f1; --green-50:#24a148; --green-10:#defbe6;
+  --yellow-30:#f1c21b; --yellow-10:#fcf4d6; --purple-60:#8a3ffc; --purple-10:#f6f2ff;
+  --s03:8px; --s04:12px; --s05:16px; --s06:24px; --s07:32px; --s08:40px; --s09:48px; --s10:64px;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--white);color:var(--text-primary);font-family:var(--sans);
+  font-size:14px;line-height:1.43;letter-spacing:.16px;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+.shell{max-width:1120px;margin:0 auto;padding:0 var(--s05)}
+
+/* header */
+.masthead{background:var(--gray-100);color:var(--text-on-color);
+  padding-top:env(safe-area-inset-top,0px)}
+.masthead .shell{display:flex;align-items:center;gap:var(--s05);height:48px}
+.masthead .brand{font-weight:600;letter-spacing:.1px}
+.masthead .divider{width:1px;height:20px;background:var(--gray-80)}
+.masthead .ctx{color:#c6c6c6;font-size:13px}
+.masthead .spacer{flex:1}
+#theme-toggle{display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;padding:0;border:0;background:none;color:#f4f4f4;cursor:pointer}
+#theme-toggle:hover{background:#353535}
+#theme-toggle:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+#theme-toggle svg{display:block;flex:none}
+
+/* title block */
+.title{background:var(--layer-01);border-bottom:1px solid var(--border-subtle);
+  padding:var(--s09) 0 var(--s07)}
+h1{margin:0 0 var(--s04);font-size:clamp(28px,4.2vw,42px);line-height:1.18;font-weight:400;letter-spacing:0}
+.lede{margin:0;max-width:62ch;color:var(--text-secondary);font-size:16px;line-height:1.5}
+.tags{display:flex;flex-wrap:wrap;gap:var(--s03);margin-top:var(--s06)}
+.tag{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;
+  font-size:12px;font-weight:600;letter-spacing:.32px;white-space:nowrap}
+.tag-blue{background:var(--blue-10);color:var(--blue-70)}
+.tag-green{background:var(--green-10);color:#0e6027}
+.tag-red{background:var(--red-10);color:#a2191f}
+.tag-yellow{background:var(--yellow-10);color:#684e00}
+.tag-purple{background:var(--purple-10);color:#6929c4}
+.tag-gray{background:var(--layer-accent);color:var(--gray-90)}
+
+/* sections */
+main{padding-bottom:var(--s10)}
+section{padding-top:var(--s09);scroll-margin-top:var(--s06)}
+h2{margin:0 0 var(--s05);font-size:24px;line-height:1.33;font-weight:400;letter-spacing:0}
+h3{margin:var(--s07) 0 var(--s04);font-size:16px;line-height:1.5;font-weight:600;letter-spacing:0}
+h4{margin:var(--s06) 0 var(--s03);font-size:14px;font-weight:600}
+p{margin:0 0 var(--s05);max-width:76ch}
+ul,ol{margin:0 0 var(--s05);padding-left:var(--s06);max-width:76ch}
+li{margin-bottom:6px}
+a{color:var(--link)}
+code{font-family:var(--mono);font-size:.9em;background:var(--layer-01);padding:1px 5px;
+  border-radius:2px;word-break:break-word}
+pre{font-family:var(--mono);font-size:13px;line-height:1.5;background:var(--gray-100);
+  color:#f4f4f4;padding:var(--s05);border-radius:2px;overflow-x:auto;margin:0 0 var(--s05)}
+pre code{background:none;color:inherit;padding:0}
+.rule{height:1px;background:var(--border-subtle);border:0;margin:var(--s08) 0 0}
+
+/* notifications */
+.note{display:flex;gap:var(--s04);padding:var(--s05);margin:0 0 var(--s05);
+  border-left:3px solid var(--blue-60);background:var(--blue-10)}
+.note.warn{border-left-color:var(--yellow-30);background:var(--yellow-10)}
+.note.err{border-left-color:var(--red-60);background:var(--red-10)}
+.note.ok{border-left-color:var(--green-50);background:var(--green-10)}
+.note .body{max-width:74ch}
+.note .body :last-child{margin-bottom:0}
+.note strong{display:block;margin-bottom:4px}
+
+/* table */
+.tablewrap{overflow-x:auto;margin:0 0 var(--s05);border:1px solid var(--border-subtle)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+thead th{background:var(--layer-01);text-align:left;font-weight:600;padding:10px var(--s05);
+  border-bottom:1px solid var(--border-subtle);white-space:nowrap}
+tbody td{padding:10px var(--s05);border-bottom:1px solid var(--border-subtle);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#f9f9f9}
+td .mono,th .mono{font-family:var(--mono);font-size:12.5px}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;
+  background:var(--border-subtle);border:1px solid var(--border-subtle);margin-bottom:var(--s05)}
+.card{background:var(--white);padding:var(--s05)}
+.card h3{margin:0 0 var(--s03);font-size:14px}
+.card p{margin:0;font-size:13px;color:var(--text-secondary)}
+.kv{display:flex;justify-content:space-between;gap:var(--s05);padding:7px 0;
+  border-bottom:1px solid var(--border-subtle);font-size:13px}
+.kv:last-child{border-bottom:0}
+.kv dt{color:var(--text-secondary)}
+.kv dd{margin:0;font-family:var(--mono);font-size:12.5px;text-align:right}
+dl{margin:0}
+
+/* option blocks */
+.opt{border:1px solid var(--border-subtle);border-left:3px solid var(--border-strong);
+  padding:var(--s05);margin-bottom:var(--s04);background:var(--white)}
+.opt.rec{border-left-color:var(--green-50);background:#fbfffc}
+.opt.dead{border-left-color:var(--red-60)}
+.opt.future{border-left-color:var(--purple-60)}
+.opt .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s03);margin-bottom:var(--s03)}
+.opt .head h3{margin:0;font-size:15px}
+.opt ul{margin-bottom:0}
+.verdict{font-size:13px;color:var(--text-secondary);margin-top:var(--s03)}
+
+/* a11y: visible keyboard focus, Carbon style */
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.tablewrap:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.skip{position:absolute;left:-9999px;top:0;z-index:10;background:var(--link);color:#fff;
+  padding:var(--s04) var(--s05);font-weight:600;text-decoration:none}
+.skip:focus{left:0}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+
+/* Dark theme. System preference by default; an explicit choice on the root wins. */
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root:not([data-theme="light"]) .tag-gray{background:#393939;color:#f4f4f4}
+:root:not([data-theme="light"]) .tag-green{color:#42be65}
+:root:not([data-theme="light"]) .tag-red{color:#ff8389}
+:root:not([data-theme="light"]) .tag-yellow{color:#f1c21b}
+:root:not([data-theme="light"]) .tag-purple{color:#be95ff}
+:root:not([data-theme="light"]) .opt.rec{background:#0a1a0d}
+:root:not([data-theme="light"]) tbody tr:hover{background:#1f1f1f}
+:root:not([data-theme="light"]) pre{background:#000}
+}
+:root[data-theme="dark"]{color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root[data-theme="dark"] .tag-gray{background:#393939;color:#f4f4f4}
+:root[data-theme="dark"] .tag-green{color:#42be65}
+:root[data-theme="dark"] .tag-red{color:#ff8389}
+:root[data-theme="dark"] .tag-yellow{color:#f1c21b}
+:root[data-theme="dark"] .tag-purple{color:#be95ff}
+:root[data-theme="dark"] .opt.rec{background:#0a1a0d}
+:root[data-theme="dark"] tbody tr:hover{background:#1f1f1f}
+:root[data-theme="dark"] pre{background:#000}
+
+footer{border-top:1px solid var(--border-subtle);margin-top:var(--s09);padding:var(--s06) 0 var(--s09);
+  color:var(--text-helper);font-size:12px;padding-bottom:calc(var(--s09) + env(safe-area-inset-bottom,0px))}
+footer p{max-width:76ch;margin-bottom:6px}
+
+/* guide extras: step numbers and copy buttons */
+h3 .num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:var(--s04);
+  background:var(--blue-60);color:#fff;font-size:14px;font-weight:600;font-family:var(--mono)}
+h3[id]{scroll-margin-top:var(--s06)}
+.codewrap{position:relative}
+.codewrap pre{padding-right:84px}
+.copy{position:absolute;top:0;right:0;height:32px;min-width:64px;padding:0 var(--s04);border:0;
+  background:#393939;color:#f4f4f4;font:400 12px/1 var(--sans);letter-spacing:.32px;cursor:pointer}
+.copy:hover{background:#4c4c4c}
+.copy:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+.copy[data-done]{background:var(--green-50);color:#fff}
+.crumb{margin:0 0 var(--s04);font-size:13px;max-width:none}
+.crumb a{text-decoration:none}
+.crumb a:hover{text-decoration:underline}
+.masthead .ctx{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="masthead">
+  <div class="shell">
+    <span class="brand">IBM</span>
+    <span class="divider" aria-hidden="true"></span>
+    <span class="ctx">BAW Dev Tools MCP · Terminal Guide</span>
+    <span class="spacer" aria-hidden="true"></span>
+    <button type="button" id="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M13.5 2c-1.7 0-3.4.4-4.9 1.2 3.6 1.9 6.1 5.6 6.1 9.9s-2.5 8-6.1 9.9c1.5.8 3.2 1.2 4.9 1.2 6.1 0 11.1-5 11.1-11.1S19.6 2 13.5 2z" transform="translate(4 3)"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div class="title">
+  <div class="shell">
+    <p class="crumb"><a href="index.html">BAW Dev Tools MCP docs</a></p>
+    <h1>Export and import BAW apps from the terminal</h1>
+    <p class="lede">A step-by-step guide for downloading a process app snapshot as a <code>.twx</code> file and
+      installing a <code>.twx</code> file, using only <code>curl</code> and the BAW REST API. No MCP server,
+      Bob skills or project scripts needed.</p>
+    <div class="tags">
+      <span class="tag tag-blue">CP4BA · BAW 26.0.0</span>
+      <span class="tag tag-gray">curl + jq</span>
+      <span class="tag tag-gray">macOS · Linux · WSL</span>
+      <span class="tag tag-green">Export: read-only</span>
+      <span class="tag tag-red">Import: changes the server</span>
+      <span class="tag tag-purple">8 October 2026</span>
+    </div>
+    <p style="margin-top:var(--s05);margin-bottom:0"><a href="baw-rest-api-reference.html">Which endpoints these are and why &rarr;</a></p>
+  </div>
+</div>
+
+<main class="shell" id="main">
+
+<section id="overview">
+  <h2>The whole journey</h2>
+  <p>Every request to BAW needs two passes: a <strong>login token</strong> that proves who you are, and a
+  <strong>CSRF token</strong> that BAW asks for on every REST call. Once you have both, exporting is two lookups
+  and a download, and importing is an upload and a status check.</p>
+
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Steps at a glance, scrollable">
+    <table>
+      <thead><tr><th scope="col">Step</th><th scope="col">What you do</th><th scope="col">Endpoint</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#step-1">1</a></td><td>Check your tools</td><td>none</td></tr>
+        <tr><td><a href="#step-2">2</a></td><td>Tell the terminal your server and user</td><td>none</td></tr>
+        <tr><td><a href="#step-3">3</a></td><td>Get a login token</td><td class="mono">POST /icp4d-api/v1/authorize</td></tr>
+        <tr><td><a href="#step-4">4</a></td><td>Get a CSRF token</td><td class="mono">POST /bas/ops/system/login</td></tr>
+        <tr><td colspan="3"><strong>Export</strong></td></tr>
+        <tr><td><a href="#step-5">5</a></td><td>Find the app's acronym</td><td class="mono">GET /bas/ops/std/bpm/containers</td></tr>
+        <tr><td><a href="#step-6">6</a></td><td>Find the snapshot</td><td class="mono">GET …/containers/{app}/versions</td></tr>
+        <tr><td><a href="#step-7">7</a></td><td>Download the <code>.twx</code></td><td class="mono">GET …/versions/{snapshot}/export</td></tr>
+        <tr><td colspan="3"><strong>Import</strong></td></tr>
+        <tr><td><a href="#step-8">8</a></td><td>Check what the file will install</td><td>none</td></tr>
+        <tr><td><a href="#step-9">9</a></td><td>Check the snapshot name is new</td><td class="mono">GET …/containers/{app}/versions</td></tr>
+        <tr><td><a href="#step-10">10</a></td><td>Upload the <code>.twx</code></td><td class="mono">POST /bas/ops/std/bpm/containers/install</td></tr>
+        <tr><td><a href="#step-11">11</a></td><td>Wait for the result</td><td class="mono">GET /bas/ops/system/queue/{id}</td></tr>
+        <tr><td><a href="#step-12">12</a></td><td>Confirm and clean up</td><td class="mono">GET …/versions</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <div class="body">
+      <strong>Run every step in the same terminal window.</strong>
+      <p>Each step saves values such as <code>$TOKEN</code> in the terminal session, and later steps use them.
+      If you close the window, start again from step 2.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="before">
+  <h2>Before you start</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>A terminal</h3>
+      <p>macOS: the Terminal app. Linux: any shell. Windows: use <strong>WSL</strong> (Ubuntu) or
+      <strong>Git Bash</strong>; the commands are written for bash and zsh, not PowerShell.</p>
+    </div>
+    <div class="card">
+      <h3>Your BAW address</h3>
+      <p>The Cloud Pak URL you open in the browser, up to the first <code>/</code> after the host, for example
+      <code>https://cpd-cp4ba.apps.example.com</code>.</p>
+    </div>
+    <div class="card">
+      <h3>An account that can install</h3>
+      <p>Your Cloud Pak username plus either its password or a Cloud Pak <strong>API key</strong>. Exporting
+      needs read access to the app; importing needs BAW author rights.</p>
+    </div>
+  </div>
+  <p>To create an API key, sign in to the Cloud Pak console, open the user menu at the top right, choose
+  <strong>Profile and settings</strong>, then <strong>API key</strong> → <strong>Generate new key</strong>.
+  Copy it somewhere safe; it is shown once.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="login">
+  <h2>Part 1 · Log in</h2>
+
+  <h3 id="step-1"><span class="num">1</span>Check your tools</h3>
+  <p>You need <code>curl</code> (sends web requests) and <code>jq</code> (reads JSON answers). Run:</p>
+<pre><code>curl --version | head -1
+jq --version</code></pre>
+  <p>Each line should print a version. If <code>jq</code> is missing, install it with
+  <code>brew install jq</code> on macOS or <code>sudo apt install jq</code> on Ubuntu and WSL.</p>
+
+  <h3 id="step-2"><span class="num">2</span>Tell the terminal your server and user</h3>
+  <p>Replace the two example values with yours. The password line hides what you type, so it never appears on
+  screen or in your shell history.</p>
+<pre><code>export BAW_URL="https://cpd-cp4ba.apps.example.com"
+export BAW_USER="your-username"
+printf 'Password: '; read -s BAW_PASSWORD; echo</code></pre>
+  <p>Using an API key instead? Replace the last line with:</p>
+<pre><code>printf 'API key: '; read -s BAW_APIKEY; echo</code></pre>
+
+  <div class="note warn">
+    <div class="body">
+      <strong>About <code>-k</code> in every command.</strong>
+      <p>Test clusters such as TechZone use self-signed certificates, so the commands pass <code>-k</code> to
+      skip the certificate check. On a production server, remove <code>-k</code> and point curl at your
+      company's certificate with <code>--cacert ca.pem</code> instead.</p>
+    </div>
+  </div>
+
+  <h3 id="step-3"><span class="num">3</span>Get a login token</h3>
+  <p>This asks Cloud Pak for a token that proves who you are. Use the command that matches step 2.</p>
+  <p><strong>With a password:</strong></p>
+<pre><code>TOKEN=$(curl -sk -X POST "$BAW_URL/icp4d-api/v1/authorize" \
+  -H "Content-Type: application/json" \
+  -d "$(jq -n --arg u "$BAW_USER" --arg p "$BAW_PASSWORD" '{username: $u, password: $p}')" \
+  | jq -r .token)</code></pre>
+  <p><strong>With an API key:</strong></p>
+<pre><code>TOKEN=$(curl -sk -X POST "$BAW_URL/icp4d-api/v1/authorize" \
+  -H "Content-Type: application/json" \
+  -d "$(jq -n --arg u "$BAW_USER" --arg k "$BAW_APIKEY" '{username: $u, api_key: $k}')" \
+  | jq -r .token)</code></pre>
+  <p><strong>Check it worked</strong> without printing the token itself:</p>
+<pre><code>echo "token length: ${#TOKEN}"</code></pre>
+  <div class="note ok">
+    <div class="body">
+      <strong>Expected</strong>
+      <p>A length in the thousands (about 3,300 on our test cluster). A length of <code>4</code> means the token
+      is the word <code>null</code>: the username, password or URL is wrong.</p>
+    </div>
+  </div>
+
+  <h3 id="step-4"><span class="num">4</span>Get a CSRF token</h3>
+  <p>BAW wants a second token, sent in a header called <code>BPMCSRFToken</code>, on every REST call. It lasts
+  up to two hours (7200 seconds).</p>
+<pre><code>CSRF=$(curl -sk -X POST "$BAW_URL/bas/ops/system/login" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_groups": false, "requested_lifetime": 7200}' \
+  | jq -r .csrf_token)
+echo "csrf length: ${#CSRF}"</code></pre>
+  <p>Expect a length around 110. Now save both tokens as one shortcut, so later commands stay short:</p>
+<pre><code>AUTH=(-H "Authorization: Bearer $TOKEN" -H "BPMCSRFToken: $CSRF")</code></pre>
+  <p>Every command below uses <code>"${AUTH[@]}"</code>, which expands to those two headers.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="export">
+  <h2>Part 2 · Export an app</h2>
+  <p>Exporting only reads from the server. It is safe to repeat.</p>
+
+  <h3 id="step-5"><span class="num">5</span>Find the app's acronym</h3>
+  <p>BAW identifies a process app by a short <strong>acronym</strong>, such as <code>ZZGQ3</code>, not by its
+  display name. List all process apps with both:</p>
+<pre><code>curl -sk "${AUTH[@]}" -H "Accept: application/json" \
+  "$BAW_URL/bas/ops/std/bpm/containers?type=PA" \
+  | jq -r '.containers[] | select(.archived | not) | "\(.container)\t\(.container_name)"'</code></pre>
+  <p>Example output (first column is the acronym):</p>
+<pre><code>ZZGQ3	ZZ Generate Quote
+ZZPNE	ZZ Pharmacy Network Enrollment</code></pre>
+  <p>Save the one you want:</p>
+<pre><code>APP="ZZGQ3"</code></pre>
+
+  <h3 id="step-6"><span class="num">6</span>Find the snapshot</h3>
+  <p>A <strong>snapshot</strong> is a saved version of the app. List them, oldest first:</p>
+<pre><code>curl -sk "${AUTH[@]}" -H "Accept: application/json" \
+  "$BAW_URL/bas/ops/std/bpm/containers/$APP/versions" \
+  | jq -r '.versions | sort_by(.creation_date)[] | select(.archived | not) | "\(.version)\t\(.version_name)\t\(.creation_date)"'</code></pre>
+<pre><code>1.0.0	1.0.0	2026-10-08T18:24:03z
+1.1.0-react	1.1.0-react	2026-10-08T18:33:51z</code></pre>
+  <p>The <strong>first column</strong> is the snapshot acronym that the export needs. It is often the same as the
+  name in the second column, but not always, so always copy the first column.</p>
+<pre><code>SNAP="1.1.0-react"</code></pre>
+  <p>Or pick the newest snapshot automatically:</p>
+<pre><code>SNAP=$(curl -sk "${AUTH[@]}" -H "Accept: application/json" \
+  "$BAW_URL/bas/ops/std/bpm/containers/$APP/versions" \
+  | jq -r '[.versions[] | select(.archived | not)] | sort_by(.creation_date) | last | .version')
+echo "$SNAP"</code></pre>
+
+  <h3 id="step-7"><span class="num">7</span>Download the <code>.twx</code></h3>
+<pre><code>curl -sk "${AUTH[@]}" -H "Accept: application/octet-stream" \
+  -o "$APP-$SNAP.twx" \
+  -w "HTTP %{http_code}, %{size_download} bytes\n" \
+  "$BAW_URL/bas/ops/std/bpm/containers/$APP/versions/$SNAP/export"</code></pre>
+  <div class="note ok">
+    <div class="body">
+      <strong>Expected</strong>
+      <p><code>HTTP 200</code> and a size in megabytes (about 15 MB for a small app, because the file carries its
+      toolkits). The file is saved in the folder you are in; <code>pwd</code> shows which one.</p>
+    </div>
+  </div>
+  <div class="note warn">
+    <div class="body">
+      <strong>The <code>Accept</code> header matters.</strong>
+      <p>The export answers <code>HTTP 406</code> if the request asks for JSON. Keep
+      <code>Accept: application/octet-stream</code> on this command. If the HTTP code is not 200, the saved file
+      contains an error message instead of the app: <code>cat "$APP-$SNAP.twx"</code> shows it.</p>
+    </div>
+  </div>
+  <p>A <code>.twx</code> is a zip file. To check it is real:</p>
+<pre><code>unzip -l "$APP-$SNAP.twx" | tail -1</code></pre>
+  <p>This prints a file count such as <code>17 files</code>. If you see "End-of-central-directory signature not
+  found", the download was an error message; read it with <code>cat</code>.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="import">
+  <h2>Part 3 · Import (install) an app</h2>
+
+  <div class="note err">
+    <div class="body">
+      <strong>Importing changes the server and cannot be undone from the terminal.</strong>
+      <p>It adds the app, or a new snapshot of an existing app, to BAW. Practise on a test server with an app
+      whose name you recognise as a demo (our team uses names starting with <code>ZZ</code>). Removing a snapshot
+      afterwards needs an administrator.</p>
+    </div>
+  </div>
+
+  <h3 id="step-8"><span class="num">8</span>Check what the file will install</h3>
+  <p>The app and snapshot a <code>.twx</code> installs into are written inside the file, not chosen at upload
+  time. Look before you upload:</p>
+<pre><code>FILE="ZZGQ3-1.1.0-react.twx"
+TARGET=$(unzip -p "$FILE" META-INF/package.xml | sed -n '/&lt;target&gt;/,/&lt;\/target&gt;/p')
+echo "App name:    $(echo "$TARGET" | sed -n 's/.*&lt;project [^&gt;]* name="\([^"]*\)".*/\1/p')"
+echo "App acronym: $(echo "$TARGET" | sed -n 's/.*&lt;project [^&gt;]*shortName="\([^"]*\)".*/\1/p')"
+echo "Snapshot:    $(echo "$TARGET" | sed -n 's/.*&lt;snapshot [^&gt;]* name="\([^"]*\)".*/\1/p')"</code></pre>
+<pre><code>App name:    ZZ Generate Quote
+App acronym: ZZGQ3
+Snapshot:    1.1.0-react</code></pre>
+  <p>The first line keeps only the file's <code>&lt;target&gt;</code> section, so the toolkits the app
+  depends on are not mixed in. This file installs app <code>ZZGQ3</code> (ZZ Generate Quote), snapshot <code>1.1.0-react</code>.</p>
+
+  <h3 id="step-9"><span class="num">9</span>Check the snapshot name is new</h3>
+  <p>If that snapshot already exists on the server, BAW keeps the old content and your upload changes nothing.
+  Check first, using the acronym from step 8:</p>
+<pre><code>curl -sk "${AUTH[@]}" -H "Accept: application/json" \
+  "$BAW_URL/bas/ops/std/bpm/containers/ZZGQ3/versions" \
+  | jq -r '.versions[] | .version_name'</code></pre>
+  <ul>
+    <li><strong>The name from step 8 is not in the list:</strong> go ahead.</li>
+    <li><strong>The name is in the list:</strong> stop. The file needs a new snapshot name, which you set in
+      Workflow Center (or with this project's tools) before exporting again.</li>
+    <li><strong>The answer is an error <code>CWTBG0624E … does not exist</code>:</strong> the app is not on this
+      server yet, so the import creates it. Go ahead.</li>
+  </ul>
+
+  <h3 id="step-10"><span class="num">10</span>Upload the <code>.twx</code></h3>
+  <p>The file goes up as a form field that must be named <code>install_file</code>.</p>
+<pre><code>QUEUE_URL=$(curl -sk -X POST "${AUTH[@]}" -H "Accept: application/json" \
+  -F "install_file=@$FILE;type=application/octet-stream" \
+  "$BAW_URL/bas/ops/std/bpm/containers/install" \
+  | jq -r .url)
+echo "${QUEUE_URL%%\?*}"</code></pre>
+  <p>BAW answers right away with <code>HTTP 202</code> and a <strong>status address</strong>, then installs in
+  the background. The <code>echo</code> shows the address without its private key, for example
+  <code>…/bas/ops/system/queue/142</code>. If it prints <code>null</code>, the upload was refused; run the
+  command again without <code>| jq -r .url</code> to read the error.</p>
+
+  <h3 id="step-11"><span class="num">11</span>Wait for the result</h3>
+  <p>Ask the status address every 5 seconds until the state is <code>success</code> or <code>failure</code>.
+  The first line rebuilds the address on your own BAW URL, in case the server reports an internal host name.</p>
+<pre><code>STATUS_URL="$BAW_URL/bas/ops${QUEUE_URL#*/ops}"
+while true; do
+  STATE=$(curl -sk "${AUTH[@]}" -H "Accept: application/json" "$STATUS_URL" | jq -r .state)
+  echo "$(date +%T)  $STATE"
+  case "$STATE" in pending|running) sleep 5 ;; *) break ;; esac
+done</code></pre>
+  <p>A small app usually finishes within a few minutes. Then read the details:</p>
+<pre><code>curl -sk "${AUTH[@]}" -H "Accept: application/json" "$STATUS_URL" | jq '{state, result}'</code></pre>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Install states, scrollable">
+    <table>
+      <thead><tr><th scope="col">State</th><th scope="col">Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-yellow">pending · running</span></td><td>Still installing. The loop keeps waiting.</td></tr>
+        <tr><td><span class="tag tag-green">success</span></td><td>Installed. Go to step 12.</td></tr>
+        <tr><td><span class="tag tag-red">failure</span></td><td>Not installed. <code>result</code> holds the reason. <code>CWTBG0737E</code> is a general server error: the file is damaged or not a BAW export, or an administrator must check the server log.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The status stays available for at least 48 hours, so you can check it again later.</p>
+
+  <h3 id="step-12"><span class="num">12</span>Confirm and clean up</h3>
+  <p>The new snapshot should now be listed:</p>
+<pre><code>curl -sk "${AUTH[@]}" -H "Accept: application/json" \
+  "$BAW_URL/bas/ops/std/bpm/containers/ZZGQ3/versions" \
+  | jq -r '.versions[] | "\(.version_name)\t\(.creation_date)"'</code></pre>
+  <p>Optional: list the services you can open in the browser, with their run URLs. This call uses an older BAW
+  REST API that is not in the API explorer, but it is the one that returns run URLs.</p>
+<pre><code>curl -sk -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" \
+  "$BAW_URL/bas/rest/bpm/wle/v1/exposed/service" \
+  | jq -r '.data.exposedItemsList[] | select(.processAppAcronym == "ZZGQ3" and .tip) | "\(.display)\t\(.runURL)"'</code></pre>
+  <p>When you are done, remove the secrets from the terminal session:</p>
+<pre><code>unset BAW_PASSWORD BAW_APIKEY TOKEN CSRF AUTH QUEUE_URL STATUS_URL</code></pre>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="trouble">
+  <h2>When something goes wrong</h2>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Troubleshooting, scrollable">
+    <table>
+      <thead><tr><th scope="col">What you see</th><th scope="col">Likely cause</th><th scope="col">Fix</th></tr></thead>
+      <tbody>
+        <tr><td>Token length <code>4</code> in step 3</td><td>Wrong username, password, API key or URL</td><td>Check the values from step 2. The URL has no path after the host.</td></tr>
+        <tr><td><code>HTTP 401</code> on any step</td><td>Missing or expired login token</td><td>Repeat steps 3 and 4. Tokens expire, so long sessions need a fresh login.</td></tr>
+        <tr><td><code>HTTP 403</code></td><td>Your account lacks rights for that app or action</td><td>Ask an administrator for access to the app, or author rights for imports.</td></tr>
+        <tr><td><code>CWTBG0624E: Container '…' does not exist</code></td><td>Wrong acronym, or the app is not on this server</td><td>Copy the acronym from step 5. Acronyms are case-sensitive.</td></tr>
+        <tr><td><code>CWTBG0011E: The mandatory parameter … is not specified</code></td><td>A required part of the request is missing</td><td>Copy the command again; the full URL and its <code>?type=</code> part matter.</td></tr>
+        <tr><td><code>HTTP 406</code> on export</td><td>The request asked for JSON</td><td>Use <code>Accept: application/octet-stream</code> on the export.</td></tr>
+        <tr><td><code>curl: (60) SSL certificate problem</code></td><td>Self-signed certificate</td><td>On a test server, keep <code>-k</code>. On production, use <code>--cacert</code>.</td></tr>
+        <tr><td><code>jq: command not found</code></td><td><code>jq</code> is not installed</td><td>See step 1.</td></tr>
+        <tr><td><code>jq: … Cannot iterate over null</code></td><td>BAW answered with an error instead of a list</td><td>Run the same <code>curl</code> without the <code>| jq …</code> part to read the error.</td></tr>
+        <tr><td>Install ends in <code>failure</code></td><td>Damaged file, not a BAW export, or a server-side problem</td><td>Re-check step 7 and step 8 on the file, then ask an administrator to read the server log.</td></tr>
+        <tr><td>Install succeeds but nothing changed</td><td>The snapshot name already existed</td><td>See step 9. Give the snapshot a new name and export again.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="scripts">
+  <h2>All in one: copy-paste scripts</h2>
+  <p>The same steps as two short scripts. Save each as a file, make it runnable with
+  <code>chmod +x baw-export.sh</code>, and set <code>BAW_URL</code>, <code>BAW_USER</code> and
+  <code>BAW_PASSWORD</code> (or <code>BAW_APIKEY</code>) as in step 2 before running.</p>
+
+  <h3>baw-export.sh <span class="tag tag-green">read-only</span></h3>
+<pre><code>#!/usr/bin/env bash
+# Usage: ./baw-export.sh APP [SNAPSHOT]   (newest snapshot when SNAPSHOT is left out)
+set -euo pipefail
+APP="$1"; SNAP="${2:-}"
+BAW_URL="${BAW_URL%/}"
+if [ -n "${BAW_PASSWORD:-}" ]; then
+  BODY=$(jq -n --arg u "$BAW_USER" --arg p "$BAW_PASSWORD" '{username: $u, password: $p}')
+else
+  BODY=$(jq -n --arg u "$BAW_USER" --arg k "$BAW_APIKEY" '{username: $u, api_key: $k}')
+fi
+TOKEN=$(curl -sk -X POST "$BAW_URL/icp4d-api/v1/authorize" -H "Content-Type: application/json" -d "$BODY" | jq -r .token)
+[ "$TOKEN" != null ] || { echo "Login failed"; exit 1; }
+CSRF=$(curl -sk -X POST "$BAW_URL/bas/ops/system/login" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"refresh_groups": false, "requested_lifetime": 7200}' | jq -r .csrf_token)
+AUTH=(-H "Authorization: Bearer $TOKEN" -H "BPMCSRFToken: $CSRF")
+if [ -z "$SNAP" ]; then
+  SNAP=$(curl -sk "${AUTH[@]}" -H "Accept: application/json" "$BAW_URL/bas/ops/std/bpm/containers/$APP/versions" \
+    | jq -r '[.versions[] | select(.archived | not)] | sort_by(.creation_date) | last | .version')
+fi
+CODE=$(curl -sk "${AUTH[@]}" -H "Accept: application/octet-stream" -o "$APP-$SNAP.twx" -w "%{http_code}" \
+  "$BAW_URL/bas/ops/std/bpm/containers/$APP/versions/$SNAP/export")
+[ "$CODE" = 200 ] || { echo "Export failed (HTTP $CODE):"; cat "$APP-$SNAP.twx"; echo; rm -f "$APP-$SNAP.twx"; exit 1; }
+echo "Saved $APP-$SNAP.twx"</code></pre>
+
+  <h3>baw-import.sh <span class="tag tag-red">changes the server</span></h3>
+<pre><code>#!/usr/bin/env bash
+# Usage: ./baw-import.sh FILE.twx
+set -euo pipefail
+FILE="$1"
+BAW_URL="${BAW_URL%/}"
+PKG=$(unzip -p "$FILE" META-INF/package.xml)
+TARGET=$(sed -n '/&lt;target&gt;/,/&lt;\/target&gt;/p' &lt;&lt;&lt;"$PKG")   # this app, not its toolkits
+APP=$(sed -n 's/.*&lt;project [^&gt;]*shortName="\([^"]*\)".*/\1/p' &lt;&lt;&lt;"$TARGET")
+SNAP=$(sed -n 's/.*&lt;snapshot [^&gt;]* name="\([^"]*\)".*/\1/p' &lt;&lt;&lt;"$TARGET")
+[ -n "$APP" ] &amp;&amp; [ -n "$SNAP" ] || { echo "$FILE does not look like a BAW export"; exit 1; }
+echo "This file installs app $APP, snapshot $SNAP."
+if [ -n "${BAW_PASSWORD:-}" ]; then
+  BODY=$(jq -n --arg u "$BAW_USER" --arg p "$BAW_PASSWORD" '{username: $u, password: $p}')
+else
+  BODY=$(jq -n --arg u "$BAW_USER" --arg k "$BAW_APIKEY" '{username: $u, api_key: $k}')
+fi
+TOKEN=$(curl -sk -X POST "$BAW_URL/icp4d-api/v1/authorize" -H "Content-Type: application/json" -d "$BODY" | jq -r .token)
+[ "$TOKEN" != null ] || { echo "Login failed"; exit 1; }
+CSRF=$(curl -sk -X POST "$BAW_URL/bas/ops/system/login" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"refresh_groups": false, "requested_lifetime": 7200}' | jq -r .csrf_token)
+AUTH=(-H "Authorization: Bearer $TOKEN" -H "BPMCSRFToken: $CSRF")
+if curl -sk "${AUTH[@]}" -H "Accept: application/json" "$BAW_URL/bas/ops/std/bpm/containers/$APP/versions" \
+   | jq -e --arg s "$SNAP" '.versions // [] | any(.version_name == $s or .version == $s)' &gt;/dev/null; then
+  echo "Snapshot $SNAP already exists in $APP; BAW would keep the old content. Stopping."; exit 1
+fi
+read -r -p "Install it? Type yes to continue: " OK; [ "$OK" = yes ] || exit 1
+QUEUE_URL=$(curl -sk -X POST "${AUTH[@]}" -H "Accept: application/json" \
+  -F "install_file=@$FILE;type=application/octet-stream" "$BAW_URL/bas/ops/std/bpm/containers/install" | jq -r .url)
+[ "$QUEUE_URL" != null ] || { echo "Upload refused"; exit 1; }
+STATUS_URL="$BAW_URL/bas/ops${QUEUE_URL#*/ops}"
+while true; do
+  RESULT=$(curl -sk "${AUTH[@]}" -H "Accept: application/json" "$STATUS_URL")
+  STATE=$(jq -r .state &lt;&lt;&lt;"$RESULT"); echo "$(date +%T)  $STATE"
+  case "$STATE" in pending|running) sleep 5 ;; *) break ;; esac
+done
+jq '{state, result}' &lt;&lt;&lt;"$RESULT"
+[ "$STATE" = success ]</code></pre>
+</section>
+
+</main>
+
+<footer class="shell">
+  <p>Commands checked on 8 October 2026 against BAW 26.0.0 on Cloud Pak for Business Automation (TechZone).
+  Login, CSRF, listing, export and the status check ran as shown. The upload and status loop were checked with a
+  deliberately invalid file, which the server rejected with <code>failure</code>, so no app was changed.</p>
+  <p>Endpoint details and the reasons behind them: <a href="baw-rest-api-reference.html">BAW REST API usage reference</a>.</p>
+</footer>
+
+
+<script>
+// Copy buttons on every code block.
+document.querySelectorAll('pre').forEach(function (pre) {
+  var wrap = document.createElement('div'); wrap.className = 'codewrap';
+  pre.parentNode.insertBefore(wrap, pre); wrap.appendChild(pre);
+  var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+  btn.setAttribute('aria-label', 'Copy command');
+  btn.addEventListener('click', function () {
+    navigator.clipboard.writeText(pre.innerText).then(function () {
+      btn.textContent = 'Copied'; btn.setAttribute('data-done', '');
+      setTimeout(function () { btn.textContent = 'Copy'; btn.removeAttribute('data-done'); }, 1500);
+    });
+  });
+  wrap.appendChild(btn);
+});
+</script>
+<script>
+(function () {
+  var root = document.documentElement,
+      btn  = document.getElementById('theme-toggle'),
+      mq   = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function isDark() {
+    var set = root.getAttribute('data-theme');
+    return set ? set === 'dark' : mq.matches;
+  }
+  function sync() {
+    var dark = isDark();
+    btn.setAttribute('aria-pressed', String(dark));
+    btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  try {
+    var saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  sync();
+
+  btn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    sync();
+  });
+  // follow the system only while the reader has not chosen
+  mq.addEventListener('change', function () { if (!root.hasAttribute('data-theme')) sync(); });
+})();
+</script>
+</body>
+</html>

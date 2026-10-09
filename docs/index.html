@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BAW Dev Tools MCP documentation</title>
+<link rel="preconnect" href="https://1.www.s81c.com" crossorigin>
+<style>
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-Regular-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:600;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-SemiBold-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2) format("woff2")}
+:root{
+  color-scheme:light;
+  --white:#ffffff; --layer-01:#f4f4f4; --layer-02:#ffffff; --layer-accent:#e0e0e0;
+  --border-subtle:#e0e0e0; --border-strong:#8d8d8d;
+  --text-primary:#161616; --text-secondary:#525252; --text-helper:#6f6f6f; --text-on-color:#ffffff;
+  --link:#0f62fe; --blue-60:#0f62fe; --blue-70:#0043ce; --blue-10:#edf5ff;
+  --gray-100:#161616; --gray-90:#262626; --gray-80:#393939; --gray-10:#f4f4f4;
+  --red-60:#da1e28; --red-10:#fff1f1; --green-50:#24a148; --green-10:#defbe6;
+  --yellow-30:#f1c21b; --yellow-10:#fcf4d6; --purple-60:#8a3ffc; --purple-10:#f6f2ff;
+  --s03:8px; --s04:12px; --s05:16px; --s06:24px; --s07:32px; --s08:40px; --s09:48px; --s10:64px;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--white);color:var(--text-primary);font-family:var(--sans);
+  font-size:14px;line-height:1.43;letter-spacing:.16px;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+.shell{max-width:1120px;margin:0 auto;padding:0 var(--s05)}
+
+/* header */
+.masthead{background:var(--gray-100);color:var(--text-on-color);
+  padding-top:env(safe-area-inset-top,0px)}
+.masthead .shell{display:flex;align-items:center;gap:var(--s05);height:48px}
+.masthead .brand{font-weight:600;letter-spacing:.1px}
+.masthead .divider{width:1px;height:20px;background:var(--gray-80)}
+.masthead .ctx{color:#c6c6c6;font-size:13px}
+.masthead .spacer{flex:1}
+#theme-toggle{display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;padding:0;border:0;background:none;color:#f4f4f4;cursor:pointer}
+#theme-toggle:hover{background:#353535}
+#theme-toggle:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+#theme-toggle svg{display:block;flex:none}
+
+/* title block */
+.title{background:var(--layer-01);border-bottom:1px solid var(--border-subtle);
+  padding:var(--s09) 0 var(--s07)}
+h1{margin:0 0 var(--s04);font-size:clamp(28px,4.2vw,42px);line-height:1.18;font-weight:400;letter-spacing:0}
+.lede{margin:0;max-width:62ch;color:var(--text-secondary);font-size:16px;line-height:1.5}
+.tags{display:flex;flex-wrap:wrap;gap:var(--s03);margin-top:var(--s06)}
+.tag{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;
+  font-size:12px;font-weight:600;letter-spacing:.32px;white-space:nowrap}
+.tag-blue{background:var(--blue-10);color:var(--blue-70)}
+.tag-green{background:var(--green-10);color:#0e6027}
+.tag-red{background:var(--red-10);color:#a2191f}
+.tag-yellow{background:var(--yellow-10);color:#684e00}
+.tag-purple{background:var(--purple-10);color:#6929c4}
+.tag-gray{background:var(--layer-accent);color:var(--gray-90)}
+
+/* sections */
+main{padding-bottom:var(--s10)}
+section{padding-top:var(--s09);scroll-margin-top:var(--s06)}
+h2{margin:0 0 var(--s05);font-size:24px;line-height:1.33;font-weight:400;letter-spacing:0}
+h3{margin:var(--s07) 0 var(--s04);font-size:16px;line-height:1.5;font-weight:600;letter-spacing:0}
+h4{margin:var(--s06) 0 var(--s03);font-size:14px;font-weight:600}
+p{margin:0 0 var(--s05);max-width:76ch}
+ul,ol{margin:0 0 var(--s05);padding-left:var(--s06);max-width:76ch}
+li{margin-bottom:6px}
+a{color:var(--link)}
+code{font-family:var(--mono);font-size:.9em;background:var(--layer-01);padding:1px 5px;
+  border-radius:2px;word-break:break-word}
+pre{font-family:var(--mono);font-size:13px;line-height:1.5;background:var(--gray-100);
+  color:#f4f4f4;padding:var(--s05);border-radius:2px;overflow-x:auto;margin:0 0 var(--s05)}
+pre code{background:none;color:inherit;padding:0}
+.rule{height:1px;background:var(--border-subtle);border:0;margin:var(--s08) 0 0}
+
+/* notifications */
+.note{display:flex;gap:var(--s04);padding:var(--s05);margin:0 0 var(--s05);
+  border-left:3px solid var(--blue-60);background:var(--blue-10)}
+.note.warn{border-left-color:var(--yellow-30);background:var(--yellow-10)}
+.note.err{border-left-color:var(--red-60);background:var(--red-10)}
+.note.ok{border-left-color:var(--green-50);background:var(--green-10)}
+.note .body{max-width:74ch}
+.note .body :last-child{margin-bottom:0}
+.note strong{display:block;margin-bottom:4px}
+
+/* table */
+.tablewrap{overflow-x:auto;margin:0 0 var(--s05);border:1px solid var(--border-subtle)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+thead th{background:var(--layer-01);text-align:left;font-weight:600;padding:10px var(--s05);
+  border-bottom:1px solid var(--border-subtle);white-space:nowrap}
+tbody td{padding:10px var(--s05);border-bottom:1px solid var(--border-subtle);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#f9f9f9}
+td .mono,th .mono{font-family:var(--mono);font-size:12.5px}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;
+  background:var(--border-subtle);border:1px solid var(--border-subtle);margin-bottom:var(--s05)}
+.card{background:var(--white);padding:var(--s05)}
+.card h3{margin:0 0 var(--s03);font-size:14px}
+.card p{margin:0;font-size:13px;color:var(--text-secondary)}
+.kv{display:flex;justify-content:space-between;gap:var(--s05);padding:7px 0;
+  border-bottom:1px solid var(--border-subtle);font-size:13px}
+.kv:last-child{border-bottom:0}
+.kv dt{color:var(--text-secondary)}
+.kv dd{margin:0;font-family:var(--mono);font-size:12.5px;text-align:right}
+dl{margin:0}
+
+/* option blocks */
+.opt{border:1px solid var(--border-subtle);border-left:3px solid var(--border-strong);
+  padding:var(--s05);margin-bottom:var(--s04);background:var(--white)}
+.opt.rec{border-left-color:var(--green-50);background:#fbfffc}
+.opt.dead{border-left-color:var(--red-60)}
+.opt.future{border-left-color:var(--purple-60)}
+.opt .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s03);margin-bottom:var(--s03)}
+.opt .head h3{margin:0;font-size:15px}
+.opt ul{margin-bottom:0}
+.verdict{font-size:13px;color:var(--text-secondary);margin-top:var(--s03)}
+
+/* a11y: visible keyboard focus, Carbon style */
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.tablewrap:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.skip{position:absolute;left:-9999px;top:0;z-index:10;background:var(--link);color:#fff;
+  padding:var(--s04) var(--s05);font-weight:600;text-decoration:none}
+.skip:focus{left:0}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+
+/* Dark theme. System preference by default; an explicit choice on the root wins. */
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root:not([data-theme="light"]) .tag-gray{background:#393939;color:#f4f4f4}
+:root:not([data-theme="light"]) .tag-green{color:#42be65}
+:root:not([data-theme="light"]) .tag-red{color:#ff8389}
+:root:not([data-theme="light"]) .tag-yellow{color:#f1c21b}
+:root:not([data-theme="light"]) .tag-purple{color:#be95ff}
+:root:not([data-theme="light"]) .opt.rec{background:#0a1a0d}
+:root:not([data-theme="light"]) tbody tr:hover{background:#1f1f1f}
+:root:not([data-theme="light"]) pre{background:#000}
+}
+:root[data-theme="dark"]{color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root[data-theme="dark"] .tag-gray{background:#393939;color:#f4f4f4}
+:root[data-theme="dark"] .tag-green{color:#42be65}
+:root[data-theme="dark"] .tag-red{color:#ff8389}
+:root[data-theme="dark"] .tag-yellow{color:#f1c21b}
+:root[data-theme="dark"] .tag-purple{color:#be95ff}
+:root[data-theme="dark"] .opt.rec{background:#0a1a0d}
+:root[data-theme="dark"] tbody tr:hover{background:#1f1f1f}
+:root[data-theme="dark"] pre{background:#000}
+
+footer{border-top:1px solid var(--border-subtle);margin-top:var(--s09);padding:var(--s06) 0 var(--s09);
+  color:var(--text-helper);font-size:12px;padding-bottom:calc(var(--s09) + env(safe-area-inset-bottom,0px))}
+footer p{max-width:76ch;margin-bottom:6px}
+
+/* guide extras: step numbers and copy buttons */
+h3 .num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:var(--s04);
+  background:var(--blue-60);color:#fff;font-size:14px;font-weight:600;font-family:var(--mono)}
+h3[id]{scroll-margin-top:var(--s06)}
+.codewrap{position:relative}
+.codewrap pre{padding-right:84px}
+.copy{position:absolute;top:0;right:0;height:32px;min-width:64px;padding:0 var(--s04);border:0;
+  background:#393939;color:#f4f4f4;font:400 12px/1 var(--sans);letter-spacing:.32px;cursor:pointer}
+.copy:hover{background:#4c4c4c}
+.copy:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+.copy[data-done]{background:var(--green-50);color:#fff}
+
+/* docs navigation */
+.crumb{margin:0 0 var(--s04);font-size:13px;max-width:none}
+.crumb a{text-decoration:none}
+.crumb a:hover{text-decoration:underline}
+.toc{padding-top:var(--s07)}
+.toc ol{columns:3 200px;column-gap:var(--s06);margin:0;padding:var(--s05) var(--s05) var(--s05) var(--s08);
+  max-width:none;background:var(--layer-01);border-left:3px solid var(--blue-60)}
+.toc li{margin-bottom:6px;break-inside:avoid}
+
+/* flow strip */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s03);margin:0 0 var(--s05);padding:0;list-style:none;max-width:none}
+.flow li{margin:0;padding:6px var(--s04);border:1px solid var(--border-strong);background:var(--white);font-size:13px}
+.flow li.hl{background:var(--blue-60);border-color:var(--blue-60);color:#fff}
+.flow li.opt-step{border-style:dashed}
+.flow li.arrow{padding:0;border:0;background:none;color:var(--text-helper)}
+
+/* column fill illustration */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:var(--s04);max-width:220px}
+.cols span{display:flex;align-items:center;justify-content:center;height:24px;font:400 12px/1 var(--mono);
+  background:var(--blue-10);color:var(--blue-70)}
+.cols span.wide{grid-column:1/-1;background:var(--layer-accent);color:var(--text-primary)}
+.cols span.empty{background:none;border:1px dashed var(--border-subtle)}
+
+/* document tiles: Carbon clickable tiles */
+.docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--border-subtle);
+  border:1px solid var(--border-subtle);margin:0 0 var(--s05)}
+.doc{position:relative;display:flex;flex-direction:column;gap:var(--s03);min-height:220px;
+  padding:var(--s05) var(--s05) var(--s08);background:var(--white);color:var(--text-primary);text-decoration:none;
+  transition:background-color 110ms cubic-bezier(.2,0,.38,.9)}
+.doc:hover{background:var(--layer-01)}
+.doc:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.doc .kicker{font-size:12px;letter-spacing:.32px;color:var(--text-secondary)}
+.doc h3{margin:0;font-size:20px;line-height:1.4;font-weight:400}
+.doc p{margin:0;font-size:14px;color:var(--text-secondary)}
+.doc .tags{margin-top:auto;padding-top:var(--s04);padding-right:var(--s07)}
+.doc .go{position:absolute;right:var(--s05);bottom:var(--s05);color:var(--link)}
+.masthead .brand{color:inherit;text-decoration:none}
+.masthead .ctx{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.masthead .brand:focus-visible{outline:2px solid #fff;outline-offset:2px}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="masthead">
+  <div class="shell">
+    <a class="brand" href="index.html">IBM</a>
+    <span class="divider" aria-hidden="true"></span>
+    <span class="ctx">BAW Dev Tools MCP · Docs</span>
+    <span class="spacer" aria-hidden="true"></span>
+    <button type="button" id="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M13.5 2c-1.7 0-3.4.4-4.9 1.2 3.6 1.9 6.1 5.6 6.1 9.9s-2.5 8-6.1 9.9c1.5.8 3.2 1.2 4.9 1.2 6.1 0 11.1-5 11.1-11.1S19.6 2 13.5 2z" transform="translate(4 3)"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div class="title">
+  <div class="shell">
+    <h1>BAW Dev Tools MCP documentation</h1>
+    <p class="lede">Build and modernize IBM Business Automation Workflow process apps with an AI agent. IBM Bob
+      writes app specs and React screens; the MCP server packages, installs and tests them on BAW. Start here.</p>
+    <div class="tags">
+      <span class="tag tag-blue">CP4BA · BAW 26.0.0</span>
+      <span class="tag tag-gray">13 MCP tools</span>
+      <span class="tag tag-gray">2 Bob modes · 5 skills</span>
+      <span class="tag tag-green">ZZ apps only · no delete</span>
+      <span class="tag tag-purple">9 October 2026</span>
+    </div>
+  </div>
+</div>
+
+<main class="shell" id="main">
+
+<section id="docs">
+  <h2>Documents</h2>
+  <div class="docs">
+    <a class="doc" href="getting-started.html">
+      <span class="kicker">Start here · New teammates</span>
+      <h3>Getting started</h3>
+      <p>From a fresh laptop to your first app on BAW: tools, server settings, connecting Bob and the first build, with a check after every step.</p>
+      <span class="tags"><span class="tag tag-blue">10 steps</span><span class="tag tag-gray">About 30 minutes</span></span>
+      <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
+    </a>
+    <a class="doc" href="app-spec-reference.html">
+      <span class="kicker">Reference · App builders</span>
+      <h3>App spec reference</h3>
+      <p>Every key of the JSON that describes an app: steps or tabs, sections and columns, field types, review, confirmation, theme and banner, and the validation errors.</p>
+      <span class="tags"><span class="tag tag-blue">JSON</span><span class="tag tag-gray">8 field types</span></span>
+      <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
+    </a>
+    <a class="doc" href="baw-import-export-terminal-guide.html">
+      <span class="kicker">Guide · Anyone with a terminal</span>
+      <h3>Export and import from the terminal</h3>
+      <p>Download a snapshot as a <code>.twx</code> and install one using only <code>curl</code> and <code>jq</code>, with no agent, MCP server or project scripts.</p>
+      <span class="tags"><span class="tag tag-blue">12 steps</span><span class="tag tag-gray">curl + jq</span></span>
+      <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
+    </a>
+    <a class="doc" href="baw-rest-api-reference.html">
+      <span class="kicker">Reference · Developers and maintainers</span>
+      <h3>BAW REST API usage</h3>
+      <p>The six BAW REST operations the server calls, out of 200 documented, how login and CSRF work, and how each choice was found and checked.</p>
+      <span class="tags"><span class="tag tag-blue">Ops · BPM · Case APIs</span><span class="tag tag-gray">Swagger 2.0</span></span>
+      <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
+    </a>
+    <a class="doc" href="showoff/baw-mcp-demo-script/index.html">
+      <span class="kicker">Script · Presenters</span>
+      <h3>Demo script</h3>
+      <p>A timed run of show for presenting the tools live: what to say, what to type into Bob and what the audience sees.</p>
+      <span class="tags"><span class="tag tag-blue">Live demo</span><span class="tag tag-gray">Timer · light and dark</span></span>
+      <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
+    </a>
+    <a class="doc" href="#files">
+      <span class="kicker">Reference · Developers</span>
+      <h3>Vendor API specs</h3>
+      <p>The Swagger 2.0 specs of the BAW Operations, BPM and Case REST APIs, exactly as the server serves them, for looking up any operation.</p>
+      <span class="tags"><span class="tag tag-blue">3 JSON files</span><span class="tag tag-gray">200 operations</span></span>
+      <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
+    </a>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="which">
+  <h2>Which page do I need?</h2>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Which page do I need, scrollable">
+    <table>
+      <thead><tr><th scope="col">I want to&hellip;</th><th scope="col">Go to</th></tr></thead>
+      <tbody>
+        <tr><td>Set up the project and build my first app</td><td><a href="getting-started.html">Getting started</a></td></tr>
+        <tr><td>Write or fix an app spec, or understand one Bob wrote</td><td><a href="app-spec-reference.html">App spec reference</a></td></tr>
+        <tr><td>Make an app look like a screenshot or a brand</td><td><a href="app-spec-reference.html#theme">App spec reference: theme</a> and <a href="app-spec-reference.html#banner">banner</a></td></tr>
+        <tr><td>Know why a spec is rejected</td><td><a href="app-spec-reference.html#errors">App spec reference: validation errors</a></td></tr>
+        <tr><td>Back up an app, or move one between servers, without Bob</td><td><a href="baw-import-export-terminal-guide.html">Terminal guide</a></td></tr>
+        <tr><td>Know which BAW endpoints the tools call, and why</td><td><a href="baw-rest-api-reference.html">REST API usage</a></td></tr>
+        <tr><td>Look up any BAW REST operation</td><td>The vendor specs in <a href="#files">reference files</a></td></tr>
+        <tr><td>Fix a connection, install or test problem</td><td><a href="getting-started.html#troubleshooting">Getting started: troubleshooting</a></td></tr>
+        <tr><td>Show the tools to an audience</td><td><a href="showoff/baw-mcp-demo-script/index.html">Demo script</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="how">
+  <h2>How it fits together</h2>
+  <ol class="flow" aria-label="How a request flows">
+    <li>You</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li>IBM Bob: designs and writes</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li class="hl">baw-dev-tools MCP server</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li>BAW Operations REST API</li>
+  </ol>
+  <p>Bob writes three kinds of files: <strong>app specs</strong> (<code>work/*.app.json</code>), <strong>coach specs</strong>
+  (<code>work/*.coaches.json</code>) and <strong>React screens</strong> (<code>react-coach/src/screens/*.jsx</code>).
+  The server does the platform work: it builds <code>.twx</code> files, installs them, reads coaches and tests every
+  screen in a headless browser.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Read the server</h3>
+      <p><code>list_apps</code>, <code>list_snapshots</code>, <code>list_services</code>, <code>export_app</code></p>
+    </div>
+    <div class="card">
+      <h3>Read screenshots</h3>
+      <p><code>view_image</code>, <code>image_colors</code>, <code>crop_image</code></p>
+    </div>
+    <div class="card">
+      <h3>Build</h3>
+      <p><code>inspect_coaches</code>, <code>create_app</code>, <code>build_screens</code>, <code>modernize_app</code></p>
+    </div>
+    <div class="card">
+      <h3>Install and test</h3>
+      <p><code>install_app</code>, <code>test_service</code></p>
+    </div>
+  </div>
+
+  <h3>Bob modes and skills</h3>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Bob modes and skills, scrollable">
+    <table>
+      <thead><tr><th scope="col">Mode</th><th scope="col">Skill</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="2">🏗️ BAW App Builder</td><td class="mono">baw-app-builder</td><td>A written requirement &rarr; app spec &rarr; installed, tested app</td></tr>
+        <tr><td class="mono">screenshot-to-app</td><td>A screenshot of a form &rarr; an app with the same layout, colours and header</td></tr>
+        <tr><td rowspan="3">✨ BAW Coach Modernizer</td><td class="mono">coach-inventory</td><td>Reads an app's coaches into an editable coach spec</td></tr>
+        <tr><td class="mono">react-coach-screen</td><td>Writes a React + Carbon screen for one coach</td></tr>
+        <tr><td class="mono">coach-modernize</td><td>Writes a screen per coach, adds the React versions as a new snapshot, installs and tests them</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Guard rails</h3>
+  <ul>
+    <li>Only apps whose name and acronym start with "ZZ" can be installed.</li>
+    <li>A snapshot name can be used once per app; BAW would otherwise keep the old content silently.</li>
+    <li>There is no delete tool.</li>
+    <li>Credentials stay in the server process and are never returned to the agent.</li>
+  </ul>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="files">
+  <h2>Reference files</h2>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Reference files, scrollable">
+    <table>
+      <thead><tr><th scope="col">File</th><th scope="col">What it is</th></tr></thead>
+      <tbody>
+        <tr><td class="mono"><a href="api-specs/baw-ops-rest-swagger-2.0.json">api-specs/baw-ops-rest-swagger-2.0.json</a></td><td>BAW Operations REST API, as served by the server (<code>/bas/ops</code>, 156 operations)</td></tr>
+        <tr><td class="mono"><a href="api-specs/baw-bpm-rest-swagger-2.0.json">api-specs/baw-bpm-rest-swagger-2.0.json</a></td><td>BAW BPM REST API (<code>/bas/bpm</code>, 11 operations)</td></tr>
+        <tr><td class="mono"><a href="api-specs/baw-case-rest-swagger-2.0.json">api-specs/baw-case-rest-swagger-2.0.json</a></td><td>BAW Case REST API (<code>/bas/CaseManager/CASEREST/v2</code>, 33 operations)</td></tr>
+        <tr><td class="mono"><a href="../app-specs/">app-specs/</a></td><td>Three example app specs</td></tr>
+        <tr><td class="mono"><a href="../README.md">README.md</a></td><td>Project overview, setup and tool list</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Open the vendor specs in any Swagger 2.0 viewer, or live on your server at
+  <code>&lt;BAW_URL&gt;/bas/bpm/explorer</code>.</p>
+</section>
+
+</main>
+
+<footer class="shell">
+  <p>BAW Dev Tools MCP is not an official IBM project. Use it with test servers and test apps.</p>
+  <p>Facts on this page checked on 9 October 2026 against <code>baw_mcp.py</code>, <code>.bob/</code> and the documents it links.</p>
+</footer>
+
+
+<script>
+// Copy buttons on every code block.
+document.querySelectorAll('pre').forEach(function (pre) {
+  var wrap = document.createElement('div'); wrap.className = 'codewrap';
+  pre.parentNode.insertBefore(wrap, pre); wrap.appendChild(pre);
+  var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+  btn.setAttribute('aria-label', 'Copy command');
+  btn.addEventListener('click', function () {
+    navigator.clipboard.writeText(pre.innerText).then(function () {
+      btn.textContent = 'Copied'; btn.setAttribute('data-done', '');
+      setTimeout(function () { btn.textContent = 'Copy'; btn.removeAttribute('data-done'); }, 1500);
+    });
+  });
+  wrap.appendChild(btn);
+});
+</script>
+<script>
+(function () {
+  var root = document.documentElement,
+      btn  = document.getElementById('theme-toggle'),
+      mq   = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function isDark() {
+    var set = root.getAttribute('data-theme');
+    return set ? set === 'dark' : mq.matches;
+  }
+  function sync() {
+    var dark = isDark();
+    btn.setAttribute('aria-pressed', String(dark));
+    btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  try {
+    var saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  sync();
+
+  btn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    sync();
+  });
+  // follow the system only while the reader has not chosen
+  mq.addEventListener('change', function () { if (!root.hasAttribute('data-theme')) sync(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>App spec reference · BAW Dev Tools MCP</title>
+<link rel="preconnect" href="https://1.www.s81c.com" crossorigin>
+<style>
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-Regular-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:600;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-SemiBold-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2) format("woff2")}
+:root{
+  color-scheme:light;
+  --white:#ffffff; --layer-01:#f4f4f4; --layer-02:#ffffff; --layer-accent:#e0e0e0;
+  --border-subtle:#e0e0e0; --border-strong:#8d8d8d;
+  --text-primary:#161616; --text-secondary:#525252; --text-helper:#6f6f6f; --text-on-color:#ffffff;
+  --link:#0f62fe; --blue-60:#0f62fe; --blue-70:#0043ce; --blue-10:#edf5ff;
+  --gray-100:#161616; --gray-90:#262626; --gray-80:#393939; --gray-10:#f4f4f4;
+  --red-60:#da1e28; --red-10:#fff1f1; --green-50:#24a148; --green-10:#defbe6;
+  --yellow-30:#f1c21b; --yellow-10:#fcf4d6; --purple-60:#8a3ffc; --purple-10:#f6f2ff;
+  --s03:8px; --s04:12px; --s05:16px; --s06:24px; --s07:32px; --s08:40px; --s09:48px; --s10:64px;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--white);color:var(--text-primary);font-family:var(--sans);
+  font-size:14px;line-height:1.43;letter-spacing:.16px;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+.shell{max-width:1120px;margin:0 auto;padding:0 var(--s05)}
+
+/* header */
+.masthead{background:var(--gray-100);color:var(--text-on-color);
+  padding-top:env(safe-area-inset-top,0px)}
+.masthead .shell{display:flex;align-items:center;gap:var(--s05);height:48px}
+.masthead .brand{font-weight:600;letter-spacing:.1px}
+.masthead .divider{width:1px;height:20px;background:var(--gray-80)}
+.masthead .ctx{color:#c6c6c6;font-size:13px}
+.masthead .spacer{flex:1}
+#theme-toggle{display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;padding:0;border:0;background:none;color:#f4f4f4;cursor:pointer}
+#theme-toggle:hover{background:#353535}
+#theme-toggle:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+#theme-toggle svg{display:block;flex:none}
+
+/* title block */
+.title{background:var(--layer-01);border-bottom:1px solid var(--border-subtle);
+  padding:var(--s09) 0 var(--s07)}
+h1{margin:0 0 var(--s04);font-size:clamp(28px,4.2vw,42px);line-height:1.18;font-weight:400;letter-spacing:0}
+.lede{margin:0;max-width:62ch;color:var(--text-secondary);font-size:16px;line-height:1.5}
+.tags{display:flex;flex-wrap:wrap;gap:var(--s03);margin-top:var(--s06)}
+.tag{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;
+  font-size:12px;font-weight:600;letter-spacing:.32px;white-space:nowrap}
+.tag-blue{background:var(--blue-10);color:var(--blue-70)}
+.tag-green{background:var(--green-10);color:#0e6027}
+.tag-red{background:var(--red-10);color:#a2191f}
+.tag-yellow{background:var(--yellow-10);color:#684e00}
+.tag-purple{background:var(--purple-10);color:#6929c4}
+.tag-gray{background:var(--layer-accent);color:var(--gray-90)}
+
+/* sections */
+main{padding-bottom:var(--s10)}
+section{padding-top:var(--s09);scroll-margin-top:var(--s06)}
+h2{margin:0 0 var(--s05);font-size:24px;line-height:1.33;font-weight:400;letter-spacing:0}
+h3{margin:var(--s07) 0 var(--s04);font-size:16px;line-height:1.5;font-weight:600;letter-spacing:0}
+h4{margin:var(--s06) 0 var(--s03);font-size:14px;font-weight:600}
+p{margin:0 0 var(--s05);max-width:76ch}
+ul,ol{margin:0 0 var(--s05);padding-left:var(--s06);max-width:76ch}
+li{margin-bottom:6px}
+a{color:var(--link)}
+code{font-family:var(--mono);font-size:.9em;background:var(--layer-01);padding:1px 5px;
+  border-radius:2px;word-break:break-word}
+pre{font-family:var(--mono);font-size:13px;line-height:1.5;background:var(--gray-100);
+  color:#f4f4f4;padding:var(--s05);border-radius:2px;overflow-x:auto;margin:0 0 var(--s05)}
+pre code{background:none;color:inherit;padding:0}
+.rule{height:1px;background:var(--border-subtle);border:0;margin:var(--s08) 0 0}
+
+/* notifications */
+.note{display:flex;gap:var(--s04);padding:var(--s05);margin:0 0 var(--s05);
+  border-left:3px solid var(--blue-60);background:var(--blue-10)}
+.note.warn{border-left-color:var(--yellow-30);background:var(--yellow-10)}
+.note.err{border-left-color:var(--red-60);background:var(--red-10)}
+.note.ok{border-left-color:var(--green-50);background:var(--green-10)}
+.note .body{max-width:74ch}
+.note .body :last-child{margin-bottom:0}
+.note strong{display:block;margin-bottom:4px}
+
+/* table */
+.tablewrap{overflow-x:auto;margin:0 0 var(--s05);border:1px solid var(--border-subtle)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+thead th{background:var(--layer-01);text-align:left;font-weight:600;padding:10px var(--s05);
+  border-bottom:1px solid var(--border-subtle);white-space:nowrap}
+tbody td{padding:10px var(--s05);border-bottom:1px solid var(--border-subtle);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#f9f9f9}
+td .mono,th .mono{font-family:var(--mono);font-size:12.5px}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;
+  background:var(--border-subtle);border:1px solid var(--border-subtle);margin-bottom:var(--s05)}
+.card{background:var(--white);padding:var(--s05)}
+.card h3{margin:0 0 var(--s03);font-size:14px}
+.card p{margin:0;font-size:13px;color:var(--text-secondary)}
+.kv{display:flex;justify-content:space-between;gap:var(--s05);padding:7px 0;
+  border-bottom:1px solid var(--border-subtle);font-size:13px}
+.kv:last-child{border-bottom:0}
+.kv dt{color:var(--text-secondary)}
+.kv dd{margin:0;font-family:var(--mono);font-size:12.5px;text-align:right}
+dl{margin:0}
+
+/* option blocks */
+.opt{border:1px solid var(--border-subtle);border-left:3px solid var(--border-strong);
+  padding:var(--s05);margin-bottom:var(--s04);background:var(--white)}
+.opt.rec{border-left-color:var(--green-50);background:#fbfffc}
+.opt.dead{border-left-color:var(--red-60)}
+.opt.future{border-left-color:var(--purple-60)}
+.opt .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s03);margin-bottom:var(--s03)}
+.opt .head h3{margin:0;font-size:15px}
+.opt ul{margin-bottom:0}
+.verdict{font-size:13px;color:var(--text-secondary);margin-top:var(--s03)}
+
+/* a11y: visible keyboard focus, Carbon style */
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.tablewrap:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.skip{position:absolute;left:-9999px;top:0;z-index:10;background:var(--link);color:#fff;
+  padding:var(--s04) var(--s05);font-weight:600;text-decoration:none}
+.skip:focus{left:0}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+
+/* Dark theme. System preference by default; an explicit choice on the root wins. */
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root:not([data-theme="light"]) .tag-gray{background:#393939;color:#f4f4f4}
+:root:not([data-theme="light"]) .tag-green{color:#42be65}
+:root:not([data-theme="light"]) .tag-red{color:#ff8389}
+:root:not([data-theme="light"]) .tag-yellow{color:#f1c21b}
+:root:not([data-theme="light"]) .tag-purple{color:#be95ff}
+:root:not([data-theme="light"]) .opt.rec{background:#0a1a0d}
+:root:not([data-theme="light"]) tbody tr:hover{background:#1f1f1f}
+:root:not([data-theme="light"]) pre{background:#000}
+}
+:root[data-theme="dark"]{color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root[data-theme="dark"] .tag-gray{background:#393939;color:#f4f4f4}
+:root[data-theme="dark"] .tag-green{color:#42be65}
+:root[data-theme="dark"] .tag-red{color:#ff8389}
+:root[data-theme="dark"] .tag-yellow{color:#f1c21b}
+:root[data-theme="dark"] .tag-purple{color:#be95ff}
+:root[data-theme="dark"] .opt.rec{background:#0a1a0d}
+:root[data-theme="dark"] tbody tr:hover{background:#1f1f1f}
+:root[data-theme="dark"] pre{background:#000}
+
+footer{border-top:1px solid var(--border-subtle);margin-top:var(--s09);padding:var(--s06) 0 var(--s09);
+  color:var(--text-helper);font-size:12px;padding-bottom:calc(var(--s09) + env(safe-area-inset-bottom,0px))}
+footer p{max-width:76ch;margin-bottom:6px}
+
+/* guide extras: step numbers and copy buttons */
+h3 .num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:var(--s04);
+  background:var(--blue-60);color:#fff;font-size:14px;font-weight:600;font-family:var(--mono)}
+h3[id]{scroll-margin-top:var(--s06)}
+.codewrap{position:relative}
+.codewrap pre{padding-right:84px}
+.copy{position:absolute;top:0;right:0;height:32px;min-width:64px;padding:0 var(--s04);border:0;
+  background:#393939;color:#f4f4f4;font:400 12px/1 var(--sans);letter-spacing:.32px;cursor:pointer}
+.copy:hover{background:#4c4c4c}
+.copy:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+.copy[data-done]{background:var(--green-50);color:#fff}
+
+/* docs navigation */
+.crumb{margin:0 0 var(--s04);font-size:13px;max-width:none}
+.crumb a{text-decoration:none}
+.crumb a:hover{text-decoration:underline}
+.toc{padding-top:var(--s07)}
+.toc ol{columns:3 200px;column-gap:var(--s06);margin:0;padding:var(--s05) var(--s05) var(--s05) var(--s08);
+  max-width:none;background:var(--layer-01);border-left:3px solid var(--blue-60)}
+.toc li{margin-bottom:6px;break-inside:avoid}
+
+/* flow strip */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s03);margin:0 0 var(--s05);padding:0;list-style:none;max-width:none}
+.flow li{margin:0;padding:6px var(--s04);border:1px solid var(--border-strong);background:var(--white);font-size:13px}
+.flow li.hl{background:var(--blue-60);border-color:var(--blue-60);color:#fff}
+.flow li.opt-step{border-style:dashed}
+.flow li.arrow{padding:0;border:0;background:none;color:var(--text-helper)}
+
+/* column fill illustration */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:var(--s04);max-width:220px}
+.cols span{display:flex;align-items:center;justify-content:center;height:24px;font:400 12px/1 var(--mono);
+  background:var(--blue-10);color:var(--blue-70)}
+.cols span.wide{grid-column:1/-1;background:var(--layer-accent);color:var(--text-primary)}
+.cols span.empty{background:none;border:1px dashed var(--border-subtle)}
+
+/* document tiles: Carbon clickable tiles */
+.docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--border-subtle);
+  border:1px solid var(--border-subtle);margin:0 0 var(--s05)}
+.doc{position:relative;display:flex;flex-direction:column;gap:var(--s03);min-height:220px;
+  padding:var(--s05) var(--s05) var(--s08);background:var(--white);color:var(--text-primary);text-decoration:none;
+  transition:background-color 110ms cubic-bezier(.2,0,.38,.9)}
+.doc:hover{background:var(--layer-01)}
+.doc:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.doc .kicker{font-size:12px;letter-spacing:.32px;color:var(--text-secondary)}
+.doc h3{margin:0;font-size:20px;line-height:1.4;font-weight:400}
+.doc p{margin:0;font-size:14px;color:var(--text-secondary)}
+.doc .tags{margin-top:auto;padding-top:var(--s04);padding-right:var(--s07)}
+.doc .go{position:absolute;right:var(--s05);bottom:var(--s05);color:var(--link)}
+.masthead .brand{color:inherit;text-decoration:none}
+.masthead .ctx{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.masthead .brand:focus-visible{outline:2px solid #fff;outline-offset:2px}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="masthead">
+  <div class="shell">
+    <a class="brand" href="index.html">IBM</a>
+    <span class="divider" aria-hidden="true"></span>
+    <span class="ctx">BAW Dev Tools MCP · App Spec Reference</span>
+    <span class="spacer" aria-hidden="true"></span>
+    <button type="button" id="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M13.5 2c-1.7 0-3.4.4-4.9 1.2 3.6 1.9 6.1 5.6 6.1 9.9s-2.5 8-6.1 9.9c1.5.8 3.2 1.2 4.9 1.2 6.1 0 11.1-5 11.1-11.1S19.6 2 13.5 2z" transform="translate(4 3)"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div class="title">
+  <div class="shell">
+    <p class="crumb"><a href="index.html">BAW Dev Tools MCP docs</a></p>
+    <h1>App spec reference</h1>
+    <p class="lede">An app spec is one JSON file that describes a BAW process app: its name, the data it
+      collects, the screens, the review and confirmation, and how it looks. <code>create_app</code> (or
+      <code>generate_app.py</code>) turns it into an installable <code>.twx</code>. This page lists every key,
+      what it does and the rules the generator checks.</p>
+    <div class="tags">
+      <span class="tag tag-blue">JSON</span>
+      <span class="tag tag-gray">generate_app.py · coach_theme.py</span>
+      <span class="tag tag-green">Checked offline before any server call</span>
+      <span class="tag tag-purple">9 October 2026</span>
+    </div>
+  </div>
+</div>
+
+<main class="shell" id="main">
+
+<nav class="toc" aria-label="On this page">
+  <h2 class="vh">On this page</h2>
+  <ol>
+    <li><a href="#what">What a spec becomes</a></li>
+    <li><a href="#minimal">A minimal spec</a></li>
+    <li><a href="#top">Top-level keys</a></li>
+    <li><a href="#app">app, businessObject, service</a></li>
+    <li><a href="#layout">layout and form</a></li>
+    <li><a href="#steps">steps</a></li>
+    <li><a href="#sections">sections and columns</a></li>
+    <li><a href="#fields">fields</a></li>
+    <li><a href="#types">Field types</a></li>
+    <li><a href="#review">review and confirmation</a></li>
+    <li><a href="#theme">theme</a></li>
+    <li><a href="#banner">banner</a></li>
+    <li><a href="#errors">Validation errors</a></li>
+    <li><a href="#limits">What a spec cannot express</a></li>
+    <li><a href="#examples">Example specs</a></li>
+  </ol>
+</nav>
+
+<section id="what">
+  <h2>What a spec becomes</h2>
+  <p>One spec builds one process app with one client-side human service, exposed as a URL so users can launch
+  it. The service has one coach (screen) per step, then an optional review and an optional confirmation:</p>
+  <ol class="flow" aria-label="Service flow">
+    <li>Start</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li>Initialize</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li class="hl">Step 1 &hellip; Step N</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li class="opt-step">Review</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li class="opt-step">Assign reference</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li class="opt-step">Confirmation</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li>End</li>
+  </ol>
+  <ul>
+    <li><strong>Initialize</strong> creates the business object, sets every checkbox to <code>false</code> and
+    clears the reference number.</li>
+    <li><strong>Steps</strong> each get a Next button, and a Back button from step 2 on. With
+    <a href="#layout"><code>"layout": "tabs"</code></a> all steps become tabs of a single screen.</li>
+    <li><strong>Review</strong> (dashed: optional) shows every answer read-only, with Back and Submit.</li>
+    <li><strong>Confirmation</strong> (optional) shows a generated reference number and the fields you pick.</li>
+  </ul>
+  <p>Every screen is built from standard UI Toolkit views bound to one business object, so the app runs as soon
+  as it is installed, and <code>inspect_coaches</code> and <code>modernize_app</code> work on it like on any other app.</p>
+
+  <div class="note">
+    <div class="body">
+      <strong>Where specs live</strong>
+      <p>Write your spec as <code>work/&lt;ACRONYM&gt;.app.json</code>. The <code>work/</code> folder is not committed.
+      The examples in <code>app-specs/</code> are committed; copy one rather than editing it.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="minimal">
+  <h2>A minimal spec</h2>
+  <p>This is a complete, valid spec: one step, three fields, and the default review screen.</p>
+<pre><code>{
+  "app": { "name": "ZZ Leave Request", "acronym": "ZZLEAVE", "snapshot": "1.0.0" },
+  "businessObject": { "name": "LeaveRequest", "variable": "leave" },
+  "service": { "name": "Leave Request" },
+  "steps": [
+    {
+      "title": "Your leave",
+      "fields": [
+        { "name": "employeeName", "label": "Employee Name", "required": true },
+        { "name": "firstDay", "label": "First Day", "type": "Date" },
+        { "name": "days", "label": "Number of Days", "type": "Integer" }
+      ]
+    }
+  ]
+}</code></pre>
+  <p>Check a spec without touching the server. The generator validates the whole spec first and lists every
+  problem at once; it only contacts the server after the spec is valid.</p>
+<pre><code>python3 generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx</code></pre>
+  <div class="note warn">
+    <div class="body">
+      <strong>A valid spec goes on to build</strong>
+      <p>When the spec is valid, the command builds the <code>.twx</code>. The first build ever also downloads the
+      Hiring Sample (HSS) once into <code>work/base-HSS.twx</code> to package the app, so it needs your
+      <code>.env</code>. Building does not install anything; installing is a separate step.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="top">
+  <h2>Top-level keys</h2>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Top-level keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it is</th></tr></thead>
+      <tbody>
+        <tr><td class="mono"><a href="#app">app</a></td><td>Yes</td><td></td><td>Name, acronym and snapshot of the process app</td></tr>
+        <tr><td class="mono"><a href="#app">businessObject</a></td><td>Yes</td><td></td><td>The data type that holds every field, and the variable name for it</td></tr>
+        <tr><td class="mono"><a href="#app">service</a></td><td>Yes</td><td></td><td>The service users launch</td></tr>
+        <tr><td class="mono"><a href="#layout">layout</a></td><td>No</td><td class="mono">"steps"</td><td><code>"steps"</code> (a screen per step) or <code>"tabs"</code> (one screen, a tab per step)</td></tr>
+        <tr><td class="mono"><a href="#layout">form</a></td><td>No</td><td></td><td>Title, intro and buttons of the tabbed screen (<code>"tabs"</code> only)</td></tr>
+        <tr><td class="mono"><a href="#steps">steps</a></td><td>Yes</td><td></td><td>The steps in order, each with fields or sections; at least one</td></tr>
+        <tr><td class="mono"><a href="#review">review</a></td><td>No</td><td>on</td><td>An object to set the review screen, or <code>false</code> to leave it out</td></tr>
+        <tr><td class="mono"><a href="#review">confirmation</a></td><td>No</td><td>off</td><td>An object adds a confirmation screen with a reference number</td></tr>
+        <tr><td class="mono"><a href="#theme">theme</a></td><td>No</td><td>off</td><td>Colours, font, shapes, field icons, width and button placement</td></tr>
+        <tr><td class="mono"><a href="#banner">banner</a></td><td>No</td><td>off</td><td>A coloured header strip with a title, product name, text and logo</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="app">
+  <h2>app, businessObject, service</h2>
+<pre><code>"app": { "name": "ZZ Leave Request", "acronym": "ZZLEAVE", "snapshot": "1.0.0" },
+"businessObject": { "name": "LeaveRequest", "variable": "leave" },
+"service": { "name": "Leave Request", "description": "Ask for time off." }</code></pre>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="app, businessObject and service keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Rule</th><th scope="col">Example</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">app.name</td><td>Required. Must start with <code>ZZ</code> to be installed by the tools</td><td class="mono">ZZ Leave Request</td></tr>
+        <tr><td class="mono">app.acronym</td><td>Required. 2 to 8 upper-case letters or digits, starting with a letter. Must start with <code>ZZ</code> to be installed, and must not be used by another app on the server</td><td class="mono">ZZLEAVE</td></tr>
+        <tr><td class="mono">app.snapshot</td><td>Optional, default <code>1.0.0</code>. Must be new for every build of the same app</td><td class="mono">1.0.0</td></tr>
+        <tr><td class="mono">businessObject.name</td><td>Required. A JavaScript identifier: letters, digits and <code>_</code>, not starting with a digit</td><td class="mono">LeaveRequest</td></tr>
+        <tr><td class="mono">businessObject.variable</td><td>Required. An identifier; the service stores the answers in <code>tw.local.&lt;variable&gt;</code></td><td class="mono">leave</td></tr>
+        <tr><td class="mono">service.name</td><td>Required. What users see, and what you pass to <code>test_service</code></td><td class="mono">Leave Request</td></tr>
+        <tr><td class="mono">service.description</td><td>Optional. Defaults to the service name</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Naming rules that protect the server</h3>
+  <ul>
+    <li><strong>ZZ only.</strong> <code>install_app</code> refuses any app whose name does not start with "ZZ" or whose
+    acronym does not start with <code>ZZ</code>. The generator itself accepts other names, so the check happens at install.</li>
+    <li><strong>New acronym for a new app.</strong> Run <code>list_apps</code> (or <code>python3 baw_ops.py list</code>) first.
+    If the acronym belongs to another app, the install fails.</li>
+    <li><strong>New snapshot name for every change.</strong> BAW silently keeps the old content when a snapshot name
+    is reused, so <code>create_app</code> and <code>install_app</code> refuse a name that already exists. Bump it:
+    <code>1.0.0</code> &rarr; <code>1.0.1</code> or <code>1.1.0</code>.</li>
+    <li><strong>Same acronym, new snapshot = update.</strong> When the app already exists, <code>create_app</code>
+    builds the spec as a new snapshot of that app, so its run URL and history stay.</li>
+  </ul>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="layout">
+  <h2>layout and form</h2>
+  <div class="grid">
+    <div class="card">
+      <h3><code>"layout": "steps"</code> (default)</h3>
+      <p>One screen per step, titled "Step 2 of 3: &lt;title&gt;" when there is more than one step. Back and Next
+      move between them. The last step's button says Next when a review follows, otherwise Submit.</p>
+    </div>
+    <div class="card">
+      <h3><code>"layout": "tabs"</code></h3>
+      <p>One screen with a tab per step. Users move freely between tabs, then one button leaves the screen for the
+      review (or the end). Step <code>intro</code> and step button labels are not used; set them in <code>form</code>.</p>
+    </div>
+  </div>
+  <p><code>form</code> is read only with <code>"tabs"</code>:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="form keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">form.title</td><td><code>service.name</code></td><td>Title of the tabbed screen</td></tr>
+        <tr><td class="mono">form.intro</td><td>none</td><td>Text under the title</td></tr>
+        <tr><td class="mono">form.nextLabel</td><td>Next, or Submit when <code>"review": false</code></td><td>Text of the button that leaves the screen</td></tr>
+        <tr><td class="mono">form.cancelLabel</td><td>none</td><td>Adds a button with this text that ends the service</td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>"layout": "tabs",
+"form": { "title": "New Quote", "nextLabel": "Submit", "cancelLabel": "Cancel" }</code></pre>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="steps">
+  <h2>steps</h2>
+  <p>A list, in order, with at least one step. Each step lists its <code>fields</code> directly (shown in one panel
+  titled like the step) or its <code>sections</code> (several titled panels).</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="step keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Required</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">title</td><td>Yes</td><td>Screen title (or tab name with <code>"tabs"</code>)</td></tr>
+        <tr><td class="mono">intro</td><td>No</td><td>Text under the title. <code>"steps"</code> layout only</td></tr>
+        <tr><td class="mono">fields</td><td>One of the two</td><td>The step's <a href="#fields">fields</a>, in one panel</td></tr>
+        <tr><td class="mono">sections</td><td>One of the two</td><td>Titled panels, each with its own fields and <a href="#sections">columns</a>. When both are given, <code>sections</code> wins</td></tr>
+        <tr><td class="mono">columns</td><td>No</td><td>With <code>fields</code>: 1 to 6 columns (default 1)</td></tr>
+        <tr><td class="mono">widths</td><td>No</td><td>With <code>fields</code>: relative column widths, one number per column</td></tr>
+        <tr><td class="mono">nextLabel</td><td>No</td><td>Text of the forward button (default Next, or Submit on the last step without a review)</td></tr>
+        <tr><td class="mono">backLabel</td><td>No</td><td>Text of the Back button (steps 2 and later)</td></tr>
+        <tr><td class="mono">cancelLabel</td><td>No</td><td>Adds a button with this text that ends the service</td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>"steps": [
+  { "title": "Requester", "intro": "Who needs the equipment?", "fields": [ ... ] },
+  { "title": "Item", "nextLabel": "Continue", "cancelLabel": "Cancel", "fields": [ ... ] }
+]</code></pre>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="sections">
+  <h2>sections and columns</h2>
+  <p>A section is a titled panel. Use sections when a step has more than about six fields.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="section keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Required</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">title</td><td>Yes</td><td>Panel title</td></tr>
+        <tr><td class="mono">intro</td><td>No</td><td>Text at the top of the panel</td></tr>
+        <tr><td class="mono">columns</td><td>No</td><td>1 to 6, default 1</td></tr>
+        <tr><td class="mono">widths</td><td>No</td><td>One positive number per column, relative to each other: <code>[1, 1.6, 1]</code> makes the middle column 1.6 times as wide</td></tr>
+        <tr><td class="mono">fields</td><td>Yes</td><td>At least one field</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>How fields fill the columns</h3>
+  <div class="grid">
+    <div class="card">
+      <h3>Row by row (default)</h3>
+      <p>Fields fill the columns left to right, then the next row. With 2 columns, fields 1 and 2 share the first row.</p>
+      <div class="cols" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span class="wide">wide</span><span>5</span><span>6</span></div>
+    </div>
+    <div class="card">
+      <h3>Placed by column</h3>
+      <p>Give <em>every</em> field in the section a <code>"column"</code> (1, 2, &hellip;). Each column lists its fields
+      top to bottom, in spec order, so columns can have different lengths.</p>
+      <div class="cols" aria-hidden="true"><span>A1</span><span>B1</span><span>A2</span><span>B2</span><span>A3</span><span class="empty"></span></div>
+    </div>
+  </div>
+  <ul>
+    <li><code>"wide": true</code> puts a field on its own full-width row, between the column rows. Wide fields do not need a <code>column</code>.</li>
+    <li>On screens narrower than 900px the columns stack.</li>
+    <li>The content is 960px wide. With a <a href="#theme">theme</a>, it grows to 1400px when any section has more than 3 columns, and <code>theme.width</code> sets it exactly.</li>
+  </ul>
+<pre><code>{ "title": "Company", "columns": 2, "fields": [
+  { "name": "legalName", "label": "Legal Name", "required": true },
+  { "name": "taxId", "label": "Tax ID", "required": true },
+  { "name": "supplierType", "label": "Supplier Type", "type": "Select", "options": ["Manufacturer", "Distributor"] },
+  { "name": "yearEstablished", "label": "Year Established", "type": "Integer" },
+  { "name": "businessSize", "label": "Business Size", "type": "Radio", "options": ["Small", "Medium", "Large"], "wide": true }
+]}</code></pre>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="fields">
+  <h2>fields</h2>
+  <p>Each field becomes a property of the business object and an input on the screen.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="field keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Required</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">name</td><td>Yes</td><td>An identifier, unique across <em>all</em> steps. <code>referenceNumber</code> is reserved when there is a confirmation</td></tr>
+        <tr><td class="mono">label</td><td>Yes</td><td>The text shown next to the input</td></tr>
+        <tr><td class="mono">type</td><td>No</td><td>One of the <a href="#types">field types</a>; default <code>String</code></td></tr>
+        <tr><td class="mono">options</td><td>Select and Radio</td><td>The choices: a list of strings, or of <code>{"value", "label"}</code> when the stored value differs from the text shown</td></tr>
+        <tr><td class="mono">required</td><td>No</td><td><code>true</code> shows the required marker. It is a visual marker only; the generated service has no validation, so it does not stop Next</td></tr>
+        <tr><td class="mono">help</td><td>No</td><td>Adds a help icon with this text</td></tr>
+        <tr><td class="mono">wide</td><td>No</td><td><code>true</code>: full width in a multi-column section</td></tr>
+        <tr><td class="mono">column</td><td>No</td><td>1, 2, &hellip;: the column it sits in. All or none of a section's non-wide fields</td></tr>
+        <tr><td class="mono">icon</td><td>No</td><td>Icon in the box before the input, with <a href="#theme"><code>theme.fieldIcons</code></a>. See the <a href="#icons">icon list</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>{ "name": "priority", "label": "Priority", "type": "Radio", "options": ["Low", "Normal", "High"] }
+{ "name": "costCentre", "label": "Cost Centre", "type": "Select",
+  "options": [ { "value": "CC100", "label": "100 - Finance" }, { "value": "CC200", "label": "200 - IT" } ] }
+{ "name": "email", "label": "Email", "required": true, "help": "We send the decision here.", "icon": "mail" }</code></pre>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="types">
+  <h2>Field types</h2>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Field types, scrollable">
+    <table>
+      <thead><tr><th scope="col">type</th><th scope="col">Stored as</th><th scope="col">UI Toolkit view</th><th scope="col">Use it for</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">String</td><td class="mono">String</td><td>Text</td><td>Short text: names, codes, one address part per field</td></tr>
+        <tr><td class="mono">Text Area</td><td class="mono">String</td><td>Text Area</td><td>Long free text: notes, reasons</td></tr>
+        <tr><td class="mono">Date</td><td class="mono">Date</td><td>Date Time Picker</td><td>Dates</td></tr>
+        <tr><td class="mono">Boolean</td><td class="mono">Boolean</td><td>Checkbox</td><td>Yes/no questions and confirmations. Starts unticked</td></tr>
+        <tr><td class="mono">Integer</td><td class="mono">Integer</td><td>Integer</td><td>Counts and quantities</td></tr>
+        <tr><td class="mono">Decimal</td><td class="mono">Decimal</td><td>Decimal</td><td>Money and percentages</td></tr>
+        <tr><td class="mono">Select</td><td class="mono">String</td><td>Single Select</td><td>A choice from a list (a dropdown); needs <code>options</code></td></tr>
+        <tr><td class="mono">Radio</td><td class="mono">String</td><td>Radio Button Group</td><td>A choice from up to about four options, all visible; needs <code>options</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>On the review and confirmation screens, text fields show as plain text and the other types as read-only inputs.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="review">
+  <h2>review and confirmation</h2>
+  <h3>review</h3>
+  <p>On by default, titled "Review and Submit". It shows a read-only panel per step, a Back button to the last step
+  and a Submit button.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="review keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Value</th><th scope="col">Result</th></tr></thead>
+      <tbody>
+        <tr><td>left out, or <code>true</code></td><td>Review screen with the default texts</td></tr>
+        <tr><td class="mono">{ "title", "intro", "submitLabel" }</td><td>Review screen with your title, intro and Submit text</td></tr>
+        <tr><td class="mono">false</td><td>No review. The last step (or the tabbed screen) submits directly</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>confirmation</h3>
+  <p>Off unless present. After Submit, the service gives the request a reference number and shows it with the
+  fields you list.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="confirmation keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">title</td><td>Submitted</td><td>Screen title</td></tr>
+        <tr><td class="mono">message</td><td>none</td><td>Text under the title</td></tr>
+        <tr><td class="mono">referencePrefix</td><td class="mono">REF-</td><td>The reference number is this prefix plus the last 8 digits of the submit time in milliseconds, e.g. <code>EQ-52814630</code>. It is not checked for uniqueness</td></tr>
+        <tr><td class="mono">showFields</td><td>none</td><td>Field names to show under the reference number. Each must be a field of the spec</td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>"review": { "title": "Review your request", "submitLabel": "Send" },
+"confirmation": {
+  "title": "Request Submitted",
+  "message": "Your request was sent to your manager.",
+  "referencePrefix": "EQ-",
+  "showFields": ["employeeName", "itemType"]
+}</code></pre>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="theme">
+  <h2>theme</h2>
+  <p>Optional. Without it the screens use the standard UI Toolkit look. Leave it out unless the user asks for a
+  look, names brand colours or gives a screenshot. Unknown keys are rejected.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="theme keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Value</th><th scope="col">Default</th><th scope="col">What it colours or changes</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">primary</td><td>colour</td><td class="mono">#0f62fe</td><td>Banner, section title bars, field icon boxes</td></tr>
+        <tr><td class="mono">onPrimary</td><td>colour</td><td class="mono">#ffffff</td><td>Text and icons on <code>primary</code></td></tr>
+        <tr><td class="mono">heading</td><td>colour</td><td><code>onPrimary</code></td><td>Banner title and product name</td></tr>
+        <tr><td class="mono">button</td><td>colour</td><td><code>primary</code></td><td>Forward and Submit buttons, the active tab</td></tr>
+        <tr><td class="mono">secondaryButton</td><td>colour</td><td>outlined</td><td>Back and Cancel buttons; without it they are white with a <code>button</code>-coloured outline</td></tr>
+        <tr><td class="mono">background</td><td>colour</td><td class="mono">#f4f6f8</td><td>The page behind the form</td></tr>
+        <tr><td class="mono">font</td><td>font family</td><td>inherited</td><td>Font of the page, e.g. <code>"Open Sans"</code>; system fonts follow it. Letters, digits, spaces and hyphens, up to 40</td></tr>
+        <tr><td class="mono">shape</td><td class="mono">square | rounded | pill</td><td class="mono">rounded</td><td>Corners of fields, panels and buttons; <code>pill</code> gives pill-shaped buttons</td></tr>
+        <tr><td class="mono">fieldIcons</td><td class="mono">true | false</td><td class="mono">false</td><td>A coloured icon box before every input; fields pick their icon with <code>icon</code></td></tr>
+        <tr><td class="mono">width</td><td>600 to 3000, or <code>"full"</code></td><td>960, or 1400 with more than 3 columns</td><td>Maximum content width in pixels</td></tr>
+        <tr><td class="mono">buttonAlign</td><td class="mono">left | center | right</td><td class="mono">left</td><td>Where the button bar sits</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Colours are <code>#rgb</code> or <code>#rrggbb</code>. When building from a screenshot, read them with
+  <code>image_colors</code> instead of guessing.</p>
+
+  <h3 id="icons">Field icons</h3>
+  <p>With <code>"fieldIcons": true</code>, each field shows the icon named in its <code>icon</code>, or the default for its type:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Field icons, scrollable">
+    <table>
+      <thead><tr><th scope="col">Icon names</th><th scope="col">Defaults by type</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">text, file, user, users, calendar, list, options, check, hash, search, id, mail, phone, building, dollar, info, briefcase</td>
+        <td>String <code>text</code> · Text Area <code>file</code> · Date <code>calendar</code> · Select <code>list</code> · Radio <code>options</code> · Boolean <code>check</code> · Integer and Decimal <code>hash</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>"theme": {
+  "primary": "#5aa9d6", "onPrimary": "#ffffff", "heading": "#1f5f99",
+  "button": "#2f74c0", "secondaryButton": "#e8a33d", "background": "#f5f6f8",
+  "font": "Open Sans", "shape": "pill", "fieldIcons": true,
+  "width": "full", "buttonAlign": "right"
+}</code></pre>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="banner">
+  <h2>banner</h2>
+  <p>Optional. A strip in the <code>primary</code> colour that replaces the plain title on every screen. It shows,
+  left to right: the logo, the title, the product name and a short text. Unknown keys are rejected.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="banner keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">title</td><td>Banner title. Default: the screen's own title, so each screen keeps its name</td></tr>
+        <tr><td class="mono">product</td><td>Large product name, e.g. <code>QUOTE DESK</code></td></tr>
+        <tr><td class="mono">text</td><td>Short text on the right, e.g. a greeting</td></tr>
+        <tr><td class="mono">logo</td><td>Path to an image inside the project, relative to the project folder, e.g. <code>work/logo.png</code>. PNG, JPG, GIF, WebP or SVG, at most 200 KB. It is embedded in the app, so the server needs no access to the file</td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>"banner": { "product": "QUOTE DESK", "text": "Good afternoon", "logo": "work/quote-logo.png" }</code></pre>
+  <p>To cut a logo out of a screenshot, ask the agent to use <code>crop_image</code>; it writes the cut-out into <code>work/</code>.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="errors">
+  <h2>Validation errors</h2>
+  <p>The generator checks the whole spec and lists every problem before it builds anything. A real run on a spec
+  with five mistakes:</p>
+<pre><code>$ python3 generate_app.py work/bad.app.json work/bad.twx
+Invalid app spec:
+  app.acronym must be 2-8 upper-case letters or digits, starting with a letter
+  step 1: field name 'start date' must be an identifier
+  step 1: field 'kind' (Select) needs options: a list of strings or {"value", "label"}
+  step 1: field 'days' has unknown type 'Number'; use one of String, Text Area, Date, Boolean, Integer, Decimal, Select, Radio
+  confirmation.showFields: unknown field 'reason'</code></pre>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Common errors and fixes, scrollable">
+    <table>
+      <thead><tr><th scope="col">Message contains</th><th scope="col">Fix</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">must be an identifier</td><td>Use letters, digits and <code>_</code> only, no spaces, not starting with a digit: <code>startDate</code></td></tr>
+        <tr><td class="mono">is used twice (or is reserved)</td><td>Rename one of the fields; names are shared by all steps. Do not name a field <code>referenceNumber</code> when there is a confirmation</td></tr>
+        <tr><td class="mono">needs options</td><td>Add <code>"options": [...]</code> to the Select or Radio field</td></tr>
+        <tr><td class="mono">needs a column from 1 to N</td><td>One field in the section has a <code>column</code>, so all non-wide fields need one</td></tr>
+        <tr><td class="mono">widths must list N positive numbers</td><td>Give exactly one width per column</td></tr>
+        <tr><td class="mono">is not a theme setting</td><td>Check the spelling against the <a href="#theme">theme keys</a>; they are case-sensitive</td></tr>
+        <tr><td class="mono">banner.logo &hellip; must be an image file inside the project</td><td>Save the image under the project folder (e.g. <code>work/</code>) and give the path relative to it</td></tr>
+        <tr><td class="mono">Snapshot &hellip; already exists</td><td>From <code>create_app</code> or <code>install_app</code>: bump <code>app.snapshot</code></td></tr>
+        <tr><td class="mono">Refusing to install into</td><td>From <code>install_app</code>: the name and acronym must both start with ZZ</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="limits">
+  <h2>What a spec cannot express</h2>
+  <p>A spec builds forms. These need something else:</p>
+  <ul>
+    <li><strong>Tables, file uploads, links and menus.</strong> Add them in a React screen with the coach-modernize skill.</li>
+    <li><strong>Validation and rules.</strong> No required-field blocking, no field-to-field rules, no show/hide logic.</li>
+    <li><strong>Lookups and integrations.</strong> Dropdown options are fixed in the spec; nothing calls another system.</li>
+    <li><strong>Processes and tasks.</strong> The app has one service that a user launches by URL. There is no BPD,
+    no task routing and no approvals between people.</li>
+  </ul>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="examples">
+  <h2>Example specs</h2>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Example specs, scrollable">
+    <table>
+      <thead><tr><th scope="col">File</th><th scope="col">Shows</th></tr></thead>
+      <tbody>
+        <tr><td class="mono"><a href="../app-specs/example-equipment-request.json">example-equipment-request.json</a></td><td>A simple multi-step form, every basic field type, review and confirmation</td></tr>
+        <tr><td class="mono"><a href="../app-specs/example-supplier-registration.json">example-supplier-registration.json</a></td><td>Written from <code>screenshots/example-supplier-registration.png</code>: sections, two columns, wide fields, dropdowns, radio groups, required fields</td></tr>
+        <tr><td class="mono"><a href="../app-specs/example-themed-quote.json">example-themed-quote.json</a></td><td>Tabs, a theme and banner, placed columns with widths, field icons, help text, Cancel and no review</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Each example uses a ZZ acronym that may already be on your server. Change <code>app.name</code> and
+  <code>app.acronym</code> in your copy before you build it.</p>
+</section>
+
+</main>
+
+<footer class="shell">
+  <p>Keys, defaults and messages checked on 9 October 2026 against <code>generate_app.py</code> and
+  <code>coach_theme.py</code>. The validation example is real output from a spec with deliberate mistakes.</p>
+  <p>Setup: <a href="getting-started.html">Getting started</a> · All docs: <a href="index.html">BAW Dev Tools MCP docs</a></p>
+</footer>
+
+
+<script>
+// Copy buttons on every code block.
+document.querySelectorAll('pre').forEach(function (pre) {
+  var wrap = document.createElement('div'); wrap.className = 'codewrap';
+  pre.parentNode.insertBefore(wrap, pre); wrap.appendChild(pre);
+  var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+  btn.setAttribute('aria-label', 'Copy command');
+  btn.addEventListener('click', function () {
+    navigator.clipboard.writeText(pre.innerText).then(function () {
+      btn.textContent = 'Copied'; btn.setAttribute('data-done', '');
+      setTimeout(function () { btn.textContent = 'Copy'; btn.removeAttribute('data-done'); }, 1500);
+    });
+  });
+  wrap.appendChild(btn);
+});
+</script>
+<script>
+(function () {
+  var root = document.documentElement,
+      btn  = document.getElementById('theme-toggle'),
+      mq   = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function isDark() {
+    var set = root.getAttribute('data-theme');
+    return set ? set === 'dark' : mq.matches;
+  }
+  function sync() {
+    var dark = isDark();
+    btn.setAttribute('aria-pressed', String(dark));
+    btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  try {
+    var saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  sync();
+
+  btn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    sync();
+  });
+  // follow the system only while the reader has not chosen
+  mq.addEventListener('change', function () { if (!root.hasAttribute('data-theme')) sync(); });
+})();
+</script>
+</body>
+</html>
