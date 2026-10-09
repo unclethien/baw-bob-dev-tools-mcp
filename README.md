@@ -33,7 +33,7 @@ Guard rails:
 ```
 Agent (Bob) ── writes ──▶ work/*.app.json, work/*.coaches.json, react-coach/src/screens/*.jsx
      │
-     └── calls MCP tools ──▶ baw_mcp.py ──▶ generators (TWX) ──▶ BAW Operations REST API
+     └── calls MCP tools ──▶ server/baw_mcp.py ──▶ generators (TWX) ──▶ BAW Operations REST API
                                         └──▶ verify-service.mjs (headless browser) ──▶ screenshots in work/
 ```
 
@@ -73,8 +73,8 @@ Settings are read from the environment first, then `.env`:
    - **✨ BAW Coach Modernizer** gives an existing app a React UI that Bob writes.
 
    Both modes edit only `work/`, `app-specs/` and `react-coach/src/screens/`, and do everything else through the MCP tools.
-2. Copy `.bob/mcp.example.json` to `.bob/mcp.json` and set the absolute path to `baw_mcp.py`. To switch servers without editing `.env`, add an `"env": { "BAW_URL": "..." }` block there.
-3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 11 tools.
+2. Copy `.bob/mcp.example.json` to `.bob/mcp.json` and set the absolute path to `server/baw_mcp.py`. To switch servers without editing `.env`, add an `"env": { "BAW_URL": "..." }` block there.
+3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 13 tools.
 4. Try it in BAW App Builder mode:
 
    ```
@@ -98,10 +98,10 @@ Bob asks for approval before `create_app`, `modernize_app` and `install_app`; th
 Any stdio MCP client works:
 
 ```json
-{ "command": "uv", "args": ["run", "--quiet", "--script", "/ABSOLUTE/PATH/TO/baw_mcp.py"] }
+{ "command": "uv", "args": ["run", "--quiet", "--script", "/ABSOLUTE/PATH/TO/baw-bob-dev-tools-mcp/server/baw_mcp.py"] }
 ```
 
-The scripts also run on their own, e.g. `python3 baw_ops.py list`, `python3 generate_app.py app-specs/example-equipment-request.json work/ZZEQ.twx`.
+The scripts also run on their own, e.g. `python3 server/baw_ops.py list`, `python3 server/generate_app.py app-specs/example-equipment-request.json work/ZZEQ.twx`.
 
 ## License
 

@@ -34,7 +34,7 @@ Architecture: Bob (custom mode + skills) → MCP over stdio → `baw_mcp.py` →
 Checklist, 30 minutes before:
 
 1. `.env` holds `BAW_URL`, `BAW_USER` and `BAW_PASSWORD` or `BAW_APIKEY`. Never show it on screen.
-2. The repo is open as Bob's workspace; `.bob/mcp.json` points to `baw_mcp.py`; the MCP panel shows **baw-dev-tools, 11 tools**.
+2. The repo is open as Bob's workspace; `.bob/mcp.json` points to `server/baw_mcp.py`; the MCP panel shows **baw-dev-tools, 13 tools**.
 3. The Hiring Sample (HSS) app is installed. Run one rehearsal build, so the packaging base is already cached and the first build is fast.
 4. Mode: 🏗️ BAW App Builder. Font size up, `.env` closed, the sample screenshot open in a tab.
 5. Keep the rehearsal app as a backup. There is no delete tool, so clean up after the demo.
@@ -101,7 +101,7 @@ Checklist, 30 minutes before:
 - *Does Bob write BAW XML?* No. It writes JSON specs and React files; the server generates the TWX.
 - *What can it not build from a screenshot yet?* Tables, file uploads, links and extra buttons. Bob lists them and offers to add them in a React screen.
 - *Does it work with our existing apps?* Yes, read-only: `export_app` + `inspect_coaches` turn any app into a coach spec. Modernized output installs only into ZZ copies.
-- *Can other agents use it?* Yes. It is a standard stdio MCP server; any MCP client can call the same 11 tools.[^mcp-tools]
+- *Can other agents use it?* Yes. It is a standard stdio MCP server; any MCP client can call the same 13 tools.[^mcp-tools]
 - *What happens on an error?* Tool errors come back as readable messages (bad login, snapshot exists, compiler error with file and line), and Bob fixes the spec or screen and retries.
 
 **If something breaks on stage**

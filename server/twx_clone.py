@@ -8,7 +8,7 @@ the bundled dependency toolkits (toolkits/*.zip) are left alone, so references t
 System Data and UI Toolkit keep working.
 
 Example:
-    python3 twx_clone.py source.twx clone.twx --name "ZZ Spike - HSS Clone" --acronym ZZHSS
+    python3 server/twx_clone.py source.twx clone.twx --name "ZZ Spike - HSS Clone" --acronym ZZHSS
 
 Pass --project-id and --branch-id of an installed app (with a new --snapshot) to
 install the clone as a new snapshot of that app instead of a separate app.

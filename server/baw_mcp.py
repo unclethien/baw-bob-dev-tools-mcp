@@ -12,7 +12,7 @@ install, inspect and test them on the BAW server set by BAW_URL (environment fir
 see baw_ops.py). Credentials stay in this process and are never returned. Installs are limited to "ZZ" demo apps, and there is
 no delete tool.
 
-Run:  uv run --script baw_mcp.py      (Bob starts it from .bob/mcp.json)
+Run:  uv run --script server/baw_mcp.py      (Bob starts it from .bob/mcp.json)
 """
 
 import json
@@ -29,11 +29,12 @@ from mcp.server import MCPServer
 from mcp.server.mcpserver import Image
 from mcp.server.mcpserver.exceptions import ToolError
 
-ROOT = Path(__file__).resolve().parent
+SERVER = Path(__file__).resolve().parent
+ROOT = SERVER.parent
 WORK = ROOT / "work"
 REACT = ROOT / "react-coach"
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(SERVER))
 
 from baw_ops import BawOps, ConfigError  # noqa: E402
 
@@ -82,7 +83,7 @@ def run(args, cwd=ROOT, timeout=600):
 
 
 def python(script, *args, timeout=600):
-    return run([sys.executable, str(ROOT / script), *map(str, args)], timeout=timeout)
+    return run([sys.executable, str(SERVER / script), *map(str, args)], timeout=timeout)
 
 
 def package_xml(twx: Path) -> str:

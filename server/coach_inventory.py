@@ -13,7 +13,7 @@ Review the spec before running modernize_coaches.py. Fix labels, mark fields
 "modernize" to false for services to skip, and set "intro" for a coach's lead text.
 
 Example:
-    python3 coach_inventory.py zzeq.twx -o zzeq.coaches.json
+    python3 server/coach_inventory.py zzeq.twx -o zzeq.coaches.json
 """
 
 import argparse
