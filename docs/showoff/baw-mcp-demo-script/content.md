@@ -35,7 +35,7 @@ Checklist, 30 minutes before:
 
 1. `.env` holds `BAW_URL`, `BAW_USER` and `BAW_PASSWORD` or `BAW_APIKEY`. Never show it on screen.
 2. The repo is open as Bob's workspace; `.bob/mcp.json` points to `server/baw_mcp.py`; the MCP panel shows **baw-dev-tools, 13 tools**.
-3. The Hiring Sample (HSS) app is installed. Run one rehearsal build, so the packaging base is already cached and the first build is fast.
+3. Run one rehearsal build and install, so you know the server accepts the app and how long an install takes.
 4. Mode: 🏗️ BAW App Builder. Font size up, `.env` closed, the sample screenshot open in a tab.
 5. Keep the rehearsal app as a backup. There is no delete tool, so clean up after the demo.
 

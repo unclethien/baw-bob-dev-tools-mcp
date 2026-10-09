@@ -275,7 +275,7 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td><a href="#step-4">4</a></td><td>Add your server settings</td><td><code>.env</code> is readable only by you</td></tr>
         <tr><td><a href="#step-5">5</a></td><td>Install the screen tools</td><td><code>npm install</code> finishes</td></tr>
         <tr><td><a href="#step-6">6</a></td><td>Check the connection</td><td>Your server's apps are listed</td></tr>
-        <tr><td><a href="#step-7">7</a></td><td>Check the Hiring Sample</td><td><code>HSS</code> is in the list</td></tr>
+        <tr><td><a href="#step-7">7</a></td><td>Build a package</td><td>A <code>.twx</code> is written to <code>work/</code></td></tr>
         <tr><td><a href="#step-8">8</a></td><td>Connect Bob</td><td>13 tools in Bob's MCP panel</td></tr>
         <tr><td><a href="#step-9">9</a></td><td>Build your first app</td><td>Bob reports a run URL</td></tr>
         <tr><td><a href="#step-10">10</a></td><td>Look at the result and change it</td><td>The app opens in your browser</td></tr>
@@ -394,11 +394,12 @@ HSSX2      app      Smart Hire</code></pre>
     </table>
   </div>
 
-  <h3 id="step-7"><span class="num">7</span>Check the Hiring Sample</h3>
-  <p>The tools package every new app using the Hiring Sample (HSS) as a base, so it must be on the server:</p>
-<pre><code>python3 server/baw_ops.py list | grep '^HSS '</code></pre>
-  <p><strong>Check:</strong> one line, <code>HSS app Hiring Sample</code>. If nothing prints, ask your BAW admin to
-  install the Hiring Sample; it ships with BAW.</p>
+  <h3 id="step-7"><span class="num">7</span>Build a package</h3>
+  <p>The tools build every app from a template that ships with them, so nothing has to be downloaded from the server
+  first. Build the example app once to check that the build works. This step does not use the server:</p>
+<pre><code>python3 server/generate_app.py app-specs/example-equipment-request.json work/ZZEQ-1.0.0.twx</code></pre>
+  <p><strong>Check:</strong> the first line reads <code>Wrote work/ZZEQ-1.0.0.twx: app ZZ Equipment Request (ZZEQ), snapshot 1.0.0</code>.
+  The file is not installed; you can delete it.</p>
 
   <h3 id="step-8"><span class="num">8</span>Connect Bob</h3>
   <p>Bob starts the MCP server from <code>.bob/mcp.json</code>, which needs the full path to this folder. This
@@ -430,11 +431,11 @@ grep baw_mcp.py .bob/mcp.json</code></pre>
 item, quantity and needed-by date, then a review screen. Install it and test it.</code></pre>
   <p>What Bob does, and where you come in:</p>
   <ol>
-    <li>Reads the server (<code>list_apps</code>) to pick a ZZ acronym nobody uses.</li>
+    <li>Reads the server (<code>list_apps</code>) to pick a ZZ acronym nobody uses, and asks you which installed app
+    the package should match. Any app works, since only its BAW version is used; or say "the built-in template".</li>
     <li>Writes the app spec to <code>work/&lt;ACRONYM&gt;.app.json</code>. You can open it; the
     <a href="app-spec-reference.html">app spec reference</a> explains every key.</li>
-    <li>Calls <code>create_app</code>. <strong>Approve it.</strong> It builds the <code>.twx</code> in <code>work/</code>.
-    The first build also saves the Hiring Sample to <code>work/base-HSS.twx</code>.</li>
+    <li>Calls <code>create_app</code>. <strong>Approve it.</strong> It builds the <code>.twx</code> in <code>work/</code>.</li>
     <li>Checks the screens with <code>inspect_coaches</code>.</li>
     <li>Calls <code>install_app</code>. <strong>Approve it.</strong> The install usually takes one to three minutes.</li>
     <li>Runs <code>test_service</code>: a headless browser opens each screen, fills sample values and presses Next.</li>
@@ -484,6 +485,22 @@ item, quantity and needed-by date, then a review screen. Install it and test it.
 <pre><code>{ "command": "uv", "args": ["run", "--quiet", "--script", "/ABSOLUTE/PATH/TO/baw-bob-dev-tools-mcp/server/baw_mcp.py"] }</code></pre>
   <p>The Bob modes and skills live in <code>.bob/</code>; other clients get the tools, but not the step-by-step skills.</p>
 
+  <h3 id="no-server">No BAW server? Import the app yourself</h3>
+  <p>Without step 4's settings, Bob can still write the app spec and build the <code>.twx</code>: <code>create_app</code>,
+  <code>inspect_coaches</code>, <code>build_screens</code>, <code>modernize_app</code> and the screenshot tools work
+  without a server. The other tools answer <code>No BAW server is configured</code>. Bob then gives you the file and
+  the import steps:</p>
+  <ol>
+    <li>Open Workflow Center, go to <strong>Process Apps</strong> and click <strong>Import</strong>.</li>
+    <li>Choose the <code>.twx</code> from <code>work/</code> and finish the wizard. Its snapshot name must be new in
+    that app.</li>
+    <li>Run the service from Workflow Center and check each screen by hand.</li>
+  </ol>
+  <p>The package uses BAW's no-toolkits format: it names the System Data and UI Toolkit versions that every server
+  has, instead of bundling them. The built-in template matches BAW 26.0.0. For another version, export any app from
+  your server, put the <code>.twx</code> in <code>work/</code> and ask Bob to use it as the base. To add a snapshot to
+  an app you already have, use an export of that app as the base.</p>
+
   <h3 id="no-agent">Build an app without an agent</h3>
   <p>For a <strong>new</strong> app you can run the same build from the terminal. Copy an example, change its
   <code>app.name</code> and <code>app.acronym</code> to an unused ZZ name, then:</p>
@@ -496,8 +513,8 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
     <div class="body">
       <strong>The scripts skip the guard rails</strong>
       <p><code>baw_ops.py install</code> does not check the ZZ name or the snapshot name; only the MCP tools do. And
-      for a new snapshot of an app that already exists, use <code>create_app</code>: it reuses the installed app's
-      identity, which <code>generate_app.py</code> alone does not. To install by hand with <code>curl</code>, follow the
+      for a new snapshot of an app that already exists, pass an export of that app as <code>--base</code>, so the build
+      reuses its identity; <code>create_app</code> does this for you. To install by hand with <code>curl</code>, follow the
       <a href="baw-import-export-terminal-guide.html">terminal guide</a>, which includes those checks.</p>
     </div>
   </div>
@@ -519,7 +536,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>The snapshot name is used</td><td>Bump <code>app.snapshot</code></td></tr>
         <tr><td class="mono">Refusing to install into &hellip;</td><td>Name or acronym is not ZZ</td><td>Rename the app in the spec</td></tr>
         <tr><td>Install ends in <code>failure</code></td><td>Often an acronym already used by another app</td><td>Pick another acronym; read <code>details</code> in the result</td></tr>
-        <tr><td>The first build fails while exporting HSS</td><td>The Hiring Sample is missing</td><td>See step 7</td></tr>
+        <tr><td class="mono">No BAW server is configured</td><td><code>.env</code> is missing a setting</td><td>Fix step 4, or <a href="#no-server">import the app yourself</a></td></tr>
         <tr><td><code>test_service</code> cannot start a browser</td><td>No Chrome or Brave in the usual place</td><td>Install one, or set <a href="#browser"><code>BROWSER_PATH</code></a></td></tr>
       </tbody>
     </table>
@@ -530,7 +547,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
 
 <footer class="shell">
   <p>Steps checked on 9 October 2026 on macOS against BAW on Cloud Pak for Business Automation (TechZone): the
-  connection, the app list, the Hiring Sample check, the server start and the 401, 500 and unknown-host errors ran as shown. Bob's MCP panel and the first
+  connection, the app list, the package build, the server start and the 401, 500 and unknown-host errors ran as shown. Bob's MCP panel and the first
   app build follow the project README.</p>
   <p>Next: <a href="app-spec-reference.html">App spec reference</a> · All docs: <a href="index.html">BAW Dev Tools MCP docs</a></p>
 </footer>

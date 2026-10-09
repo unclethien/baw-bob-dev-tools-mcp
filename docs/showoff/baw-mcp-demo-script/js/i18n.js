@@ -35,7 +35,7 @@ window.I18N_VI = {
   'setup.f4': 'dòng XML viết tay',
   'setup.c1': 'Điền <code>.env</code> với <code>BAW_URL</code>, <code>BAW_USER</code> và mật khẩu hoặc API key. Đừng để nó lên màn hình.',
   'setup.c2': 'Mở repo trong Bob. Bảng MCP hiện <b>baw-dev-tools</b> với 13 tool.',
-  'setup.c3': 'Kiểm tra Hiring Sample (HSS) đã được cài. Tập dượt một lần build để bản đóng gói nền được lưu sẵn.',
+  'setup.c3': 'Tập dượt một lần build và cài đặt, để biết máy chủ nhận ứng dụng và việc cài đặt mất bao lâu.',
   'setup.c4': 'Chuyển sang chế độ <b>BAW App Builder</b>. Tăng cỡ chữ. Mở sẵn ảnh chụp mẫu.',
   'setup.c5': 'Giữ app tập dượt làm dự phòng. Không có tool xóa, nên hãy dọn dẹp sau buổi demo.',
 

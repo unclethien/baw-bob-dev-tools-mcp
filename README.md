@@ -18,7 +18,7 @@ An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com
 | `image_colors` | Main colours of a screenshot or one region of it, as hex: the theme colours to build with |
 | `crop_image` | Cut a region out of a screenshot into `work/`, e.g. its logo for the banner |
 | `inspect_coaches` | Read every coach (sections, fields, buttons, flow) into an editable coach spec |
-| `create_app` | Build an installable `.twx` from an app spec; a new snapshot when the app exists |
+| `create_app` | Build an installable `.twx` from an app spec, from a built-in template or matching an app you pick; a new snapshot when the app exists |
 | `build_screens` | Compile the React screens; returns compiler errors with file and line |
 | `modernize_app` | Add React + Carbon copies of each service (brand and carbon themes) as a new snapshot |
 | `install_app` | Install a `.twx` and wait for the result |
@@ -45,7 +45,7 @@ Agent (Bob) ── writes ──▶ work/*.app.json, work/*.coaches.json, react-
 
 ## Requirements
 
-- An IBM BAW server on Cloud Pak for Business Automation, with an account that can install process apps, and the **Hiring Sample (HSS)** process app installed. `create_app` uses it once as the packaging base.
+- An IBM BAW server on Cloud Pak for Business Automation, with an account that can install process apps. Without one, the agent still builds the `.twx` files and you import them yourself (see [Without a BAW server](#without-a-baw-server)).
 - [uv](https://docs.astral.sh/uv/) (runs the server with its pinned MCP dependency), Python 3.11+
 - Node.js 18+ and Google Chrome or Brave (for `build_screens` and `test_service`). Set `BROWSER_PATH` to use another Chromium.
 
@@ -94,6 +94,12 @@ Settings are read from the environment first, then `.env`:
    Bob reads the screen with the screenshot-to-app skill: its layout (tabs, sections, columns and their widths, which field sits where), its controls (labels, dropdowns, radio groups, checkboxes, required markers, help icons, buttons) and its look (colours sampled with `image_colors`, the header banner with the logo cut out by `crop_image`, field icons, shapes, button placement). It writes the app spec, builds and installs it, then compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
 
 Bob asks for approval before `create_app`, `modernize_app` and `install_app`; the read and test tools run without asking.
+
+## Without a BAW server
+
+Leave `BAW_URL` unset and the build tools still work: `create_app`, `inspect_coaches`, `build_screens`, `modernize_app` and the image tools. `create_app` builds the app from a built-in template in BAW's no-toolkits export format (`server/app_template.py`, matching BAW 26.0.0), so nothing has to be downloaded first. Its result says where the `.twx` is; import it in Workflow Center (Process Apps, Import). The server tools (`list_apps`, `install_app`, `test_service`, ...) say that no server is configured.
+
+To add a snapshot to an app you already have, export it from Workflow Center, put the `.twx` in `work/` and pass it as `create_app`'s `base`. With a server, `base` can name any installed app instead, so the package matches that server's BAW build and toolkit versions.
 
 ## Use it with other MCP clients
 
