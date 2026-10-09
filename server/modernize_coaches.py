@@ -15,9 +15,9 @@ The output keeps the source app's identity. Pass --snapshot to install it as a n
 snapshot of the same app, next to the original services.
 
 Example:
-    python3 coach_inventory.py zzeq.twx -o zzeq.coaches.json      # then review the spec
-    python3 modernize_coaches.py zzeq.twx zzeq.coaches.json zzeq-modern.twx --snapshot 1.1.0
-    python3 baw_ops.py install zzeq-modern.twx
+    python3 server/coach_inventory.py zzeq.twx -o zzeq.coaches.json      # then review the spec
+    python3 server/modernize_coaches.py zzeq.twx zzeq.coaches.json zzeq-modern.twx --snapshot 1.1.0
+    python3 server/baw_ops.py install zzeq-modern.twx
 """
 
 import argparse
@@ -218,7 +218,7 @@ def main():
     parser.add_argument("twx", type=Path, help="Exported process app (the spec's source)")
     parser.add_argument("spec", type=Path, help="Coach spec from coach_inventory.py")
     parser.add_argument("dest", type=Path)
-    parser.add_argument("--bundle", type=Path, default=Path(__file__).parent / "react-coach" / "bundle",
+    parser.add_argument("--bundle", type=Path, default=Path(__file__).resolve().parent.parent / "react-coach" / "bundle",
                         help="Built React bundle directory (npm run build in react-coach/)")
     parser.add_argument("--themes", help="Comma-separated themes (default: the spec's themes)")
     parser.add_argument("--snapshot", help="Install as this new snapshot of the same app")

@@ -7,11 +7,11 @@ Settings: BAW_URL, BAW_USER, and BAW_PASSWORD or BAW_APIKEY. Values already in t
 Tokens are kept in memory and never printed.
 
 Examples:
-    python3 baw_ops.py list
-    python3 baw_ops.py export HSS RHSV180 hss.twx
-    python3 baw_ops.py install clone.twx
-    python3 baw_ops.py versions ZZHSS
-    python3 baw_ops.py services ZZEQ         # exposed services of the tip snapshot, with run URLs
+    python3 server/baw_ops.py list
+    python3 server/baw_ops.py export HSS RHSV180 hss.twx
+    python3 server/baw_ops.py install clone.twx
+    python3 server/baw_ops.py versions ZZHSS
+    python3 server/baw_ops.py services ZZEQ         # exposed services of the tip snapshot, with run URLs
 """
 
 import argparse
@@ -24,7 +24,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-ENV_FILE = Path(__file__).with_name(".env")
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 # Test clusters often use self-signed certificates.
 SSL_CTX = ssl._create_unverified_context()
 

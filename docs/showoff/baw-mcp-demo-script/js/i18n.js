@@ -34,7 +34,7 @@ window.I18N_VI = {
   'setup.f3': 'skill',
   'setup.f4': 'dòng XML viết tay',
   'setup.c1': 'Điền <code>.env</code> với <code>BAW_URL</code>, <code>BAW_USER</code> và mật khẩu hoặc API key. Đừng để nó lên màn hình.',
-  'setup.c2': 'Mở repo trong Bob. Bảng MCP hiện <b>baw-dev-tools</b> với 11 tool.',
+  'setup.c2': 'Mở repo trong Bob. Bảng MCP hiện <b>baw-dev-tools</b> với 13 tool.',
   'setup.c3': 'Kiểm tra Hiring Sample (HSS) đã được cài. Tập dượt một lần build để bản đóng gói nền được lưu sẵn.',
   'setup.c4': 'Chuyển sang chế độ <b>BAW App Builder</b>. Tăng cỡ chữ. Mở sẵn ảnh chụp mẫu.',
   'setup.c5': 'Giữ app tập dượt làm dự phòng. Không có tool xóa, nên hãy dọn dẹp sau buổi demo.',
@@ -124,7 +124,7 @@ window.I18N_VI = {
   'q.3': 'Có dùng được với app hiện có không?',
   'a.3': 'Có, ở chế độ chỉ đọc. <code>export_app</code> và <code>inspect_coaches</code> biến mọi app thành coach spec. Kết quả chỉ cài vào bản sao ZZ.',
   'q.4': 'Agent khác có dùng được không?',
-  'a.4': 'Được. Đây là MCP server stdio chuẩn, nên mọi MCP client đều gọi được 11 tool này.<sup><a href="#ref-1">1</a></sup>',
+  'a.4': 'Được. Đây là MCP server stdio chuẩn, nên mọi MCP client đều gọi được 13 tool này.<sup><a href="#ref-1">1</a></sup>',
   'q.5': 'Khi có lỗi thì sao?',
   'a.5': 'Lỗi trả về dưới dạng thông báo dễ đọc, như đăng nhập thất bại hay lỗi biên dịch kèm tệp và dòng. Bob sửa đầu vào rồi thử lại.',
 

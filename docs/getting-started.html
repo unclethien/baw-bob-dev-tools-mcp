@@ -271,7 +271,7 @@ h3[id]{scroll-margin-top:var(--s06)}
       <tbody>
         <tr><td><a href="#step-1">1</a></td><td>Get access to a BAW test server</td><td>You can log in to the Cloud Pak console</td></tr>
         <tr><td><a href="#step-2">2</a></td><td>Install the tools</td><td>Four version numbers print</td></tr>
-        <tr><td><a href="#step-3">3</a></td><td>Get the code</td><td><code>baw_mcp.py</code> is in the folder</td></tr>
+        <tr><td><a href="#step-3">3</a></td><td>Get the code</td><td><code>server/baw_mcp.py</code> is in the folder</td></tr>
         <tr><td><a href="#step-4">4</a></td><td>Add your server settings</td><td><code>.env</code> is readable only by you</td></tr>
         <tr><td><a href="#step-5">5</a></td><td>Install the screen tools</td><td><code>npm install</code> finishes</td></tr>
         <tr><td><a href="#step-6">6</a></td><td>Check the connection</td><td>Your server's apps are listed</td></tr>
@@ -342,7 +342,7 @@ node --version</code></pre>
 <pre><code>git clone https://github.com/unclethien/baw-bob-dev-tools-mcp.git
 cd baw-bob-dev-tools-mcp</code></pre>
   <p>Stay in this folder for every step below.</p>
-  <p><strong>Check:</strong> <code>ls baw_mcp.py</code> prints <code>baw_mcp.py</code>.</p>
+  <p><strong>Check:</strong> <code>ls server/baw_mcp.py</code> prints <code>server/baw_mcp.py</code>.</p>
 
   <h3 id="step-4"><span class="num">4</span>Add your server settings</h3>
   <p>Copy the template and make it readable only by you:</p>
@@ -376,7 +376,7 @@ chmod 600 .env</code></pre>
 
   <h3 id="step-6"><span class="num">6</span>Check the connection</h3>
   <p>List the apps on the server, using the same code the MCP server uses:</p>
-<pre><code>python3 baw_ops.py list</code></pre>
+<pre><code>python3 server/baw_ops.py list</code></pre>
   <p>Each line is an acronym, <code>app</code> or <code>toolkit</code>, and the name:</p>
 <pre><code>HSS        app      Hiring Sample
 HSSX2      app      Smart Hire</code></pre>
@@ -396,7 +396,7 @@ HSSX2      app      Smart Hire</code></pre>
 
   <h3 id="step-7"><span class="num">7</span>Check the Hiring Sample</h3>
   <p>The tools package every new app using the Hiring Sample (HSS) as a base, so it must be on the server:</p>
-<pre><code>python3 baw_ops.py list | grep '^HSS '</code></pre>
+<pre><code>python3 server/baw_ops.py list | grep '^HSS '</code></pre>
   <p><strong>Check:</strong> one line, <code>HSS app Hiring Sample</code>. If nothing prints, ask your BAW admin to
   install the Hiring Sample; it ships with BAW.</p>
 
@@ -405,9 +405,9 @@ HSSX2      app      Smart Hire</code></pre>
   command writes it for you from the example:</p>
 <pre><code>sed "s#/ABSOLUTE/PATH/TO/baw-bob-dev-tools-mcp#$PWD#" .bob/mcp.example.json &gt; .bob/mcp.json
 grep baw_mcp.py .bob/mcp.json</code></pre>
-  <p>The second line should show your real path ending in <code>/baw_mcp.py</code>. Then start the server once by
+  <p>The second line should show your real path ending in <code>/server/baw_mcp.py</code>. Then start the server once by
   hand; the first run downloads its packages, so Bob does not time out waiting for them later:</p>
-<pre><code>uv run --quiet --script baw_mcp.py &lt; /dev/null &amp;&amp; echo "Server starts"</code></pre>
+<pre><code>uv run --quiet --script server/baw_mcp.py &lt; /dev/null &amp;&amp; echo "Server starts"</code></pre>
   <p>Now open this folder as the workspace in Bob and open Bob's MCP panel.</p>
   <p><strong>Check:</strong> <code>baw-dev-tools</code> shows as connected with <strong>13 tools</strong>:</p>
   <div class="tablewrap" role="region" tabindex="0" aria-label="The 13 tools, scrollable">
@@ -481,7 +481,7 @@ item, quantity and needed-by date, then a review screen. Install it and test it.
 
   <h3 id="other-clients">Other MCP clients</h3>
   <p>Any MCP client that runs stdio servers works. Give it this command, with your full path:</p>
-<pre><code>{ "command": "uv", "args": ["run", "--quiet", "--script", "/ABSOLUTE/PATH/TO/baw_mcp.py"] }</code></pre>
+<pre><code>{ "command": "uv", "args": ["run", "--quiet", "--script", "/ABSOLUTE/PATH/TO/baw-bob-dev-tools-mcp/server/baw_mcp.py"] }</code></pre>
   <p>The Bob modes and skills live in <code>.bob/</code>; other clients get the tools, but not the step-by-step skills.</p>
 
   <h3 id="no-agent">Build an app without an agent</h3>
@@ -489,9 +489,9 @@ item, quantity and needed-by date, then a review screen. Install it and test it.
   <code>app.name</code> and <code>app.acronym</code> to an unused ZZ name, then:</p>
 <pre><code>cp app-specs/example-equipment-request.json work/ZZOFFICE.app.json
 # edit work/ZZOFFICE.app.json: "name": "ZZ Office Request", "acronym": "ZZOFFICE"
-python3 generate_app.py work/ZZOFFICE.app.json work/ZZOFFICE-1.0.0.twx
-python3 baw_ops.py install work/ZZOFFICE-1.0.0.twx
-python3 baw_ops.py services ZZOFFICE</code></pre>
+python3 server/generate_app.py work/ZZOFFICE.app.json work/ZZOFFICE-1.0.0.twx
+python3 server/baw_ops.py install work/ZZOFFICE-1.0.0.twx
+python3 server/baw_ops.py services ZZOFFICE</code></pre>
   <div class="note warn">
     <div class="body">
       <strong>The scripts skip the guard rails</strong>

@@ -332,7 +332,7 @@ h3[id]{scroll-margin-top:var(--s06)}
 }</code></pre>
   <p>Check a spec without touching the server. The generator validates the whole spec first and lists every
   problem at once; it only contacts the server after the spec is valid.</p>
-<pre><code>python3 generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx</code></pre>
+<pre><code>python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx</code></pre>
   <div class="note warn">
     <div class="body">
       <strong>A valid spec goes on to build</strong>
@@ -392,7 +392,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <ul>
     <li><strong>ZZ only.</strong> <code>install_app</code> refuses any app whose name does not start with "ZZ" or whose
     acronym does not start with <code>ZZ</code>. The generator itself accepts other names, so the check happens at install.</li>
-    <li><strong>New acronym for a new app.</strong> Run <code>list_apps</code> (or <code>python3 baw_ops.py list</code>) first.
+    <li><strong>New acronym for a new app.</strong> Run <code>list_apps</code> (or <code>python3 server/baw_ops.py list</code>) first.
     If the acronym belongs to another app, the install fails.</li>
     <li><strong>New snapshot name for every change.</strong> BAW silently keeps the old content when a snapshot name
     is reused, so <code>create_app</code> and <code>install_app</code> refuse a name that already exists. Bump it:
@@ -671,7 +671,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <h2>Validation errors</h2>
   <p>The generator checks the whole spec and lists every problem before it builds anything. A real run on a spec
   with five mistakes:</p>
-<pre><code>$ python3 generate_app.py work/bad.app.json work/bad.twx
+<pre><code>$ python3 server/generate_app.py work/bad.app.json work/bad.twx
 Invalid app spec:
   app.acronym must be 2-8 upper-case letters or digits, starting with a letter
   step 1: field name 'start date' must be an identifier

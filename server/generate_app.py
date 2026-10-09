@@ -24,8 +24,8 @@ Packaging metadata and the System Data / UI Toolkit dependencies come from an ex
 app. When --base does not exist yet, the Hiring Sample (HSS) is exported from the server.
 
 Example:
-    python3 generate_app.py app-specs/example-equipment-request.json work/ZZEQ.twx
-    python3 baw_ops.py install work/ZZEQ.twx
+    python3 server/generate_app.py app-specs/example-equipment-request.json work/ZZEQ.twx
+    python3 server/baw_ops.py install work/ZZEQ.twx
 """
 
 import argparse
@@ -50,7 +50,7 @@ FIELD_TYPES = {  # spec type -> (business object type, input view)
 }
 CHOICES = {"Select", "Radio"}
 MAX_COLUMNS = 6
-PROJECT = Path(__file__).resolve().parent
+PROJECT = Path(__file__).resolve().parent.parent
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 REFERENCE = "referenceNumber"
 
