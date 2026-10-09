@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Get started with BAW Dev Tools MCP · Step-by-step guide</title>
+<link rel="preconnect" href="https://1.www.s81c.com" crossorigin>
+<style>
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-Regular-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:600;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-SemiBold-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2) format("woff2")}
+:root{
+  color-scheme:light;
+  --white:#ffffff; --layer-01:#f4f4f4; --layer-02:#ffffff; --layer-accent:#e0e0e0;
+  --border-subtle:#e0e0e0; --border-strong:#8d8d8d;
+  --text-primary:#161616; --text-secondary:#525252; --text-helper:#6f6f6f; --text-on-color:#ffffff;
+  --link:#0f62fe; --blue-60:#0f62fe; --blue-70:#0043ce; --blue-10:#edf5ff;
+  --gray-100:#161616; --gray-90:#262626; --gray-80:#393939; --gray-10:#f4f4f4;
+  --red-60:#da1e28; --red-10:#fff1f1; --green-50:#24a148; --green-10:#defbe6;
+  --yellow-30:#f1c21b; --yellow-10:#fcf4d6; --purple-60:#8a3ffc; --purple-10:#f6f2ff;
+  --s03:8px; --s04:12px; --s05:16px; --s06:24px; --s07:32px; --s08:40px; --s09:48px; --s10:64px;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--white);color:var(--text-primary);font-family:var(--sans);
+  font-size:14px;line-height:1.43;letter-spacing:.16px;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+.shell{max-width:1120px;margin:0 auto;padding:0 var(--s05)}
+
+/* header */
+.masthead{background:var(--gray-100);color:var(--text-on-color);
+  padding-top:env(safe-area-inset-top,0px)}
+.masthead .shell{display:flex;align-items:center;gap:var(--s05);height:48px}
+.masthead .brand{font-weight:600;letter-spacing:.1px}
+.masthead .divider{width:1px;height:20px;background:var(--gray-80)}
+.masthead .ctx{color:#c6c6c6;font-size:13px}
+.masthead .spacer{flex:1}
+#theme-toggle{display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;padding:0;border:0;background:none;color:#f4f4f4;cursor:pointer}
+#theme-toggle:hover{background:#353535}
+#theme-toggle:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+#theme-toggle svg{display:block;flex:none}
+
+/* title block */
+.title{background:var(--layer-01);border-bottom:1px solid var(--border-subtle);
+  padding:var(--s09) 0 var(--s07)}
+h1{margin:0 0 var(--s04);font-size:clamp(28px,4.2vw,42px);line-height:1.18;font-weight:400;letter-spacing:0}
+.lede{margin:0;max-width:62ch;color:var(--text-secondary);font-size:16px;line-height:1.5}
+.tags{display:flex;flex-wrap:wrap;gap:var(--s03);margin-top:var(--s06)}
+.tag{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;
+  font-size:12px;font-weight:600;letter-spacing:.32px;white-space:nowrap}
+.tag-blue{background:var(--blue-10);color:var(--blue-70)}
+.tag-green{background:var(--green-10);color:#0e6027}
+.tag-red{background:var(--red-10);color:#a2191f}
+.tag-yellow{background:var(--yellow-10);color:#684e00}
+.tag-purple{background:var(--purple-10);color:#6929c4}
+.tag-gray{background:var(--layer-accent);color:var(--gray-90)}
+
+/* sections */
+main{padding-bottom:var(--s10)}
+section{padding-top:var(--s09);scroll-margin-top:var(--s06)}
+h2{margin:0 0 var(--s05);font-size:24px;line-height:1.33;font-weight:400;letter-spacing:0}
+h3{margin:var(--s07) 0 var(--s04);font-size:16px;line-height:1.5;font-weight:600;letter-spacing:0}
+h4{margin:var(--s06) 0 var(--s03);font-size:14px;font-weight:600}
+p{margin:0 0 var(--s05);max-width:76ch}
+ul,ol{margin:0 0 var(--s05);padding-left:var(--s06);max-width:76ch}
+li{margin-bottom:6px}
+a{color:var(--link)}
+code{font-family:var(--mono);font-size:.9em;background:var(--layer-01);padding:1px 5px;
+  border-radius:2px;word-break:break-word}
+pre{font-family:var(--mono);font-size:13px;line-height:1.5;background:var(--gray-100);
+  color:#f4f4f4;padding:var(--s05);border-radius:2px;overflow-x:auto;margin:0 0 var(--s05)}
+pre code{background:none;color:inherit;padding:0}
+.rule{height:1px;background:var(--border-subtle);border:0;margin:var(--s08) 0 0}
+
+/* notifications */
+.note{display:flex;gap:var(--s04);padding:var(--s05);margin:0 0 var(--s05);
+  border-left:3px solid var(--blue-60);background:var(--blue-10)}
+.note.warn{border-left-color:var(--yellow-30);background:var(--yellow-10)}
+.note.err{border-left-color:var(--red-60);background:var(--red-10)}
+.note.ok{border-left-color:var(--green-50);background:var(--green-10)}
+.note .body{max-width:74ch}
+.note .body :last-child{margin-bottom:0}
+.note strong{display:block;margin-bottom:4px}
+
+/* table */
+.tablewrap{overflow-x:auto;margin:0 0 var(--s05);border:1px solid var(--border-subtle)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+thead th{background:var(--layer-01);text-align:left;font-weight:600;padding:10px var(--s05);
+  border-bottom:1px solid var(--border-subtle);white-space:nowrap}
+tbody td{padding:10px var(--s05);border-bottom:1px solid var(--border-subtle);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#f9f9f9}
+td .mono,th .mono{font-family:var(--mono);font-size:12.5px}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;
+  background:var(--border-subtle);border:1px solid var(--border-subtle);margin-bottom:var(--s05)}
+.card{background:var(--white);padding:var(--s05)}
+.card h3{margin:0 0 var(--s03);font-size:14px}
+.card p{margin:0;font-size:13px;color:var(--text-secondary)}
+.kv{display:flex;justify-content:space-between;gap:var(--s05);padding:7px 0;
+  border-bottom:1px solid var(--border-subtle);font-size:13px}
+.kv:last-child{border-bottom:0}
+.kv dt{color:var(--text-secondary)}
+.kv dd{margin:0;font-family:var(--mono);font-size:12.5px;text-align:right}
+dl{margin:0}
+
+/* option blocks */
+.opt{border:1px solid var(--border-subtle);border-left:3px solid var(--border-strong);
+  padding:var(--s05);margin-bottom:var(--s04);background:var(--white)}
+.opt.rec{border-left-color:var(--green-50);background:#fbfffc}
+.opt.dead{border-left-color:var(--red-60)}
+.opt.future{border-left-color:var(--purple-60)}
+.opt .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s03);margin-bottom:var(--s03)}
+.opt .head h3{margin:0;font-size:15px}
+.opt ul{margin-bottom:0}
+.verdict{font-size:13px;color:var(--text-secondary);margin-top:var(--s03)}
+
+/* a11y: visible keyboard focus, Carbon style */
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.tablewrap:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.skip{position:absolute;left:-9999px;top:0;z-index:10;background:var(--link);color:#fff;
+  padding:var(--s04) var(--s05);font-weight:600;text-decoration:none}
+.skip:focus{left:0}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+
+/* Dark theme. System preference by default; an explicit choice on the root wins. */
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root:not([data-theme="light"]) .tag-gray{background:#393939;color:#f4f4f4}
+:root:not([data-theme="light"]) .tag-green{color:#42be65}
+:root:not([data-theme="light"]) .tag-red{color:#ff8389}
+:root:not([data-theme="light"]) .tag-yellow{color:#f1c21b}
+:root:not([data-theme="light"]) .tag-purple{color:#be95ff}
+:root:not([data-theme="light"]) .opt.rec{background:#0a1a0d}
+:root:not([data-theme="light"]) tbody tr:hover{background:#1f1f1f}
+:root:not([data-theme="light"]) pre{background:#000}
+}
+:root[data-theme="dark"]{color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root[data-theme="dark"] .tag-gray{background:#393939;color:#f4f4f4}
+:root[data-theme="dark"] .tag-green{color:#42be65}
+:root[data-theme="dark"] .tag-red{color:#ff8389}
+:root[data-theme="dark"] .tag-yellow{color:#f1c21b}
+:root[data-theme="dark"] .tag-purple{color:#be95ff}
+:root[data-theme="dark"] .opt.rec{background:#0a1a0d}
+:root[data-theme="dark"] tbody tr:hover{background:#1f1f1f}
+:root[data-theme="dark"] pre{background:#000}
+
+footer{border-top:1px solid var(--border-subtle);margin-top:var(--s09);padding:var(--s06) 0 var(--s09);
+  color:var(--text-helper);font-size:12px;padding-bottom:calc(var(--s09) + env(safe-area-inset-bottom,0px))}
+footer p{max-width:76ch;margin-bottom:6px}
+
+/* guide extras: step numbers and copy buttons */
+h3 .num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:var(--s04);
+  background:var(--blue-60);color:#fff;font-size:14px;font-weight:600;font-family:var(--mono)}
+h3[id]{scroll-margin-top:var(--s06)}
+.codewrap{position:relative}
+.codewrap pre{padding-right:84px}
+.copy{position:absolute;top:0;right:0;height:32px;min-width:64px;padding:0 var(--s04);border:0;
+  background:#393939;color:#f4f4f4;font:400 12px/1 var(--sans);letter-spacing:.32px;cursor:pointer}
+.copy:hover{background:#4c4c4c}
+.copy:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+.copy[data-done]{background:var(--green-50);color:#fff}
+
+/* docs navigation */
+.crumb{margin:0 0 var(--s04);font-size:13px;max-width:none}
+.crumb a{text-decoration:none}
+.crumb a:hover{text-decoration:underline}
+.toc{padding-top:var(--s07)}
+.toc ol{columns:3 200px;column-gap:var(--s06);margin:0;padding:var(--s05) var(--s05) var(--s05) var(--s08);
+  max-width:none;background:var(--layer-01);border-left:3px solid var(--blue-60)}
+.toc li{margin-bottom:6px;break-inside:avoid}
+
+/* flow strip */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s03);margin:0 0 var(--s05);padding:0;list-style:none;max-width:none}
+.flow li{margin:0;padding:6px var(--s04);border:1px solid var(--border-strong);background:var(--white);font-size:13px}
+.flow li.hl{background:var(--blue-60);border-color:var(--blue-60);color:#fff}
+.flow li.opt-step{border-style:dashed}
+.flow li.arrow{padding:0;border:0;background:none;color:var(--text-helper)}
+
+/* column fill illustration */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:var(--s04);max-width:220px}
+.cols span{display:flex;align-items:center;justify-content:center;height:24px;font:400 12px/1 var(--mono);
+  background:var(--blue-10);color:var(--blue-70)}
+.cols span.wide{grid-column:1/-1;background:var(--layer-accent);color:var(--text-primary)}
+.cols span.empty{background:none;border:1px dashed var(--border-subtle)}
+
+/* document tiles: Carbon clickable tiles */
+.docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--border-subtle);
+  border:1px solid var(--border-subtle);margin:0 0 var(--s05)}
+.doc{position:relative;display:flex;flex-direction:column;gap:var(--s03);min-height:220px;
+  padding:var(--s05) var(--s05) var(--s08);background:var(--white);color:var(--text-primary);text-decoration:none;
+  transition:background-color 110ms cubic-bezier(.2,0,.38,.9)}
+.doc:hover{background:var(--layer-01)}
+.doc:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.doc .kicker{font-size:12px;letter-spacing:.32px;color:var(--text-secondary)}
+.doc h3{margin:0;font-size:20px;line-height:1.4;font-weight:400}
+.doc p{margin:0;font-size:14px;color:var(--text-secondary)}
+.doc .tags{margin-top:auto;padding-top:var(--s04);padding-right:var(--s07)}
+.doc .go{position:absolute;right:var(--s05);bottom:var(--s05);color:var(--link)}
+.masthead .brand{color:inherit;text-decoration:none}
+.masthead .ctx{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.masthead .brand:focus-visible{outline:2px solid #fff;outline-offset:2px}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="masthead">
+  <div class="shell">
+    <a class="brand" href="index.html">IBM</a>
+    <span class="divider" aria-hidden="true"></span>
+    <span class="ctx">BAW Dev Tools MCP · Getting Started</span>
+    <span class="spacer" aria-hidden="true"></span>
+    <button type="button" id="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M13.5 2c-1.7 0-3.4.4-4.9 1.2 3.6 1.9 6.1 5.6 6.1 9.9s-2.5 8-6.1 9.9c1.5.8 3.2 1.2 4.9 1.2 6.1 0 11.1-5 11.1-11.1S19.6 2 13.5 2z" transform="translate(4 3)"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div class="title">
+  <div class="shell">
+    <p class="crumb"><a href="index.html">BAW Dev Tools MCP docs</a></p>
+    <h1>Get started with BAW Dev Tools MCP</h1>
+    <p class="lede">From a fresh laptop to your first app running on BAW, built by IBM Bob. Follow the steps in
+      order; each one ends with a check so you know it worked before moving on.</p>
+    <div class="tags">
+      <span class="tag tag-blue">New teammates</span>
+      <span class="tag tag-gray">macOS · Linux</span>
+      <span class="tag tag-gray">Python 3.11+ · Node 18+ · uv</span>
+      <span class="tag tag-gray">IBM Bob</span>
+      <span class="tag tag-yellow">About 30 minutes</span>
+      <span class="tag tag-purple">9 October 2026</span>
+    </div>
+  </div>
+</div>
+
+<main class="shell" id="main">
+
+<section id="overview">
+  <h2>Where you will end up</h2>
+  <ul>
+    <li>The project on your laptop, connected to a BAW test server.</li>
+    <li>IBM Bob showing the <code>baw-dev-tools</code> MCP server with 13 tools and two modes:
+    🏗️ BAW App Builder and ✨ BAW Coach Modernizer.</li>
+    <li>A small ZZ app you asked Bob for, installed on the server, tested in a browser, with a link you can open.</li>
+  </ul>
+
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Steps at a glance, scrollable">
+    <table>
+      <thead><tr><th scope="col">Step</th><th scope="col">What you do</th><th scope="col">Check</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#step-1">1</a></td><td>Get access to a BAW test server</td><td>You can log in to the Cloud Pak console</td></tr>
+        <tr><td><a href="#step-2">2</a></td><td>Install the tools</td><td>Four version numbers print</td></tr>
+        <tr><td><a href="#step-3">3</a></td><td>Get the code</td><td><code>baw_mcp.py</code> is in the folder</td></tr>
+        <tr><td><a href="#step-4">4</a></td><td>Add your server settings</td><td><code>.env</code> is readable only by you</td></tr>
+        <tr><td><a href="#step-5">5</a></td><td>Install the screen tools</td><td><code>npm install</code> finishes</td></tr>
+        <tr><td><a href="#step-6">6</a></td><td>Check the connection</td><td>Your server's apps are listed</td></tr>
+        <tr><td><a href="#step-7">7</a></td><td>Check the Hiring Sample</td><td><code>HSS</code> is in the list</td></tr>
+        <tr><td><a href="#step-8">8</a></td><td>Connect Bob</td><td>13 tools in Bob's MCP panel</td></tr>
+        <tr><td><a href="#step-9">9</a></td><td>Build your first app</td><td>Bob reports a run URL</td></tr>
+        <tr><td><a href="#step-10">10</a></td><td>Look at the result and change it</td><td>The app opens in your browser</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <div class="body">
+      <strong>Use a test server</strong>
+      <p>The tools install apps. They only install apps named "ZZ &hellip;" and never delete anything, but use a
+      test or demo server, never production.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="steps">
+  <h2>Steps</h2>
+
+  <h3 id="step-1"><span class="num">1</span>Get access to a BAW test server</h3>
+  <p>Ask your team lead or BAW admin for:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="What to ask for, scrollable">
+    <table>
+      <thead><tr><th scope="col">You need</th><th scope="col">Looks like</th><th scope="col">Note</th></tr></thead>
+      <tbody>
+        <tr><td>The Cloud Pak base URL</td><td class="mono">https://cpd-cp4ba.apps.&lt;cluster&gt;</td><td>Only the address, nothing after the host name</td></tr>
+        <tr><td>A user name</td><td class="mono">jsmith</td><td>The user must be allowed to install process apps</td></tr>
+        <tr><td>A password <em>or</em> a Platform API key</td><td>[keep it private]</td><td>An API key is better: you can revoke it without changing your password</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>To make an API key: log in to the Cloud Pak console, open your profile menu at the top right, choose
+  <strong>Profile and settings</strong>, then <strong>API key</strong> &rarr; <strong>Generate new key</strong>.
+  Copy it straight into step 4; the console shows it only once.</p>
+  <p><strong>Check:</strong> you can log in to the Cloud Pak console in a browser with that user.</p>
+
+  <h3 id="step-2"><span class="num">2</span>Install the tools</h3>
+  <p>Open a terminal and check what you already have:</p>
+<pre><code>git --version
+uv --version
+python3 --version
+node --version</code></pre>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Tools, scrollable">
+    <table>
+      <thead><tr><th scope="col">Tool</th><th scope="col">Need</th><th scope="col">Used for</th><th scope="col">Install on macOS</th></tr></thead>
+      <tbody>
+        <tr><td>git</td><td>any</td><td>Getting the code</td><td class="mono">xcode-select --install</td></tr>
+        <tr><td>uv</td><td>any</td><td>Runs the MCP server with its pinned packages</td><td class="mono">brew install uv</td></tr>
+        <tr><td>Python</td><td>3.11 or newer</td><td>The server and the build scripts</td><td class="mono">brew install python</td></tr>
+        <tr><td>Node.js</td><td>18 or newer</td><td>React screens and the browser tests</td><td class="mono">brew install node</td></tr>
+        <tr><td>Chrome or Brave</td><td>installed in <code>/Applications</code></td><td>The browser tests (<code>test_service</code>)</td><td>From the vendor's website</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>No Homebrew? Get it from <a href="https://brew.sh">brew.sh</a>, or install uv with its own installer:
+  <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>. On Linux use your package manager; the browser test
+  looks for <code>/usr/bin/chromium</code> and <code>/usr/bin/google-chrome</code>. For any other Chromium browser, see
+  <a href="#browser">Use another browser</a>.</p>
+  <p><strong>Check:</strong> all four commands print a version, Python is 3.11 or newer and Node is v18 or newer.</p>
+
+  <h3 id="step-3"><span class="num">3</span>Get the code</h3>
+<pre><code>git clone https://github.com/unclethien/baw-bob-dev-tools-mcp.git
+cd baw-bob-dev-tools-mcp</code></pre>
+  <p>Stay in this folder for every step below.</p>
+  <p><strong>Check:</strong> <code>ls baw_mcp.py</code> prints <code>baw_mcp.py</code>.</p>
+
+  <h3 id="step-4"><span class="num">4</span>Add your server settings</h3>
+  <p>Copy the template and make it readable only by you:</p>
+<pre><code>cp .env.example .env
+chmod 600 .env</code></pre>
+  <p>Open <code>.env</code> in an editor (<code>open -e .env</code> on macOS, or <code>nano .env</code>) and fill it in:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Settings, scrollable">
+    <table>
+      <thead><tr><th scope="col">Setting</th><th scope="col">Value</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">BAW_URL</td><td>The base URL from step 1, e.g. <code>https://cpd-cp4ba.apps.&lt;cluster&gt;</code></td></tr>
+        <tr><td class="mono">BAW_USER</td><td>Your user name</td></tr>
+        <tr><td class="mono">BAW_PASSWORD</td><td>Your password, <em>or</em> leave it empty and set:</td></tr>
+        <tr><td class="mono">BAW_APIKEY</td><td>Your Platform API key. Used only when <code>BAW_PASSWORD</code> is empty</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note err">
+    <div class="body">
+      <strong>Keep <code>.env</code> to yourself</strong>
+      <p>It holds your credentials. Git ignores it, so it is never committed; do not copy it into chat, tickets or
+      screenshots. The MCP server reads it, logs in and never returns your credentials to the agent.</p>
+    </div>
+  </div>
+  <p><strong>Check:</strong> <code>ls -l .env</code> starts with <code>-rw-------</code>.</p>
+
+  <h3 id="step-5"><span class="num">5</span>Install the screen tools</h3>
+  <p>The React screens and the browser tests have their own packages:</p>
+<pre><code>(cd react-coach &amp;&amp; npm install)</code></pre>
+  <p><strong>Check:</strong> it ends with "added &hellip; packages" and no <code>ERR!</code> lines.</p>
+
+  <h3 id="step-6"><span class="num">6</span>Check the connection</h3>
+  <p>List the apps on the server, using the same code the MCP server uses:</p>
+<pre><code>python3 baw_ops.py list</code></pre>
+  <p>Each line is an acronym, <code>app</code> or <code>toolkit</code>, and the name:</p>
+<pre><code>HSS        app      Hiring Sample
+HSSX2      app      Smart Hire</code></pre>
+  <p><strong>Check:</strong> you see a list of apps. If you see an error instead, look at its last line:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Connection errors, scrollable">
+    <table>
+      <thead><tr><th scope="col">Last line says</th><th scope="col">Fix</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Missing BAW settings: &hellip;</td><td>A setting in <code>.env</code> is empty; the message names it</td></tr>
+        <tr><td class="mono">HTTP Error 401</td><td>Wrong user, password or API key. Try logging in to the console with them</td></tr>
+        <tr><td class="mono">nodename nor servname provided</td><td>The host name in <code>BAW_URL</code> is wrong, or you need the VPN. On Linux it reads <code>Name or service not known</code></td></tr>
+        <tr><td class="mono">HTTP Error 500</td><td>Usually <code>BAW_URL</code> has a path after the host name, such as <code>/bas/bpm</code>; remove it</td></tr>
+        <tr><td class="mono">timed out</td><td>It waits a long time, then fails: the server is not reachable from your network. Check the VPN</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="step-7"><span class="num">7</span>Check the Hiring Sample</h3>
+  <p>The tools package every new app using the Hiring Sample (HSS) as a base, so it must be on the server:</p>
+<pre><code>python3 baw_ops.py list | grep '^HSS '</code></pre>
+  <p><strong>Check:</strong> one line, <code>HSS app Hiring Sample</code>. If nothing prints, ask your BAW admin to
+  install the Hiring Sample; it ships with BAW.</p>
+
+  <h3 id="step-8"><span class="num">8</span>Connect Bob</h3>
+  <p>Bob starts the MCP server from <code>.bob/mcp.json</code>, which needs the full path to this folder. This
+  command writes it for you from the example:</p>
+<pre><code>sed "s#/ABSOLUTE/PATH/TO/baw-bob-dev-tools-mcp#$PWD#" .bob/mcp.example.json &gt; .bob/mcp.json
+grep baw_mcp.py .bob/mcp.json</code></pre>
+  <p>The second line should show your real path ending in <code>/baw_mcp.py</code>. Then start the server once by
+  hand; the first run downloads its packages, so Bob does not time out waiting for them later:</p>
+<pre><code>uv run --quiet --script baw_mcp.py &lt; /dev/null &amp;&amp; echo "Server starts"</code></pre>
+  <p>Now open this folder as the workspace in Bob and open Bob's MCP panel.</p>
+  <p><strong>Check:</strong> <code>baw-dev-tools</code> shows as connected with <strong>13 tools</strong>:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="The 13 tools, scrollable">
+    <table>
+      <thead><tr><th scope="col">Group</th><th scope="col">Tools</th><th scope="col">Bob asks first?</th></tr></thead>
+      <tbody>
+        <tr><td>Read the server</td><td class="mono">list_apps, list_snapshots, list_services, export_app</td><td>No</td></tr>
+        <tr><td>Read screenshots</td><td class="mono">view_image, image_colors, crop_image</td><td>Only <code>crop_image</code>, which writes a file</td></tr>
+        <tr><td>Build</td><td class="mono">inspect_coaches, create_app, build_screens, modernize_app</td><td><code>create_app</code> and <code>modernize_app</code></td></tr>
+        <tr><td>Install and test</td><td class="mono">install_app, test_service</td><td><code>install_app</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The tools that run without asking are listed under <code>alwaysAllow</code> in <code>.bob/mcp.json</code>.
+  Using another MCP client instead of Bob? See <a href="#other-clients">Other MCP clients</a>.</p>
+
+  <h3 id="step-9"><span class="num">9</span>Build your first app</h3>
+  <p>In Bob, switch to the <strong>🏗️ BAW App Builder</strong> mode and send:</p>
+<pre><code>Build a small ZZ app for an office supply request: one step with requester name,
+item, quantity and needed-by date, then a review screen. Install it and test it.</code></pre>
+  <p>What Bob does, and where you come in:</p>
+  <ol>
+    <li>Reads the server (<code>list_apps</code>) to pick a ZZ acronym nobody uses.</li>
+    <li>Writes the app spec to <code>work/&lt;ACRONYM&gt;.app.json</code>. You can open it; the
+    <a href="app-spec-reference.html">app spec reference</a> explains every key.</li>
+    <li>Calls <code>create_app</code>. <strong>Approve it.</strong> It builds the <code>.twx</code> in <code>work/</code>.
+    The first build also saves the Hiring Sample to <code>work/base-HSS.twx</code>.</li>
+    <li>Checks the screens with <code>inspect_coaches</code>.</li>
+    <li>Calls <code>install_app</code>. <strong>Approve it.</strong> The install usually takes one to three minutes.</li>
+    <li>Runs <code>test_service</code>: a headless browser opens each screen, fills sample values and presses Next.</li>
+    <li>Reports the app, acronym, snapshot, run URL and the screenshot folder.</li>
+  </ol>
+  <p><strong>Check:</strong> Bob's report includes a run URL and says the test passed (<code>"ok": true</code>).</p>
+  <p>Have a screenshot of a form instead? Save it in <code>work/</code> and ask: <em>"Build a ZZ app whose screen looks
+  like work/my-form.png. Install it, test it and compare the result with the screenshot."</em> Bob then uses the
+  screenshot-to-app skill, which also copies the colours, header and layout.</p>
+
+  <h3 id="step-10"><span class="num">10</span>Look at the result and change it</h3>
+  <ul>
+    <li><strong>Run it:</strong> open the run URL in a browser where you are logged in to the Cloud Pak console.</li>
+    <li><strong>Screenshots:</strong> <code>work/shots-&lt;ACRONYM&gt;-&hellip;/</code> has one picture per screen from the test.</li>
+    <li><strong>Change it:</strong> ask Bob, e.g. <em>"Add a cost centre dropdown with 100, 200 and 300, then install
+    and test again."</em> Bob edits the spec and bumps <code>app.snapshot</code>, because every install needs a new
+    snapshot name. The run URL stays the same.</li>
+    <li><strong>Give it a modern UI:</strong> switch to <strong>✨ BAW Coach Modernizer</strong> and ask Bob to modernize
+    the app. It writes React + Carbon screens and installs them as another snapshot.</li>
+  </ul>
+  <p><strong>Check:</strong> the app opens, and the screens match the screenshots.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="more">
+  <h2>Good to know</h2>
+
+  <h3 id="rules">The rules the tools follow</h3>
+  <ul>
+    <li>Only apps whose name starts with "ZZ" and whose acronym starts with <code>ZZ</code> can be installed.</li>
+    <li>A snapshot name can be used once per app; reusing it is refused, because BAW would silently keep the old content.</li>
+    <li>There is no delete tool. To remove a test app, ask a BAW admin to archive it.</li>
+    <li>Tools only read and write files inside this folder. Bob edits only <code>work/</code>, <code>app-specs/</code>
+    and <code>react-coach/src/screens/</code>.</li>
+  </ul>
+
+  <h3 id="browser">Use another browser</h3>
+  <p>The browser test tries <code>BROWSER_PATH</code> first, then Brave, then Chrome. To use another Chromium browser
+  with Bob, add it to the server's environment in <code>.bob/mcp.json</code>:</p>
+<pre><code>"env": { "BROWSER_PATH": "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" }</code></pre>
+  <p>The same <code>"env"</code> block can hold <code>BAW_URL</code> to point Bob at another server without editing
+  <code>.env</code>; settings in the environment win over <code>.env</code>.</p>
+
+  <h3 id="other-clients">Other MCP clients</h3>
+  <p>Any MCP client that runs stdio servers works. Give it this command, with your full path:</p>
+<pre><code>{ "command": "uv", "args": ["run", "--quiet", "--script", "/ABSOLUTE/PATH/TO/baw_mcp.py"] }</code></pre>
+  <p>The Bob modes and skills live in <code>.bob/</code>; other clients get the tools, but not the step-by-step skills.</p>
+
+  <h3 id="no-agent">Build an app without an agent</h3>
+  <p>For a <strong>new</strong> app you can run the same build from the terminal. Copy an example, change its
+  <code>app.name</code> and <code>app.acronym</code> to an unused ZZ name, then:</p>
+<pre><code>cp app-specs/example-equipment-request.json work/ZZOFFICE.app.json
+# edit work/ZZOFFICE.app.json: "name": "ZZ Office Request", "acronym": "ZZOFFICE"
+python3 generate_app.py work/ZZOFFICE.app.json work/ZZOFFICE-1.0.0.twx
+python3 baw_ops.py install work/ZZOFFICE-1.0.0.twx
+python3 baw_ops.py services ZZOFFICE</code></pre>
+  <div class="note warn">
+    <div class="body">
+      <strong>The scripts skip the guard rails</strong>
+      <p><code>baw_ops.py install</code> does not check the ZZ name or the snapshot name; only the MCP tools do. And
+      for a new snapshot of an app that already exists, use <code>create_app</code>: it reuses the installed app's
+      identity, which <code>generate_app.py</code> alone does not. To install by hand with <code>curl</code>, follow the
+      <a href="baw-import-export-terminal-guide.html">terminal guide</a>, which includes those checks.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="troubleshooting">
+  <h2>Troubleshooting</h2>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Troubleshooting, scrollable">
+    <table>
+      <thead><tr><th scope="col">You see</th><th scope="col">Why</th><th scope="col">Fix</th></tr></thead>
+      <tbody>
+        <tr><td><code>baw-dev-tools</code> is not connected in Bob</td><td>Wrong path in <code>.bob/mcp.json</code>, or uv not on Bob's path</td><td>Redo step 8; run the <code>uv run</code> line and read its error</td></tr>
+        <tr><td>Fewer than 13 tools</td><td>An old copy of the project</td><td><code>git pull</code>, then restart the server from Bob's MCP panel</td></tr>
+        <tr><td class="mono">Login to BAW_URL &hellip; failed with HTTP 401</td><td>Wrong credentials</td><td>Fix <code>.env</code>; check with step 6</td></tr>
+        <tr><td class="mono">Cannot reach BAW_URL</td><td>Wrong host, or no VPN</td><td>Fix <code>BAW_URL</code>; check with step 6</td></tr>
+        <tr><td class="mono">Invalid app spec</td><td>The spec breaks a rule</td><td>Each line names the problem; see <a href="app-spec-reference.html#errors">validation errors</a></td></tr>
+        <tr><td class="mono">Snapshot &hellip; already exists</td><td>The snapshot name is used</td><td>Bump <code>app.snapshot</code></td></tr>
+        <tr><td class="mono">Refusing to install into &hellip;</td><td>Name or acronym is not ZZ</td><td>Rename the app in the spec</td></tr>
+        <tr><td>Install ends in <code>failure</code></td><td>Often an acronym already used by another app</td><td>Pick another acronym; read <code>details</code> in the result</td></tr>
+        <tr><td>The first build fails while exporting HSS</td><td>The Hiring Sample is missing</td><td>See step 7</td></tr>
+        <tr><td><code>test_service</code> cannot start a browser</td><td>No Chrome or Brave in the usual place</td><td>Install one, or set <a href="#browser"><code>BROWSER_PATH</code></a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer class="shell">
+  <p>Steps checked on 9 October 2026 on macOS against BAW on Cloud Pak for Business Automation (TechZone): the
+  connection, the app list, the Hiring Sample check, the server start and the 401, 500 and unknown-host errors ran as shown. Bob's MCP panel and the first
+  app build follow the project README.</p>
+  <p>Next: <a href="app-spec-reference.html">App spec reference</a> · All docs: <a href="index.html">BAW Dev Tools MCP docs</a></p>
+</footer>
+
+
+<script>
+// Copy buttons on every code block.
+document.querySelectorAll('pre').forEach(function (pre) {
+  var wrap = document.createElement('div'); wrap.className = 'codewrap';
+  pre.parentNode.insertBefore(wrap, pre); wrap.appendChild(pre);
+  var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+  btn.setAttribute('aria-label', 'Copy command');
+  btn.addEventListener('click', function () {
+    navigator.clipboard.writeText(pre.innerText).then(function () {
+      btn.textContent = 'Copied'; btn.setAttribute('data-done', '');
+      setTimeout(function () { btn.textContent = 'Copy'; btn.removeAttribute('data-done'); }, 1500);
+    });
+  });
+  wrap.appendChild(btn);
+});
+</script>
+<script>
+(function () {
+  var root = document.documentElement,
+      btn  = document.getElementById('theme-toggle'),
+      mq   = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function isDark() {
+    var set = root.getAttribute('data-theme');
+    return set ? set === 'dark' : mq.matches;
+  }
+  function sync() {
+    var dark = isDark();
+    btn.setAttribute('aria-pressed', String(dark));
+    btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  try {
+    var saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  sync();
+
+  btn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    sync();
+  });
+  // follow the system only while the reader has not chosen
+  mq.addEventListener('change', function () { if (!root.hasAttribute('data-theme')) sync(); });
+})();
+</script>
+</body>
+</html>
