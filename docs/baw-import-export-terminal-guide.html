@@ -397,6 +397,9 @@ echo "$SNAP"</code></pre>
       toolkits). The file is saved in the folder you are in; <code>pwd</code> shows which one.</p>
     </div>
   </div>
+  <p>To leave out the system toolkits (System Data, UI Toolkit), which every server already has, add
+  <code>?format=twxWithoutToolkits</code> to the URL. The file is much smaller and imports the same way on a
+  server with the same BAW version. This project's <code>create_app</code> exports a base app this way.</p>
   <div class="note warn">
     <div class="body">
       <strong>The <code>Accept</code> header matters.</strong>
@@ -424,6 +427,9 @@ echo "$SNAP"</code></pre>
       afterwards needs an administrator.</p>
     </div>
   </div>
+
+  <p>A <code>.twx</code> built by this project's <code>create_app</code> or <code>generate_app.py</code> imports the
+  same way, with these steps or in Workflow Center (Process Apps, Import).</p>
 
   <h3 id="step-8"><span class="num">8</span>Check what the file will install</h3>
   <p>The app and snapshot a <code>.twx</code> installs into are written inside the file, not chosen at upload

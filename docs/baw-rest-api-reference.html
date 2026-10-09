@@ -271,7 +271,7 @@ footer p{max-width:76ch;margin-bottom:6px}
       <h3>Where the calls live</h3>
       <p><code>baw_ops.py</code> holds every REST call the MCP tools make.
       <code>react-coach/scripts/verify-service.mjs</code> repeats the login and service lookup for the
-      browser test, and <code>generate_app.py</code> exports the Hiring Sample base app.</p>
+      browser test. Without these settings, the build tools still work and the server tools say so.</p>
     </div>
   </div>
 </section>
@@ -287,14 +287,14 @@ footer p{max-width:76ch;margin-bottom:6px}
     <table>
       <thead><tr><th scope="col">#</th><th scope="col">Endpoint</th><th scope="col">Source</th><th scope="col">MCP tools</th><th scope="col">Code</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td class="mono">POST /icp4d-api/v1/authorize</td><td>Cloud Pak Platform API</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:64<br>verify-service.mjs:47</td></tr>
-        <tr><td>2</td><td class="mono">POST /bas/bpm/system/login</td><td>BPM REST · System</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:69</td></tr>
-        <tr><td>3</td><td class="mono">GET /bas/ops/std/bpm/containers</td><td>Ops REST · Container</td><td><code>list_apps</code></td><td class="mono">baw_ops.py:83</td></tr>
-        <tr><td>4</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions</td><td>Ops REST · Version</td><td><code>list_snapshots</code>, <code>export_app</code>, <code>create_app</code>, <code>modernize_app</code>, <code>install_app</code></td><td class="mono">baw_ops.py:86<br>generate_app.py:351</td></tr>
-        <tr><td>5</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions/{version}/export</td><td>Ops REST · Version</td><td><code>export_app</code>, <code>create_app</code></td><td class="mono">baw_ops.py:89</td></tr>
-        <tr><td>6</td><td class="mono">POST /bas/ops/std/bpm/containers/install</td><td>Ops REST · Container</td><td><code>install_app</code></td><td class="mono">baw_ops.py:100</td></tr>
-        <tr><td>7</td><td class="mono">GET /bas/ops/system/queue/{id}</td><td>Ops REST · System</td><td><code>install_app</code> (status polling)</td><td class="mono">baw_ops.py:113</td></tr>
-        <tr><td>8</td><td class="mono">GET /bas/rest/bpm/wle/v1/exposed/service</td><td>BPM REST, older API</td><td><code>list_services</code>, <code>test_service</code></td><td class="mono">baw_ops.py:94<br>verify-service.mjs:54</td></tr>
+        <tr><td>1</td><td class="mono">POST /icp4d-api/v1/authorize</td><td>Cloud Pak Platform API</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:75<br>verify-service.mjs:47</td></tr>
+        <tr><td>2</td><td class="mono">POST /bas/bpm/system/login</td><td>BPM REST · System</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:80</td></tr>
+        <tr><td>3</td><td class="mono">GET /bas/ops/std/bpm/containers</td><td>Ops REST · Container</td><td><code>list_apps</code></td><td class="mono">baw_ops.py:94</td></tr>
+        <tr><td>4</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions</td><td>Ops REST · Version</td><td><code>list_snapshots</code>, <code>export_app</code>, <code>create_app</code>, <code>modernize_app</code>, <code>install_app</code></td><td class="mono">baw_ops.py:97</td></tr>
+        <tr><td>5</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions/{version}/export</td><td>Ops REST · Version</td><td><code>export_app</code>, <code>create_app</code></td><td class="mono">baw_ops.py:100</td></tr>
+        <tr><td>6</td><td class="mono">POST /bas/ops/std/bpm/containers/install</td><td>Ops REST · Container</td><td><code>install_app</code></td><td class="mono">baw_ops.py:113</td></tr>
+        <tr><td>7</td><td class="mono">GET /bas/ops/system/queue/{id}</td><td>Ops REST · System</td><td><code>install_app</code> (status polling)</td><td class="mono">baw_ops.py:126</td></tr>
+        <tr><td>8</td><td class="mono">GET /bas/rest/bpm/wle/v1/exposed/service</td><td>BPM REST, older API</td><td><code>list_services</code>, <code>test_service</code></td><td class="mono">baw_ops.py:107<br>verify-service.mjs:54</td></tr>
       </tbody>
     </table>
   </div>
@@ -386,12 +386,15 @@ footer p{max-width:76ch;margin-bottom:6px}
   <code>version</code> field, not the display name in <code>version_name</code>. That is why the tools
   accept either value from the user but always pass <code>version</code> to the API.</p>
 
-  <h3>5 · Export with the system toolkits included</h3>
+  <h3>5 · Export with or without the system toolkits</h3>
   <p>The export route returns the <code>.twx</code> as <code>application/octet-stream</code>. Its
-  <code>format</code> parameter can skip system toolkits (<code>twxWithoutToolkits</code>); we deliberately
-  leave it unset. The generators reuse the bundled <code>toolkits/*.zip</code> of an export: the Hiring
-  Sample (HSS) export supplies the packaging metadata and System Data / UI Toolkit dependencies for new apps,
-  and <code>twx_clone.py</code> uses the toolkit UUIDs to know which IDs it must not rewrite.</p>
+  <code>format</code> parameter can skip system toolkits (<code>twxWithoutToolkits</code>).
+  <code>export_app</code> leaves it unset, so you get the complete file. <code>create_app</code> sets it when it
+  exports a base app: only that export's packaging metadata is used. A generated app is itself in the
+  no-toolkits format, built from <code>server/app_template.py</code>: <code>META-INF/package.xml</code> names the
+  System Data and UI Toolkit versions, and <code>properties.json</code> says <code>{"twxWithoutToolkits":"true"}</code>.
+  <code>twx_clone.py</code> and <code>modernize_coaches.py</code> keep the IDs of toolkit objects that the app
+  refers to but does not hold, with or without <code>toolkits/*.zip</code>.</p>
 
   <h3>6 · Install is asynchronous</h3>
   <p><code>POST /std/bpm/containers/install</code> takes the file as the multipart form field

@@ -331,14 +331,13 @@ h3[id]{scroll-margin-top:var(--s06)}
   ]
 }</code></pre>
   <p>Check a spec without touching the server. The generator validates the whole spec first and lists every
-  problem at once; it only contacts the server after the spec is valid.</p>
+  problem at once. It never contacts the server: building and installing are separate steps.</p>
 <pre><code>python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx</code></pre>
   <div class="note warn">
     <div class="body">
       <strong>A valid spec goes on to build</strong>
-      <p>When the spec is valid, the command builds the <code>.twx</code>. The first build ever also downloads the
-      Hiring Sample (HSS) once into <code>work/base-HSS.twx</code> to package the app, so it needs your
-      <code>.env</code>. Building does not install anything; installing is a separate step.</p>
+      <p>When the spec is valid, the command builds the <code>.twx</code> from the built-in template, without a server.
+      Building does not install anything; installing is a separate step.</p>
     </div>
   </div>
 </section>
@@ -399,6 +398,10 @@ h3[id]{scroll-margin-top:var(--s06)}
     <code>1.0.0</code> &rarr; <code>1.0.1</code> or <code>1.1.0</code>.</li>
     <li><strong>Same acronym, new snapshot = update.</strong> When the app already exists, <code>create_app</code>
     builds the spec as a new snapshot of that app, so its run URL and history stay.</li>
+    <li><strong>Base app (optional).</strong> <code>create_app</code> takes a <code>base</code>: the acronym of any
+    installed app, or a <code>.twx</code> exported from your server. The package then names that server's BAW build
+    and toolkit versions instead of the built-in template's (BAW 26.0.0). Without a server, a <code>.twx</code> of
+    the app itself as <code>base</code> makes the build a new snapshot of it.</li>
   </ul>
 </section>
 
