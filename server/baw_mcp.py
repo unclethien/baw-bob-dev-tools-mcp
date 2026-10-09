@@ -10,7 +10,7 @@ build and modernize IBM BAW process apps, so the agent only designs and writes c
 The agent authors the artifacts (app specs, coach specs, React screens). These tools package,
 install, inspect and test them on the BAW server set by BAW_URL (environment first, then .env;
 see baw_ops.py). Credentials stay in this process and are never returned. Installs are limited to "ZZ" demo apps, and there is
-no delete tool.
+no delete tool. Without a server, the build tools still work: the user imports the .twx in Workflow Center.
 
 Run:  uv run --script server/baw_mcp.py      (Bob starts it from .bob/mcp.json)
 """
@@ -36,20 +36,32 @@ REACT = ROOT / "react-coach"
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 sys.path.insert(0, str(SERVER))
 
-from baw_ops import BawOps, ConfigError  # noqa: E402
+from baw_ops import BawOps, ConfigError, configured, missing_settings  # noqa: E402
 
 mcp = MCPServer("baw-dev-tools", instructions=(
     "Platform tools for IBM BAW on CP4BA. You design and write: app specs (work/<ACR>.app.json), "
     "coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx). "
     "These tools build, install, inspect and test them; view_image shows a screenshot to build from "
     "or to compare with, image_colors reads its exact colours and crop_image cuts out its logo. "
-    "Paths are relative to the project root."))
+    "Paths are relative to the project root. Without a BAW server (BAW_URL not set), the build tools still "
+    "work and the user imports the .twx in Workflow Center."))
 _ops = None
+IMPORT_STEPS = ("No BAW server is configured, so import {twx} yourself: in Workflow Center, open Process Apps, click Import, "
+                "choose the file and finish the wizard. Its snapshot name must be new in that app. Then run the service "
+                "from Workflow Center and test it by hand.")
+
+
+def offline() -> ToolError:
+    return ToolError(f"No BAW server is configured (missing {', '.join(missing_settings())}). create_app, inspect_coaches, "
+                     "modernize_app and the image tools work without one; import the .twx in Workflow Center. To use this tool, "
+                     "set BAW_URL, BAW_USER and BAW_PASSWORD or BAW_APIKEY in .env or in the env block of .bob/mcp.json")
 
 
 def ops() -> BawOps:
     global _ops
     if _ops is None:
+        if not configured():
+            raise offline()
         try:
             _ops = BawOps()
         except ConfigError as e:
@@ -102,7 +114,7 @@ def target_of(twx: Path) -> dict:
 def snapshots(acronym: str) -> list[dict]:
     try:
         versions = ops().versions(acronym)["versions"]
-    except Exception:
+    except urllib.error.HTTPError:  # no such app
         return []
     return sorted((v for v in versions if not v.get("archived")), key=lambda v: v.get("creation_date", ""))
 
@@ -112,6 +124,8 @@ def newest(found: list[dict]) -> dict:
 
 
 def require_new_snapshot(acronym: str, snapshot: str):
+    if not configured():  # checked by the user when importing
+        return
     if any(v["version_name"] == snapshot or v["version"] == snapshot for v in snapshots(acronym)):
         raise ToolError(f"Snapshot {snapshot} already exists in {acronym}; BAW would keep the old content. Use a new snapshot name")
 
@@ -224,28 +238,44 @@ def inspect_coaches(twx: str) -> dict:
 
 
 @mcp.tool()
-def create_app(app_spec: str) -> dict:
+def create_app(app_spec: str, base: str | None = None) -> dict:
     """Build an installable .twx from an app spec (see app-specs/example-equipment-request.json, and
     app-specs/example-themed-quote.json for a theme, banner, placed columns and field icons).
-    When the app already exists on the server, the build becomes a new snapshot of that app."""
+    The package comes from a built-in template, so no server is needed. base (optional) is an app on
+    the server (its acronym) or an exported .twx in the project, to match that server's BAW build and
+    toolkit versions; ask the user which app to use. When the app already exists on the server, the
+    build becomes a new snapshot of it, and base is not needed."""
     spec_path = local(app_spec)
     app = json.loads(spec_path.read_text())["app"]
     acronym, snapshot = app.get("acronym", ""), app.get("snapshot", "1.0.0")
     WORK.mkdir(exist_ok=True)
     dest = WORK / f"{acronym}-{snapshot}.twx"
-    existing = snapshots(acronym)
-    if not existing:
-        summary = python("generate_app.py", spec_path, dest)
-        return {"twx": rel(dest), "newApp": True, "summary": summary}
-    require_new_snapshot(acronym, snapshot)
+    online = configured()
+    existing = snapshots(acronym) if online else []
+    note = ""
     with tempfile.TemporaryDirectory() as tmp:
-        current, built = Path(tmp) / "current.twx", Path(tmp) / "built.twx"
-        ops().export(acronym, newest(existing)["version"], current)
-        ids = target_of(current)
-        summary = python("generate_app.py", spec_path, built)
-        python("twx_clone.py", built, dest, "--name", app["name"], "--acronym", acronym, "--snapshot", snapshot,
-               "--project-id", ids["projectId"], "--branch-id", ids["branchId"])
-    return {"twx": rel(dest), "newApp": False, "summary": summary + f"\nBuilt as snapshot {snapshot} of the existing app {acronym}"}
+        base_twx = None
+        if existing:
+            require_new_snapshot(acronym, snapshot)
+            base_twx = Path(tmp) / "current.twx"
+            ops().export(acronym, newest(existing)["version"], base_twx, toolkits=False)
+            note = f"Built as snapshot {snapshot} of the existing app {acronym}"
+        elif base and base.endswith(".twx"):
+            base_twx = local(base)
+            note = (f"Built as snapshot {snapshot} of {acronym} (from {base})" if target_of(base_twx)["acronym"] == acronym
+                    else f"Packaged to match {base}")
+        elif base:
+            found = snapshots(base)
+            if not found:
+                raise ToolError(f"No process app or toolkit {base} on the server; list_apps shows them")
+            base_twx = Path(tmp) / "base.twx"
+            ops().export(base, newest(found)["version"], base_twx, toolkits=False)
+            note = f"Packaged to match {base} on the server"
+        summary = python("generate_app.py", spec_path, dest, *(["--base", base_twx] if base_twx else []))
+    result = {"twx": rel(dest), "newApp": not existing, "summary": summary + (f"\n{note}" if note else "")}
+    if not online:
+        result["install"] = IMPORT_STEPS.format(twx=rel(dest))
+    return result
 
 
 @mcp.tool()
@@ -265,7 +295,10 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str) -> dict:
     build = build_screens()
     dest = WORK / f"{target_of(source)['acronym']}-{snapshot}.twx"
     summary = python("modernize_coaches.py", source, spec, dest, "--snapshot", snapshot)
-    return {"twx": rel(dest), "summary": summary, "build": build[-500:]}
+    result = {"twx": rel(dest), "summary": summary, "build": build[-500:]}
+    if not configured():
+        result["install"] = IMPORT_STEPS.format(twx=rel(dest))
+    return result
 
 
 # ---------------------------------------------------------------- server: change and test
@@ -290,6 +323,8 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
     """Run a service in a real browser: screenshot every screen, fill empty fields with sample
     values (fill), press the forward button, and report each step. "ok": true means every screen
     rendered and every button moved on. Look at the screenshots before calling the work done."""
+    if not configured():
+        raise offline()
     out = WORK / ("shots-" + re.sub(r"[^A-Za-z0-9]+", "-", f"{acronym}-{snapshot or 'tip'}-{service}").strip("-"))
     args = ["node", "scripts/verify-service.mjs", "--app", acronym, "--service", service, "--out", str(out)]
     if snapshot:

@@ -5,7 +5,7 @@ Shared building blocks for generating BAW process apps (.twx) from Python.
 - Layout builds CoachDesignerNG coach layouts from UI Toolkit views and Custom HTML.
 - coachflow builds a client-side human service flow (scripts, coaches, button wiring).
 - service_xml and business_object_xml produce the object XML that BAW installs.
-- write_twx packages the objects with the metadata and toolkits of an exported base app.
+- write_twx packages the objects as an installable app, from the built-in template in app_template.py.
 
 Every object gets fresh IDs and versionIds, so BAW never keeps old content on install.
 """
@@ -15,6 +15,8 @@ import uuid
 import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
+
+import app_template
 
 TWSYS = "7692552a-ea18-49ce-bd93-a1dd62100cd9"
 SYSTEM_TYPES = {
@@ -196,52 +198,36 @@ def service_xml(pid, version, bo_id, var_id, service, flow, var, author):
 """
 
 
-def business_object_xml(template, bo_id, version, name, props):
-    """Reuse a base-app business object as the template so every bookkeeping element matches the server's format.
+def business_object_xml(bo_id, version, name, props, author):
+    """props: (property name, system type name) pairs, e.g. ("employeeName", "String")."""
+    properties = "".join(app_template.PROPERTY.format(name=p, class_ref=f"{TWSYS}/{SYSTEM_TYPES[t]}") for p, t in props)
+    return app_template.BUSINESS_OBJECT.format(id=bo_id, name=name, author=author, guid=uid(), version=version, properties=properties)
 
-    props: (property name, system type name) pairs, e.g. ("employeeName", "String").
+
+def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, base: dict | None = None):
+    """Package a new process app in BAW's twxWithoutToolkits format (see app_template.py).
+
+    app: {"name", "acronym", "snapshot"}. bo: {"id", "version", "name", "props"}.
+    services: (pid, versionId, variable id, {"name", "description"}, flow(bo_id, var_id)).
+    base: app_template.read_base() of an app exported from the target server, for its BAW build and
+    toolkit versions; when it is the same app (same acronym), the package becomes a new snapshot of it.
     """
-    head, rest = template.split("<property>", 1)
-    prop_tpl = "<property>" + rest.split("</property>", 1)[0] + "</property>"
-    tail = template[template.rindex("</property>") + len("</property>"):]
-    old_id = re.search(r'<twClass id="([^"]+)"', head).group(1)
-    old_name = re.search(r'<twClass id="[^"]+" name="([^"]+)"', head).group(1)
-    head = head.replace(old_id, bo_id).replace(f'name="{old_name}"', f'name="{name}"')
-    head = re.sub(r"<versionId>[^<]+</versionId>", f"<versionId>{version}</versionId>", head)
-    head = re.sub(r"<guid>[^<]+</guid>", f"<guid>guid:{uid()}</guid>", head)
-    head = re.sub(r"<description>.*?</description>", '<description isNull="true" />', head, flags=re.S)
-    tail = tail.replace(f'simpleType name="{old_name}"', f'simpleType name="{name}"')
-    body = "".join(
-        re.sub(r"<classRef>[^<]+</classRef>", f"<classRef>{TWSYS}/{SYSTEM_TYPES[t]}</classRef>",
-               re.sub(r"<name>[^<]+</name>", f"<name>{p}</name>", prop_tpl, count=1))
-        for p, t in props)
-    return head + body + tail
-
-
-def write_twx(base: Path, dest: Path, bo: dict, var: str, services, author: str):
-    """Package a new process app from an exported base app.
-
-    The base app supplies META-INF metadata, its environment variables, project defaults and the
-    System Data / UI Toolkit dependencies; its own objects are dropped.
-    bo: {"id", "version", "name", "props"}. services: (pid, versionId, variable id, {"name", "description"}, flow(bo_id, var_id)).
-    """
-    with zipfile.ZipFile(base) as src:
-        package = src.read("META-INF/package.xml").decode("utf-8")
-        objects = re.findall(r'<object id="([^"]+)" versionId="[^"]+" name="[^"]*" type="([^"]+)"/>', package)
-        keep = [oid for oid, typ in objects if typ in ("environmentVariableSet", "projectDefaults")]
-        bo_template = next(src.read(f"objects/{oid}.xml").decode("utf-8") for oid, typ in objects if typ == "twClass")
-        kept_entries = [e for e in re.findall(r"\s*<object [^>]+/>", package) if any(f'id="{k}"' in e for k in keep)]
-        new_entries = [f'\n        <object id="{pid}" versionId="{version}" name="{escape(service["name"])}" type="process"/>' for pid, version, _, service, _ in services]
-        new_entries += [f'\n        <object id="{bo["id"]}" versionId="{bo["version"]}" name="{bo["name"]}" type="twClass"/>']
-        package = re.sub(r"<objects>.*</objects>", "<objects>" + "".join(new_entries + kept_entries) + "\n    </objects>", package, flags=re.S)
-        package = re.sub(r"<files>.*</files>", "<files/>", package, flags=re.S)
-        with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
-            for info in src.infolist():
-                name = info.filename
-                if name == "META-INF/package.xml":
-                    out.writestr(name, package)
-                elif name.startswith(("META-INF/", "toolkits/")) or any(name == f"objects/{k}.xml" for k in keep):
-                    out.writestr(name, src.read(name))
-            out.writestr(f"objects/{bo['id']}.xml", business_object_xml(bo_template, bo["id"], bo["version"], bo["name"], bo["props"]))
-            for pid, version, var_id, service, flow in services:
-                out.writestr(f"objects/{pid}.xml", service_xml(pid, version, bo["id"], var_id, service, flow(bo["id"], var_id), var, author))
+    base = base or app_template.builtin()
+    same_app = base.get("acronym") == app["acronym"]
+    ids = {"projectId": base["projectId"], "branchId": base["branchId"], "branchName": base["branchName"]} if same_app else \
+        {"projectId": "2066." + uid(), "branchId": "2063." + uid(), "branchName": "Main"}
+    ids["snapshotId"] = "2064." + uid()
+    env, defaults = ("62." + uid(), uid()), ("63." + uid(), uid())
+    objects = [(pid, version, service["name"], "process") for pid, version, _, service, _ in services]
+    objects += [(bo["id"], bo["version"], bo["name"], "twClass"), (*env, "Environment Variables", "environmentVariableSet"),
+                (*defaults, "Process App Settings", "projectDefaults")]
+    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
+        for name, text in app_template.META_INF.items():
+            out.writestr(name, text)
+        out.writestr("META-INF/package.xml", app_template.package_xml(base, app, ids, objects))
+        out.writestr(f"objects/{env[0]}.xml", app_template.ENV_VARS.format(id=env[0], version=env[1], guid=uid(), author=author))
+        out.writestr(f"objects/{defaults[0]}.xml", app_template.PROJECT_DEFAULTS.format(
+            id=defaults[0], version=defaults[1], guid=uid(), author=author, theme=app_template.DEFAULT_THEME, environment=base["environment"]))
+        out.writestr(f"objects/{bo['id']}.xml", business_object_xml(bo["id"], bo["version"], bo["name"], bo["props"], author))
+        for pid, version, var_id, service, flow in services:
+            out.writestr(f"objects/{pid}.xml", service_xml(pid, version, bo["id"], var_id, service, flow(bo["id"], var_id), var, author))

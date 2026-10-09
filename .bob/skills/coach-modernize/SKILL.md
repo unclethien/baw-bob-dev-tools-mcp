@@ -15,7 +15,7 @@ Inputs: an app `.twx` in `work/` and an **approved** coach spec from `inspect_co
 
 3. **Generate:** `modernize_app` with the `.twx`, the coach spec and a snapshot name not used in the app (`list_snapshots`). It adds `<service> (Modernized)` (brand theme) and `<service> (Modernized - Carbon)` (carbon theme) next to the legacy services.
 
-4. **Install:** `install_app` with the returned `.twx`. Continue only when `"ok": true`.
+4. **Install:** `install_app` with the returned `.twx`. Continue only when `"ok": true`. If `modernize_app` returned `install`, there is no BAW server: stop, give the user the `.twx` and its import steps, and list the services to check by hand.
 
 5. **Test every copy:** `test_service` for both services with `snapshot` set and `fill: true`. It walks each screen, types sample values (each field's `example`), presses the primary button and screenshots every step.
 
