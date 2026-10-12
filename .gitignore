@@ -15,3 +15,4 @@ react-coach/src/screens/
 __pycache__/
 *.pyc
 .DS_Store
+plans/
