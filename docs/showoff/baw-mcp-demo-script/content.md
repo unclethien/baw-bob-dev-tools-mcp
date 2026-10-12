@@ -49,7 +49,7 @@ Checklist, 30 minutes before:
 
 > Build a ZZ app whose screen looks like screenshots/example-supplier-registration.png. Install it, test it and compare the result with the screenshot.
 
-**Bob does:** `view_image` → writes `work/<ACR>.app.json` → `create_app` → `install_app` (asks approval) → `test_service` → `view_image` on each test screenshot, side by side with the original → fixes and rebuilds if anything differs.
+**Bob does:** `view_image` → samples the colours and cuts out the header logo into `work/<acr>.theme.json` → writes `work/<ACR>.app.json` → `create_app` → `install_app` (asks approval) → `test_service` → `view_image` on each test screenshot, side by side with the original → fixes and rebuilds if anything differs.
 
 **Say.**
 - "Bob is reading the picture the way a developer would: sections, columns, which control is a dropdown, which fields are required."
@@ -73,16 +73,16 @@ Checklist, 30 minutes before:
 
 **Paste.**
 
-> Approved. Write a React screen for each coach, then modernize, install and test both themes.
+> Approved. Write a React screen for each coach in the same theme, then modernize, install and test it.
 
-**Bob does:** writes `react-coach/src/screens/*.jsx` → `build_screens` (fixes compiler errors itself) → `modernize_app` (new snapshot, two new services: brand theme and Carbon theme) → `install_app` → `test_service` on both, filling sample values and pressing every button.
+**Bob does:** writes `react-coach/src/screens/*.jsx` → `build_screens` (fixes compiler errors itself) → `modernize_app` (new snapshot, a new "(Modernized)" service styled by the same theme file) → `install_app` → `test_service`, filling sample values and pressing every button.
 
 **Say.**
 - "The legacy coach flow, scripts and buttons keep running underneath. The React screen only replaces what users see, with IBM Carbon components."[^carbon]
-- "Both themes are added next to the original service as a new snapshot, so the old UI still works and you can compare."
+- "The modernized copy is added next to the original service as a new snapshot, so the old UI still works and you can compare. Both read their look from one theme file: change it once and both follow."
 - "It tested the form by typing, picking dropdown values and choosing radio options, then read the review screen."
 
-**VI. Nói gì:** Luồng coach, script và nút cũ vẫn chạy bên dưới; React chỉ thay phần người dùng nhìn thấy. Hai giao diện mới được thêm cạnh dịch vụ gốc trong snapshot mới, nên giao diện cũ vẫn dùng được để so sánh.
+**VI. Nói gì:** Luồng coach, script và nút cũ vẫn chạy bên dưới; React chỉ thay phần người dùng nhìn thấy. Bản hiện đại được thêm cạnh dịch vụ gốc trong snapshot mới, nên giao diện cũ vẫn dùng được để so sánh. Cả hai lấy giao diện từ cùng một tệp theme.
 
 ---
 

@@ -267,7 +267,7 @@ h3[id]{scroll-margin-top:var(--s06)}
     <a class="doc" href="app-spec-reference.html">
       <span class="kicker">Reference · App builders</span>
       <h3>App spec reference</h3>
-      <p>Every key of the JSON that describes an app: steps or tabs, sections and columns, field types, review, confirmation, theme and banner, and the validation errors.</p>
+      <p>Every key of the JSON that describes an app: steps or tabs, sections and columns, field types, review, confirmation, theme files and banner, and the validation errors.</p>
       <span class="tags"><span class="tag tag-blue">JSON</span><span class="tag tag-gray">8 field types</span></span>
       <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
     </a>
@@ -312,7 +312,7 @@ h3[id]{scroll-margin-top:var(--s06)}
       <tbody>
         <tr><td>Set up the project and build my first app</td><td><a href="getting-started.html">Getting started</a></td></tr>
         <tr><td>Write or fix an app spec, or understand one Bob wrote</td><td><a href="app-spec-reference.html">App spec reference</a></td></tr>
-        <tr><td>Make an app look like a screenshot or a brand</td><td><a href="app-spec-reference.html#theme">App spec reference: theme</a> and <a href="app-spec-reference.html#banner">banner</a></td></tr>
+        <tr><td>Make an app look like a screenshot or a brand, or change its look</td><td><a href="app-spec-reference.html#theme">App spec reference: theme files</a> and <a href="app-spec-reference.html#banner">banner</a></td></tr>
         <tr><td>Know why a spec is rejected</td><td><a href="app-spec-reference.html#errors">App spec reference: validation errors</a></td></tr>
         <tr><td>Back up an app, or move one between servers, without Bob</td><td><a href="baw-import-export-terminal-guide.html">Terminal guide</a></td></tr>
         <tr><td>Know which BAW endpoints the tools call, and why</td><td><a href="baw-rest-api-reference.html">REST API usage</a></td></tr>
@@ -334,8 +334,10 @@ h3[id]{scroll-margin-top:var(--s06)}
     <li class="hl">baw-dev-tools MCP server</li><li class="arrow" aria-hidden="true">&rarr;</li>
     <li>BAW Operations REST API</li>
   </ol>
-  <p>Bob writes three kinds of files: <strong>app specs</strong> (<code>work/*.app.json</code>), <strong>coach specs</strong>
+  <p>Bob writes four kinds of files: <strong>theme files</strong> (<code>work/*.theme.json</code>, the look you describe
+  or show in a screenshot), <strong>app specs</strong> (<code>work/*.app.json</code>), <strong>coach specs</strong>
   (<code>work/*.coaches.json</code>) and <strong>React screens</strong> (<code>react-coach/src/screens/*.jsx</code>).
+  One theme file styles both the classic coaches and the React screens.
   The server does the platform work: it builds <code>.twx</code> files, installs them, reads coaches and tests every
   screen in a headless browser.</p>
   <p>No BAW server to connect to? The build tools still work: every app is built from a template that ships with the
@@ -366,11 +368,12 @@ h3[id]{scroll-margin-top:var(--s06)}
     <table>
       <thead><tr><th scope="col">Mode</th><th scope="col">Skill</th><th scope="col">What it does</th></tr></thead>
       <tbody>
-        <tr><td rowspan="2">🏗️ BAW App Builder</td><td class="mono">baw-app-builder</td><td>A written requirement &rarr; app spec &rarr; installed, tested app</td></tr>
+        <tr><td rowspan="3">🏗️ BAW App Builder</td><td class="mono">app-theme</td><td>A described look or a screenshot &rarr; a theme file, used by both modes</td></tr>
+        <tr><td class="mono">baw-app-builder</td><td>A written requirement &rarr; app spec &rarr; installed, tested app</td></tr>
         <tr><td class="mono">screenshot-to-app</td><td>A screenshot of a form &rarr; an app with the same layout, colours and header</td></tr>
         <tr><td rowspan="3">✨ BAW Coach Modernizer</td><td class="mono">coach-inventory</td><td>Reads an app's coaches into an editable coach spec</td></tr>
         <tr><td class="mono">react-coach-screen</td><td>Writes a React + Carbon screen for one coach</td></tr>
-        <tr><td class="mono">coach-modernize</td><td>Writes a screen per coach, adds the React versions as a new snapshot, installs and tests them</td></tr>
+        <tr><td class="mono">coach-modernize</td><td>Writes a screen per coach, adds a "(Modernized)" copy of each service in the app's theme as a new snapshot, installs and tests them</td></tr>
       </tbody>
     </table>
   </div>

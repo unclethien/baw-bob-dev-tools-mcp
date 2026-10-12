@@ -428,11 +428,14 @@ grep baw_mcp.py .bob/mcp.json</code></pre>
   <h3 id="step-9"><span class="num">9</span>Build your first app</h3>
   <p>In Bob, switch to the <strong>🏗️ BAW App Builder</strong> mode and send:</p>
 <pre><code>Build a small ZZ app for an office supply request: one step with requester name,
-item, quantity and needed-by date, then a review screen. Install it and test it.</code></pre>
+item, quantity and needed-by date, then a review screen. Navy header, white text,
+rounded buttons, "Office Supplies" as the product name. Install it and test it.</code></pre>
   <p>What Bob does, and where you come in:</p>
   <ol>
     <li>Reads the server (<code>list_apps</code>) to pick a ZZ acronym nobody uses, and asks you which installed app
     the package should match. Any app works, since only its BAW version is used; or say "the built-in template".</li>
+    <li>Writes the look you described to a theme file, <code>work/&lt;name&gt;.theme.json</code>. Without a look in
+    your message, Bob asks you to describe one first: colours, font, corners, product name, logo.</li>
     <li>Writes the app spec to <code>work/&lt;ACRONYM&gt;.app.json</code>. You can open it; the
     <a href="app-spec-reference.html">app spec reference</a> explains every key.</li>
     <li>Calls <code>create_app</code>. <strong>Approve it.</strong> It builds the <code>.twx</code> in <code>work/</code>.</li>
@@ -444,7 +447,7 @@ item, quantity and needed-by date, then a review screen. Install it and test it.
   <p><strong>Check:</strong> Bob's report includes a run URL and says the test passed (<code>"ok": true</code>).</p>
   <p>Have a screenshot of a form instead? Save it in <code>work/</code> and ask: <em>"Build a ZZ app whose screen looks
   like work/my-form.png. Install it, test it and compare the result with the screenshot."</em> Bob then uses the
-  screenshot-to-app skill, which also copies the colours, header and layout.</p>
+  screenshot-to-app skill, which also copies the layout, and writes the colours, header and logo to a theme file.</p>
 
   <h3 id="step-10"><span class="num">10</span>Look at the result and change it</h3>
   <ul>
@@ -453,8 +456,11 @@ item, quantity and needed-by date, then a review screen. Install it and test it.
     <li><strong>Change it:</strong> ask Bob, e.g. <em>"Add a cost centre dropdown with 100, 200 and 300, then install
     and test again."</em> Bob edits the spec and bumps <code>app.snapshot</code>, because every install needs a new
     snapshot name. The run URL stays the same.</li>
+    <li><strong>Change the look:</strong> ask, e.g. <em>"Make the buttons pill-shaped and the header dark green."</em>
+    Bob edits the theme file and rebuilds; every app using that file follows it.</li>
     <li><strong>Give it a modern UI:</strong> switch to <strong>✨ BAW Coach Modernizer</strong> and ask Bob to modernize
-    the app. It writes React + Carbon screens and installs them as another snapshot.</li>
+    the app. It writes React + Carbon screens in the same theme and installs them as another snapshot, next to the
+    classic service: "&lt;service&gt; (Modernized)".</li>
   </ul>
   <p><strong>Check:</strong> the app opens, and the screens match the screenshots.</p>
 </section>

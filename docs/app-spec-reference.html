@@ -242,14 +242,14 @@ h3[id]{scroll-margin-top:var(--s06)}
     <p class="crumb"><a href="index.html">BAW Dev Tools MCP docs</a></p>
     <h1>App spec reference</h1>
     <p class="lede">An app spec is one JSON file that describes a BAW process app: its name, the data it
-      collects, the screens, the review and confirmation, and how it looks. <code>create_app</code> (or
+      collects, the screens, the review and confirmation, and the theme file that sets how it looks. <code>create_app</code> (or
       <code>generate_app.py</code>) turns it into an installable <code>.twx</code>. This page lists every key,
       what it does and the rules the generator checks.</p>
     <div class="tags">
       <span class="tag tag-blue">JSON</span>
       <span class="tag tag-gray">generate_app.py · coach_theme.py</span>
       <span class="tag tag-green">Checked offline before any server call</span>
-      <span class="tag tag-purple">9 October 2026</span>
+      <span class="tag tag-purple">12 October 2026</span>
     </div>
   </div>
 </div>
@@ -314,11 +314,13 @@ h3[id]{scroll-margin-top:var(--s06)}
 
 <section id="minimal">
   <h2>A minimal spec</h2>
-  <p>This is a complete, valid spec: one step, three fields, and the default review screen.</p>
+  <p>This is a complete, valid spec: one step, three fields, the default review screen, and one of the example
+  <a href="#theme">theme files</a> for the look.</p>
 <pre><code>{
   "app": { "name": "ZZ Leave Request", "acronym": "ZZLEAVE", "snapshot": "1.0.0" },
   "businessObject": { "name": "LeaveRequest", "variable": "leave" },
   "service": { "name": "Leave Request" },
+  "theme": "app-specs/example-it-services.theme.json",
   "steps": [
     {
       "title": "Your leave",
@@ -358,8 +360,8 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td class="mono"><a href="#steps">steps</a></td><td>Yes</td><td></td><td>The steps in order, each with fields or sections; at least one</td></tr>
         <tr><td class="mono"><a href="#review">review</a></td><td>No</td><td>on</td><td>An object to set the review screen, or <code>false</code> to leave it out</td></tr>
         <tr><td class="mono"><a href="#review">confirmation</a></td><td>No</td><td>off</td><td>An object adds a confirmation screen with a reference number</td></tr>
-        <tr><td class="mono"><a href="#theme">theme</a></td><td>No</td><td>off</td><td>Colours, font, shapes, field icons, width and button placement</td></tr>
-        <tr><td class="mono"><a href="#banner">banner</a></td><td>No</td><td>off</td><td>A coloured header strip with a title, product name, text and logo</td></tr>
+        <tr><td class="mono"><a href="#theme">theme</a></td><td>Yes</td><td></td><td>Path of the theme file: colours, font, shapes, field icons, width, button placement, header product name and logo</td></tr>
+        <tr><td class="mono"><a href="#banner">banner</a></td><td>No</td><td>off</td><td>The header strip's title and text</td></tr>
       </tbody>
     </table>
   </div>
@@ -500,7 +502,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <ul>
     <li><code>"wide": true</code> puts a field on its own full-width row, between the column rows. Wide fields do not need a <code>column</code>.</li>
     <li>On screens narrower than 900px the columns stack.</li>
-    <li>The content is 960px wide. With a <a href="#theme">theme</a>, it grows to 1400px when any section has more than 3 columns, and <code>theme.width</code> sets it exactly.</li>
+    <li>The content is 960px wide, or 1400px when any section has more than 3 columns. The theme file's <a href="#theme"><code>width</code></a> sets it exactly.</li>
   </ul>
 <pre><code>{ "title": "Company", "columns": 2, "fields": [
   { "name": "legalName", "label": "Legal Name", "required": true },
@@ -528,7 +530,7 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td class="mono">help</td><td>No</td><td>Adds a help icon with this text</td></tr>
         <tr><td class="mono">wide</td><td>No</td><td><code>true</code>: full width in a multi-column section</td></tr>
         <tr><td class="mono">column</td><td>No</td><td>1, 2, &hellip;: the column it sits in. All or none of a section's non-wide fields</td></tr>
-        <tr><td class="mono">icon</td><td>No</td><td>Icon in the box before the input, with <a href="#theme"><code>theme.fieldIcons</code></a>. See the <a href="#icons">icon list</a></td></tr>
+        <tr><td class="mono">icon</td><td>No</td><td>Icon in the box before the input, when the <a href="#theme">theme file</a> sets <code>fieldIcons</code>. See the <a href="#icons">icon list</a></td></tr>
       </tbody>
     </table>
   </div>
@@ -605,31 +607,46 @@ h3[id]{scroll-margin-top:var(--s06)}
 
 <section id="theme">
   <h2>theme</h2>
-  <p>Optional. Without it the screens use the standard UI Toolkit look. Leave it out unless the user asks for a
-  look, names brand colours or gives a screenshot. Unknown keys are rejected.</p>
-  <div class="tablewrap" role="region" tabindex="0" aria-label="theme keys, scrollable">
+  <p>Required. The path of a <strong>theme file</strong>, relative to the project folder:</p>
+<pre><code>"theme": "work/acme.theme.json"</code></pre>
+  <p>A theme file holds an app's look: colours, font, shapes, field icons, width, button placement, and the
+  product name and logo in the header. The agent writes it from your description of the look, or reads it from a
+  screenshot. There is no default look: without a theme file, the agent asks you to describe one. Several apps can
+  share one file, and the coach spec of <code>modernize_app</code> names the same file, so the React screens look
+  like the classic ones. To change the look, edit the file and build again with a new snapshot.</p>
+  <p>The file is JSON with these keys, all optional. Unknown keys are rejected.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Theme file keys, scrollable">
     <table>
       <thead><tr><th scope="col">Key</th><th scope="col">Value</th><th scope="col">Default</th><th scope="col">What it colours or changes</th></tr></thead>
       <tbody>
-        <tr><td class="mono">primary</td><td>colour</td><td class="mono">#0f62fe</td><td>Banner, section title bars, field icon boxes</td></tr>
+        <tr><td class="mono">primary</td><td>colour</td><td class="mono">#0f62fe</td><td>Banner, section title bars, field icon boxes; the React header</td></tr>
         <tr><td class="mono">onPrimary</td><td>colour</td><td class="mono">#ffffff</td><td>Text and icons on <code>primary</code></td></tr>
         <tr><td class="mono">heading</td><td>colour</td><td><code>onPrimary</code></td><td>Banner title and product name</td></tr>
         <tr><td class="mono">button</td><td>colour</td><td><code>primary</code></td><td>Forward and Submit buttons, the active tab</td></tr>
-        <tr><td class="mono">secondaryButton</td><td>colour</td><td>outlined</td><td>Back and Cancel buttons; without it they are white with a <code>button</code>-coloured outline</td></tr>
+        <tr><td class="mono">secondaryButton</td><td>colour</td><td>outlined</td><td>Back and Cancel buttons; without it they are white with a <code>button</code>-coloured outline (dark grey in React screens)</td></tr>
         <tr><td class="mono">background</td><td>colour</td><td class="mono">#f4f6f8</td><td>The page behind the form</td></tr>
         <tr><td class="mono">font</td><td>font family</td><td>inherited</td><td>Font of the page, e.g. <code>"Open Sans"</code>; system fonts follow it. Letters, digits, spaces and hyphens, up to 40</td></tr>
         <tr><td class="mono">shape</td><td class="mono">square | rounded | pill</td><td class="mono">rounded</td><td>Corners of fields, panels and buttons; <code>pill</code> gives pill-shaped buttons</td></tr>
-        <tr><td class="mono">fieldIcons</td><td class="mono">true | false</td><td class="mono">false</td><td>A coloured icon box before every input; fields pick their icon with <code>icon</code></td></tr>
+        <tr><td class="mono">fieldIcons</td><td class="mono">true | false</td><td class="mono">false</td><td>A coloured icon box before every input; fields pick their icon with <code>icon</code>. Classic coaches only</td></tr>
         <tr><td class="mono">width</td><td>600 to 3000, or <code>"full"</code></td><td>960, or 1400 with more than 3 columns</td><td>Maximum content width in pixels</td></tr>
-        <tr><td class="mono">buttonAlign</td><td class="mono">left | center | right</td><td class="mono">left</td><td>Where the button bar sits</td></tr>
+        <tr><td class="mono">buttonAlign</td><td class="mono">left | center | right</td><td>left (React screens: right)</td><td>Where the button bar sits</td></tr>
+        <tr><td class="mono">banner.product</td><td>text</td><td></td><td>Product or system name in the header, e.g. <code>QUOTE DESK</code></td></tr>
+        <tr><td class="mono">banner.logo</td><td>image path</td><td></td><td>Logo in the header: an image inside the project, relative to the project folder, e.g. <code>work/acme-logo.png</code>. PNG, JPG, GIF, WebP or SVG, at most 200 KB. It is embedded in the app, so the server needs no access to the file</td></tr>
       </tbody>
     </table>
   </div>
-  <p>Colours are <code>#rgb</code> or <code>#rrggbb</code>. When building from a screenshot, read them with
-  <code>image_colors</code> instead of guessing.</p>
+  <p>Colours are <code>#rgb</code> or <code>#rrggbb</code>. When building from a screenshot, the agent reads them with
+  <code>image_colors</code> instead of guessing, and cuts the logo out with <code>crop_image</code> into <code>work/</code>.</p>
+<pre><code>{
+  "primary": "#5aa9d6", "onPrimary": "#ffffff", "heading": "#1f5f99",
+  "button": "#2f74c0", "secondaryButton": "#e8a33d", "background": "#f5f6f8",
+  "font": "Open Sans", "shape": "pill", "fieldIcons": true,
+  "width": "full", "buttonAlign": "right",
+  "banner": { "product": "QUOTE DESK", "logo": "work/quote-logo.png" }
+}</code></pre>
 
   <h3 id="icons">Field icons</h3>
-  <p>With <code>"fieldIcons": true</code>, each field shows the icon named in its <code>icon</code>, or the default for its type:</p>
+  <p>When the theme file sets <code>"fieldIcons": true</code>, each field shows the icon named in its <code>icon</code>, or the default for its type:</p>
   <div class="tablewrap" role="region" tabindex="0" aria-label="Field icons, scrollable">
     <table>
       <thead><tr><th scope="col">Icon names</th><th scope="col">Defaults by type</th></tr></thead>
@@ -639,47 +656,41 @@ h3[id]{scroll-margin-top:var(--s06)}
       </tbody>
     </table>
   </div>
-<pre><code>"theme": {
-  "primary": "#5aa9d6", "onPrimary": "#ffffff", "heading": "#1f5f99",
-  "button": "#2f74c0", "secondaryButton": "#e8a33d", "background": "#f5f6f8",
-  "font": "Open Sans", "shape": "pill", "fieldIcons": true,
-  "width": "full", "buttonAlign": "right"
-}</code></pre>
 </section>
 
 <hr class="rule" aria-hidden="true">
 
 <section id="banner">
   <h2>banner</h2>
-  <p>Optional. A strip in the <code>primary</code> colour that replaces the plain title on every screen. It shows,
-  left to right: the logo, the title, the product name and a short text. Unknown keys are rejected.</p>
+  <p>Optional. A strip in the theme's <code>primary</code> colour that replaces the plain title on every screen. It
+  shows, left to right: the logo, the title, the product name and a short text. The logo and product name come from
+  the theme file; the app spec adds its own title and text. The strip also appears when only the theme file has a
+  banner. Unknown keys are rejected.</p>
   <div class="tablewrap" role="region" tabindex="0" aria-label="banner keys, scrollable">
     <table>
       <thead><tr><th scope="col">Key</th><th scope="col">What it does</th></tr></thead>
       <tbody>
         <tr><td class="mono">title</td><td>Banner title. Default: the screen's own title, so each screen keeps its name</td></tr>
-        <tr><td class="mono">product</td><td>Large product name, e.g. <code>QUOTE DESK</code></td></tr>
         <tr><td class="mono">text</td><td>Short text on the right, e.g. a greeting</td></tr>
-        <tr><td class="mono">logo</td><td>Path to an image inside the project, relative to the project folder, e.g. <code>work/logo.png</code>. PNG, JPG, GIF, WebP or SVG, at most 200 KB. It is embedded in the app, so the server needs no access to the file</td></tr>
       </tbody>
     </table>
   </div>
-<pre><code>"banner": { "product": "QUOTE DESK", "text": "Good afternoon", "logo": "work/quote-logo.png" }</code></pre>
-  <p>To cut a logo out of a screenshot, ask the agent to use <code>crop_image</code>; it writes the cut-out into <code>work/</code>.</p>
+<pre><code>"banner": { "text": "Good afternoon" }</code></pre>
 </section>
 
 <hr class="rule" aria-hidden="true">
 
 <section id="errors">
   <h2>Validation errors</h2>
-  <p>The generator checks the whole spec and lists every problem before it builds anything. A real run on a spec
-  with five mistakes:</p>
+  <p>The generator checks the whole spec and its theme file and lists every problem before it builds anything. A
+  real run on a spec with six mistakes:</p>
 <pre><code>$ python3 server/generate_app.py work/bad.app.json work/bad.twx
 Invalid app spec:
   app.acronym must be 2-8 upper-case letters or digits, starting with a letter
   step 1: field name 'start date' must be an identifier
   step 1: field 'kind' (Select) needs options: a list of strings or {"value", "label"}
   step 1: field 'days' has unknown type 'Number'; use one of String, Text Area, Date, Boolean, Integer, Decimal, Select, Radio
+  theme must be the path of a theme file (*.theme.json), e.g. "work/acme.theme.json"; ask the user to describe the look and write one
   confirmation.showFields: unknown field 'reason'</code></pre>
   <div class="tablewrap" role="region" tabindex="0" aria-label="Common errors and fixes, scrollable">
     <table>
@@ -690,7 +701,10 @@ Invalid app spec:
         <tr><td class="mono">needs options</td><td>Add <code>"options": [...]</code> to the Select or Radio field</td></tr>
         <tr><td class="mono">needs a column from 1 to N</td><td>One field in the section has a <code>column</code>, so all non-wide fields need one</td></tr>
         <tr><td class="mono">widths must list N positive numbers</td><td>Give exactly one width per column</td></tr>
+        <tr><td class="mono">theme must be the path of a theme file</td><td>Set <code>theme</code> to a <code>*.theme.json</code> file; ask the agent to write one from a description of the look</td></tr>
+        <tr><td class="mono">is not a file in the project</td><td>The theme file path is wrong; give it relative to the project folder</td></tr>
         <tr><td class="mono">is not a theme setting</td><td>Check the spelling against the <a href="#theme">theme keys</a>; they are case-sensitive</td></tr>
+        <tr><td class="mono">is not an app banner setting</td><td>Move <code>product</code> and <code>logo</code> from the spec's banner to the theme file's <code>banner</code></td></tr>
         <tr><td class="mono">banner.logo &hellip; must be an image file inside the project</td><td>Save the image under the project folder (e.g. <code>work/</code>) and give the path relative to it</td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>From <code>create_app</code> or <code>install_app</code>: bump <code>app.snapshot</code></td></tr>
         <tr><td class="mono">Refusing to install into</td><td>From <code>install_app</code>: the name and acronym must both start with ZZ</td></tr>
@@ -723,7 +737,10 @@ Invalid app spec:
       <tbody>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-equipment-request.json">example-equipment-request.json</a></td><td>A simple multi-step form, every basic field type, review and confirmation</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-supplier-registration.json">example-supplier-registration.json</a></td><td>Written from <code>screenshots/example-supplier-registration.png</code>: sections, two columns, wide fields, dropdowns, radio groups, required fields</td></tr>
-        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-themed-quote.json">example-themed-quote.json</a></td><td>Tabs, a theme and banner, placed columns with widths, field icons, help text, Cancel and no review</td></tr>
+        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-themed-quote.json">example-themed-quote.json</a></td><td>Tabs, a banner, placed columns with widths, field icons, help text, Cancel and no review</td></tr>
+        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-quote-desk.theme.json">example-quote-desk.theme.json</a></td><td>The theme file of the quote example: pill buttons, field icons, full width, a product name</td></tr>
+        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-acme-procurement.theme.json">example-acme-procurement.theme.json</a></td><td>Read from <code>screenshots/example-supplier-registration.png</code>: square corners, buttons on the right, a product name</td></tr>
+        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-it-services.theme.json">example-it-services.theme.json</a></td><td>A plain navy look used by the equipment request</td></tr>
       </tbody>
     </table>
   </div>
@@ -734,7 +751,7 @@ Invalid app spec:
 </main>
 
 <footer class="shell">
-  <p>Keys, defaults and messages checked on 9 October 2026 against <code>generate_app.py</code> and
+  <p>Keys, defaults and messages checked on 12 October 2026 against <code>generate_app.py</code> and
   <code>coach_theme.py</code>. The validation example is real output from a spec with deliberate mistakes.</p>
   <p>Setup: <a href="getting-started.html">Getting started</a> · All docs: <a href="index.html">BAW Dev Tools MCP docs</a></p>
 </footer>

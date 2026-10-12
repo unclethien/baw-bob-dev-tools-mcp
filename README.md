@@ -20,7 +20,7 @@ An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com
 | `inspect_coaches` | Read every coach (sections, fields, buttons, flow) into an editable coach spec |
 | `create_app` | Build an installable `.twx` from an app spec, from a built-in template or matching an app you pick; a new snapshot when the app exists |
 | `build_screens` | Compile the React screens; returns compiler errors with file and line |
-| `modernize_app` | Add React + Carbon copies of each service (brand and carbon themes) as a new snapshot |
+| `modernize_app` | Add a React + Carbon copy of each service, styled by the app's theme file, as a new snapshot |
 | `install_app` | Install a `.twx` and wait for the result |
 | `test_service` | Walk a service in a browser: screenshot each screen, fill sample values, press the forward button |
 
@@ -33,15 +33,15 @@ Guard rails:
 ## How it fits together
 
 ```
-Agent (Bob) ── writes ──▶ work/*.app.json, work/*.coaches.json, react-coach/src/screens/*.jsx
+Agent (Bob) ── writes ──▶ work/*.theme.json, work/*.app.json, work/*.coaches.json, react-coach/src/screens/*.jsx
      │
      └── calls MCP tools ──▶ server/baw_mcp.py ──▶ generators (TWX) ──▶ BAW Operations REST API
                                         └──▶ verify-service.mjs (headless browser) ──▶ screenshots in work/
 ```
 
-- **App spec** (`app-specs/`): business object, steps or tabs (`"layout": "tabs"`), titled sections with 1-6 columns (fields placed per column, relative column widths), fields (text, text area, date, checkbox, integer, decimal, dropdown, radio group; required markers and help text), button labels including Cancel, review and confirmation, and an optional `theme` (colours, font, shape, field icon boxes, width, button placement) and `banner` (header strip with title, product name, text and logo). `create_app` turns it into a client-side human service exposed as a URL, built from standard UI Toolkit views. `example-equipment-request.json` is a simple multi-step form; `example-supplier-registration.json` was written from `screenshots/example-supplier-registration.png`; `example-themed-quote.json` shows tabs, a theme, a banner, placed columns, field icons and Cancel.
-- **Coach spec**: written by `inspect_coaches` and refined by the agent: labels, required fields, patterns, examples. A coach with `"screen": "<name>"` shows a React screen the agent wrote in `react-coach/src/screens/<name>.jsx`; other coaches use a generic form. The legacy coach flow, scripts and buttons keep running underneath, and the React screen presses the coach's own buttons.
-- **Themes**: `brand` (a neutral palette; set `"brand": "Your Org"` in the coach spec and change the colours in `react-coach/src/styles.scss`) and `carbon` (IBM Carbon).
+- **Theme file** (`*.theme.json`): the look of an app, which Bob writes from the user's description or a screenshot: colours, font, corner shape, field icon boxes, width, button placement, and the header's product name and logo. Bob asks for a look when none is given; there is no default. The same file styles the classic coaches `create_app` builds and the React screens `modernize_app` adds, so changing the look means editing one file and rebuilding. Examples: `app-specs/example-*.theme.json`.
+- **App spec** (`app-specs/`): business object, steps or tabs (`"layout": "tabs"`), titled sections with 1-6 columns (fields placed per column, relative column widths), fields (text, text area, date, checkbox, integer, decimal, dropdown, radio group; required markers and help text), button labels including Cancel, review and confirmation, the `theme` file it uses and an optional `banner` (the header strip's title and text). `create_app` turns it into a client-side human service exposed as a URL, built from standard UI Toolkit views. `example-equipment-request.json` is a simple multi-step form; `example-supplier-registration.json` was written from `screenshots/example-supplier-registration.png`; `example-themed-quote.json` shows tabs, a banner, placed columns, field icons and Cancel.
+- **Coach spec**: written by `inspect_coaches` and refined by the agent: labels, required fields, patterns, examples, and the `theme` file for the React screens. A coach with `"screen": "<name>"` shows a React screen the agent wrote in `react-coach/src/screens/<name>.jsx`; other coaches use a generic form. The legacy coach flow, scripts and buttons keep running underneath, and the React screen presses the coach's own buttons.
 
 ## Requirements
 
@@ -81,7 +81,8 @@ Settings are read from the environment first, then `.env`:
 
    ```
    Build a small ZZ app for an office supply request: one step with requester name,
-   item, quantity and needed-by date, then a review screen. Install it and test it.
+   item, quantity and needed-by date, then a review screen. Navy header, white text,
+   rounded buttons, "Office Supplies" as the product name. Install it and test it.
    ```
 
    Or build from a screenshot. Attach one in the chat, or put it in `screenshots/` and name it:
@@ -91,7 +92,7 @@ Settings are read from the environment first, then `.env`:
    Install it, test it and compare the result with the screenshot.
    ```
 
-   Bob reads the screen with the screenshot-to-app skill: its layout (tabs, sections, columns and their widths, which field sits where), its controls (labels, dropdowns, radio groups, checkboxes, required markers, help icons, buttons) and its look (colours sampled with `image_colors`, the header banner with the logo cut out by `crop_image`, field icons, shapes, button placement). It writes the app spec, builds and installs it, then compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
+   Bob reads the screen with the screenshot-to-app skill: its layout (tabs, sections, columns and their widths, which field sits where), its controls (labels, dropdowns, radio groups, checkboxes, required markers, help icons, buttons) and its look (colours sampled with `image_colors`, the header banner with the logo cut out by `crop_image`, field icons, shapes, button placement). It writes the theme file and the app spec, builds and installs it, then compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
 
 Bob asks for approval before `create_app`, `modernize_app` and `install_app`; the read and test tools run without asking.
 

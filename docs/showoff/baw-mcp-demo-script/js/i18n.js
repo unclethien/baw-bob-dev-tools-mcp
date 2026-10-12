@@ -73,7 +73,7 @@ window.I18N_VI = {
   'a1.o2': 'Chọn skill screenshot-to-app và lên kế hoạch các bước.',
   'a1.s2': '“Chỉ một câu. Không spec, không Process Designer, không XML.”',
   'a1.d3': 'Mở app spec trong <code>work/</code> ngay khi Bob viết xong.',
-  'a1.o3': '<code>view_image</code>, rồi một spec JSON: phân vùng, cột, loại trường, lựa chọn, trường bắt buộc.',
+  'a1.o3': '<code>view_image</code>, một tệp theme với màu và phần đầu trang lấy từ ảnh, rồi một spec JSON: phân vùng, cột, loại trường, lựa chọn, trường bắt buộc.',
   'a1.s3': '“Bob đọc bức ảnh như một lập trình viên: khung nào là phân vùng, điều khiển nào là dropdown, trường nào bắt buộc.”',
   'a1.d4': 'Duyệt <code>create_app</code>, rồi <code>install_app</code>.',
   'a1.o4': 'Server đóng gói TWX từ spec và cài thành một app ZZ mới.',
@@ -87,8 +87,8 @@ window.I18N_VI = {
 
   'act2.title': 'Phần 2. Cùng app, giao diện React + Carbon.',
   'act2.say': '“Luồng coach, script và nút cũ vẫn chạy bên dưới. React chỉ thay phần người dùng nhìn thấy.”',
-  'act2.brand': 'Giao diện thương hiệu · biểu mẫu',
-  'act2.carbon': 'Giao diện Carbon · màn hình xem lại sau khi kiểm thử điền',
+  'act2.form': 'Màn hình React · biểu mẫu',
+  'act2.review': 'Màn hình React · màn hình xem lại sau khi kiểm thử điền',
 
   'a2.b1': 'Đọc coach',
   'a2.b2': 'Duyệt',
@@ -98,8 +98,8 @@ window.I18N_VI = {
   'a2.o1': '<code>inspect_coaches</code> biến mỗi coach thành spec: trường theo thứ tự đọc, lựa chọn, trường bắt buộc.',
   'a2.o2': 'Bob cải thiện nhãn và kiểm tra hợp lệ, rồi dừng lại chờ bạn.',
   'a2.o3': 'Mỗi coach một màn hình React. <code>build_screens</code> cho đến khi biên dịch được.',
-  'a2.o4': 'Hai service mới, giao diện thương hiệu và Carbon, trong một snapshot mới.<sup><a href="#ref-4">4</a></sup>',
-  'a2.o5': 'Gõ chữ, chọn lựa chọn, bấm mọi nút, trên cả hai giao diện.',
+  'a2.o4': 'Một bản sao "(Modernized)" của service theo theme của app, trong một snapshot mới.<sup><a href="#ref-4">4</a></sup>',
+  'a2.o5': 'Gõ chữ, chọn lựa chọn, bấm mọi nút.',
 
   'guard.title': 'Hàng rào an toàn, và những câu hỏi bạn sẽ gặp.',
   'guard.t1': 'Hàng rào',
