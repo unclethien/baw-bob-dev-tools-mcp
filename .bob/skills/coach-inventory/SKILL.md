@@ -32,11 +32,13 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
    | `modernize: false` | Set to skip a service |
    | button `primary` | Make sure exactly the forward button is primary. Primary buttons validate before they are pressed |
 
+   At the top of the spec, set `"theme"` to the app's theme file, e.g. `"work/acme.theme.json"`. Use the file the app was built with when there is one. Otherwise follow the app-theme skill: ask the user to describe the look, or read it from a screenshot of the legacy screens, and write one.
+
    Keep `path`, `viewId`, `id` and `type` as they are. Do not delete buttons: a button missing from the spec cannot be pressed.
 
 4. **Check what will not be modernized.** Read `native` and `dropped` for every coach. Tell the user about anything important that is dropped, such as a Custom HTML block with instructions, and add its text to the coach's `intro` when it matters.
 
-5. **STOP.** Show the inventory summary, a short list of your changes, and the native or dropped items. Then ask:
+5. **STOP.** Show the inventory summary, the theme file, a short list of your changes, and the native or dropped items. Then ask:
    > Approve this spec, or tell me what to change. When approved, I will write a React screen for each coach.
 
    Skip the stop only when the user said to continue without review.

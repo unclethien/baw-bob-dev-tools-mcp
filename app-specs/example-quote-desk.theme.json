@@ -1,0 +1,16 @@
+{
+  "primary": "#5aa9d6",
+  "onPrimary": "#ffffff",
+  "heading": "#1f5f99",
+  "button": "#2f74c0",
+  "secondaryButton": "#e8a33d",
+  "background": "#f5f6f8",
+  "font": "Open Sans",
+  "shape": "pill",
+  "fieldIcons": true,
+  "width": "full",
+  "buttonAlign": "right",
+  "banner": {
+    "product": "QUOTE DESK"
+  }
+}

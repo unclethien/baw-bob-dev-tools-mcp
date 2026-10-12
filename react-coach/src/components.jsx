@@ -1,14 +1,17 @@
-// Building blocks shared by the screens: the branded header and one input per field type.
+// Building blocks shared by the screens: the header in the app's theme and one input per field type.
 import {
   Checkbox, DatePicker, DatePickerInput, NumberInput, ProgressIndicator, ProgressStep, RadioButton, RadioButtonGroup,
   Select, SelectItem, TextArea, TextInput,
 } from '@carbon/react';
 
-export function Header({ theme, brand, subtitle, title, steps, step }) {
+// The theme's banner gives the logo and the product name.
+export function Header({ theme, subtitle, title, steps, step }) {
+  const banner = theme?.banner || {};
   return (
     <header className="pp-header">
       <div className="pp-brand">
-        <span className="pp-brand-mark">{theme === 'carbon' ? 'IBM BAW' : brand || 'Business Automation Workflow'}</span>
+        {banner.logoData && <img className="pp-brand-logo" src={banner.logoData} alt="" />}
+        <span className="pp-brand-mark">{banner.product || 'Business Automation Workflow'}</span>
         {subtitle && <span className="pp-brand-sub">{subtitle}</span>}
       </div>
       <h1>{title}</h1>

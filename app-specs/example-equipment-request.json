@@ -2,6 +2,7 @@
   "app": { "name": "ZZ Equipment Request", "acronym": "ZZEQ", "snapshot": "1.0.0" },
   "businessObject": { "name": "EquipmentRequest", "variable": "request" },
   "service": { "name": "Equipment Request", "description": "Employees request a laptop or other equipment." },
+  "theme": "app-specs/example-it-services.theme.json",
   "steps": [
     {
       "title": "Requester",

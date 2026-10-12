@@ -38,7 +38,7 @@ this._ppBind = function () {
   view._ppBound = bound && bound.bindAll ? bound.bindAll(function () { view._ppScreen.update(); }) : null;
 };
 this._ppScreen = window.PPReact.mount(this.context.element, option("screen", "form"), {
-  options: { theme: option("theme", "brand"), fields: JSON.parse(option("fields", "[]")), spec: JSON.parse(option("spec", "null")) },
+  options: { theme: JSON.parse(option("theme", "{}")), fields: JSON.parse(option("fields", "[]")), spec: JSON.parse(option("spec", "null")) },
   read: function (path) { var p = parent(path); return step(p.obj, p.key); },
   write: function (path, value) {
     var p = parent(path);
@@ -100,7 +100,7 @@ def coach_view_xml(view_id, version, bo_ref, string_type_ref, asset_ids, name=VI
 <emitBoundary>true</emitBoundary><isPrototypeFunc>false</isPrototypeFunc><enableDevMode>false</enableDevMode><isMobileReady>true</isMobileReady>
 <loadJsFunction>{escape(LOAD_JS)}</loadJsFunction><unloadJsFunction>{escape(UNLOAD_JS)}</unloadJsFunction><viewJsFunction isNull="true" />
 <changeJsFunction>{escape(CHANGE_JS)}</changeJsFunction><collaborationJsFunction isNull="true" />
-<description>Renders a React screen from the pp-react.js managed file. Options: screen (registered screen name), theme (brand or carbon), fields (JSON list of sections and fields), spec (JSON screen spec for the form screen).</description>
+<description>Renders a React screen from the pp-react.js managed file. Options: screen (registered screen name), theme (JSON: the app's theme file), fields (JSON list of sections and fields), spec (JSON screen spec for the form screen).</description>
 <validateJsFunction isNull="true" /><previewAdvHtml isNull="true" /><previewAdvJs isNull="true" /><useUrlBinding>false</useUrlBinding>
 <guid>{uid()}</guid><versionId>{version}</versionId><field1 isNull="true" /><field2 isNull="true" /><field3>0</field3><field4 isNull="true" /><field5>false</field5><clobField1 isNull="true" />
 <bindingType name="data">{BOOKKEEPING}<coachViewBindingTypeId>65.{uid()}</coachViewBindingTypeId><coachViewId>{view_id}</coachViewId><isList>false</isList>

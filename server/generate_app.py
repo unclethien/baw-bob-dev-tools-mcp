@@ -15,7 +15,8 @@ to right, row by row; give every field a "column" (1, 2, ...) to place it, top t
 and "widths": [1, 1.6, 1] to make some columns wider. Fields of type Select (dropdown) and Radio take a
 list of "options". "cancelLabel" on a step or on "form" adds a button that ends the service.
 
-"theme" and "banner" style the coaches (colours, shapes, field icons, a header banner); see coach_theme.py.
+"theme" names the app's theme file (colours, font, shapes, field icons, banner product and logo), and
+"banner" adds the app's own banner title and text; see coach_theme.py.
 
 Every coach is built from standard UI Toolkit views bound to one business object, so the
 result runs as soon as it is installed and can be inventoried and modernized like any app.

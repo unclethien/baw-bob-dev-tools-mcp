@@ -40,6 +40,7 @@ from baw_ops import BawOps, ConfigError, configured, missing_settings  # noqa: E
 
 mcp = MCPServer("baw-dev-tools", instructions=(
     "Platform tools for IBM BAW on CP4BA. You design and write: app specs (work/<ACR>.app.json), "
+    "theme files (work/<name>.theme.json, from the look the user describes), "
     "coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx). "
     "These tools build, install, inspect and test them; view_image shows a screenshot to build from "
     "or to compare with, image_colors reads its exact colours and crop_image cuts out its logo. "
@@ -230,7 +231,8 @@ def crop_image(path: str, box: list[float], dest: str) -> Image:
 @mcp.tool()
 def inspect_coaches(twx: str) -> dict:
     """Read every coach of an app's client-side human services into an editable coach spec
-    (work/<name>.coaches.json): sections, fields, buttons and where each button goes."""
+    (work/<name>.coaches.json): sections, fields, buttons and where each button goes. Set its "theme"
+    to the app's theme file before modernize_app."""
     source = local(twx)
     out = WORK / f"{source.stem}.coaches.json"
     summary = python("coach_inventory.py", source, "-o", out)
@@ -240,7 +242,8 @@ def inspect_coaches(twx: str) -> dict:
 @mcp.tool()
 def create_app(app_spec: str, base: str | None = None) -> dict:
     """Build an installable .twx from an app spec (see app-specs/example-equipment-request.json, and
-    app-specs/example-themed-quote.json for a theme, banner, placed columns and field icons).
+    app-specs/example-themed-quote.json for tabs, a banner, placed columns and field icons). The spec's
+    "theme" names a theme file (e.g. app-specs/example-quote-desk.theme.json) that sets the look.
     The package comes from a built-in template, so no server is needed. base (optional) is an app on
     the server (its acronym) or an exported .twx in the project, to match that server's BAW build and
     toolkit versions; ask the user which app to use. When the app already exists on the server, the
@@ -287,9 +290,9 @@ def build_screens() -> str:
 
 @mcp.tool()
 def modernize_app(twx: str, coach_spec: str, snapshot: str) -> dict:
-    """Add React + Carbon copies of the app's services, one per theme, driven by the coach spec.
-    A coach with "screen": "<name>" uses the React screen registered under that name; the others
-    use the generic form. Builds the screens first. Output: a new snapshot of the same app."""
+    """Add a React + Carbon copy of each service, "<service> (Modernized)", driven by the coach spec and
+    styled by its "theme" file. A coach with "screen": "<name>" uses the React screen registered under
+    that name; the others use the generic form. Builds the screens first. Output: a new snapshot of the same app."""
     source, spec = local(twx), local(coach_spec)
     require_new_snapshot(target_of(source)["acronym"], snapshot)
     build = build_screens()

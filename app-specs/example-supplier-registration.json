@@ -2,6 +2,7 @@
   "app": { "name": "ZZ Supplier Registration", "acronym": "ZZSUP", "snapshot": "1.0.0" },
   "businessObject": { "name": "SupplierRegistration", "variable": "supplier" },
   "service": { "name": "Supplier Registration", "description": "Register a new supplier. Built from screenshots/example-supplier-registration.png" },
+  "theme": "app-specs/example-acme-procurement.theme.json",
   "steps": [
     {
       "title": "Supplier Registration",

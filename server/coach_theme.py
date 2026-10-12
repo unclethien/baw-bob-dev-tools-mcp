@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """
-Theme support for generated coaches: the app spec's "theme" and "banner" become CSS and a
-banner header inside each coach's Custom HTML, so classic UI Toolkit coaches can follow the
-colours, shapes and header of a screenshot or a brand.
+Theme files: the look of an app, written once (by the agent, from the user's description or a
+screenshot) and used both for the generated UI Toolkit coaches and for the React screens.
 
-The CSS targets the markup BAW renders for UI Toolkit views: every view carries
-data-viewid="<layout item id>" and data-type="...<View_Name>", inputs sit in .form-group >
-.control-label + .input > .form-control, panels are .SPARKPanel with a .panel-heading, and
-buttons are .btn (.btn-primary for the primary colour style).
+A theme file is JSON, e.g. work/acme.theme.json:
 
-    "theme": {
+    {
       "primary": "#7cbde2",          banner, section bars, active tab, field icon boxes
       "onPrimary": "#ffffff",        text and icons on primary
       "heading": "#2f6f9f",          banner title and product name (default onPrimary)
@@ -18,15 +14,24 @@ buttons are .btn (.btn-primary for the primary colour style).
       "background": "#f4f6f8",       page behind the form
       "font": "Open Sans",           font family; system fonts follow it
       "shape": "rounded",            square | rounded | pill (pill: rounded fields, pill buttons)
-      "fieldIcons": true,            an icon box before every input (fields may set "icon")
+      "fieldIcons": true,            an icon box before every input (fields may set "icon"; UI Toolkit coaches only)
       "width": 1400,                 max content width in px, or "full"
-      "buttonAlign": "right"         left | center | right: where the button bar sits (default left)
-    },
-    "banner": { "title": "...", "product": "...", "text": "...", "logo": "screenshots/logo.png" }
+      "buttonAlign": "right",        left | center | right: where the button bar sits (default left)
+      "banner": { "product": "ACME", "logo": "work/acme-logo.png" }   header strip shared by every app
+    }
+
+An app spec names its theme file ("theme": "work/acme.theme.json") and may add its own banner
+"title" and "text". A coach spec names it too, for the React screens.
+
+For UI Toolkit coaches the theme becomes CSS and a banner inside each coach's Custom HTML. The CSS
+targets the markup BAW renders: every view carries data-viewid="<layout item id>" and
+data-type="...<View_Name>", inputs sit in .form-group > .control-label + .input > .form-control,
+panels are .SPARKPanel with a .panel-heading, and buttons are .btn (.btn-primary for the primary style).
 """
 
 import base64
 import html
+import json
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -36,8 +41,9 @@ FONT = re.compile(r"^[A-Za-z0-9 \-]{1,40}$")
 SHAPES = {"square": ("0", "0", "0"), "rounded": ("4px", "8px", "6px"), "pill": ("6px", "10px", "999px")}  # field, panel, button
 LOGO_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml"}
 LOGO_LIMIT = 200_000
-THEME_KEYS = {"primary", "onPrimary", "heading", "button", "secondaryButton", "background", "font", "shape", "fieldIcons", "width", "buttonAlign"}
-BANNER_KEYS = {"title", "product", "text", "logo"}
+THEME_KEYS = {"primary", "onPrimary", "heading", "button", "secondaryButton", "background", "font", "shape", "fieldIcons", "width", "buttonAlign", "banner"}
+THEME_BANNER_KEYS = {"product", "logo"}  # shared by every app in the theme
+APP_BANNER_KEYS = {"title", "text"}  # each app's own
 ALIGN = {"left": "flex-start", "center": "center", "right": "flex-end"}
 
 # 24px stroke icons (MIT-licensed Lucide shapes, simplified)
@@ -64,38 +70,64 @@ DEFAULT_ICONS = {"String": "text", "Text Area": "file", "Date": "calendar", "Sel
                  "Boolean": "check", "Integer": "hash", "Decimal": "hash"}
 
 
+def load_theme(name, project: Path, where="theme"):
+    """Read and check a theme file. Returns (theme, errors); the banner logo is embedded as theme["banner"]["logoData"]."""
+    if not isinstance(name, str) or not name.endswith(".theme.json"):
+        return None, [f"{where} must be the path of a theme file (*.theme.json), e.g. \"work/acme.theme.json\"; "
+                      "ask the user to describe the look and write one"]
+    path = (project / name).resolve()
+    if project.resolve() not in path.parents or not path.is_file():
+        return None, [f"{where} {name!r} is not a file in the project"]
+    try:
+        theme = json.loads(path.read_text())
+    except ValueError as e:
+        return None, [f"{name} is not valid JSON: {e}"]
+    if not isinstance(theme, dict):
+        return None, [f"{name} must hold a JSON object"]
+    errors = [f"{name}: {k!r} is not a theme setting; use {', '.join(sorted(THEME_KEYS))}" for k in theme if k not in THEME_KEYS]
+    errors += [f"{name}: {k} must be a colour like #1f70c1" for k in ("primary", "onPrimary", "heading", "button", "secondaryButton", "background")
+               if k in theme and not COLOR.match(str(theme[k]))]
+    if "font" in theme and not FONT.match(str(theme["font"])):
+        errors.append(f'{name}: font must be a font family name such as "Open Sans"')
+    if theme.get("shape", "rounded") not in SHAPES:
+        errors.append(f"{name}: shape must be one of {', '.join(SHAPES)}")
+    if "width" in theme and theme["width"] != "full" and not (isinstance(theme["width"], int) and 600 <= theme["width"] <= 3000):
+        errors.append(f'{name}: width must be a number of pixels (600-3000) or "full"')
+    if theme.get("buttonAlign", "left") not in ALIGN:
+        errors.append(f"{name}: buttonAlign must be one of {', '.join(ALIGN)}")
+    banner = theme.get("banner")
+    if banner is not None:
+        if not isinstance(banner, dict):
+            return theme, errors + [f"{name}: banner must be an object"]
+        errors += [f"{name}: banner.{k} is not a theme banner setting; use {', '.join(sorted(THEME_BANNER_KEYS))} "
+                   "(an app's banner title and text go in its app spec)" for k in banner if k not in THEME_BANNER_KEYS]
+        if banner.get("logo"):
+            logo = (project / banner["logo"]).resolve()
+            if project.resolve() not in logo.parents or not logo.is_file():
+                errors.append(f"{name}: banner.logo {banner['logo']!r} must be an image file inside the project")
+            elif logo.suffix.lower() not in LOGO_TYPES:
+                errors.append(f"{name}: banner.logo must be one of {', '.join(LOGO_TYPES)}")
+            elif logo.stat().st_size > LOGO_LIMIT:
+                errors.append(f"{name}: banner.logo is larger than {LOGO_LIMIT // 1000} KB; crop or compress it")
+            else:
+                banner["logoData"] = f"data:{LOGO_TYPES[logo.suffix.lower()]};base64,{base64.b64encode(logo.read_bytes()).decode()}"
+    return theme, errors
+
+
 def validate(spec, project: Path) -> list:
-    """Check the theme and banner; returns error messages. Loads the banner logo into banner["logoData"]."""
-    errors = []
-    theme, banner = spec.get("theme"), spec.get("banner")
-    if theme is not None:
-        if not isinstance(theme, dict):
-            return ["theme must be an object"]
-        errors += [f"theme.{k} is not a theme setting; use {', '.join(sorted(THEME_KEYS))}" for k in theme if k not in THEME_KEYS]
-        errors += [f"theme.{k} must be a colour like #1f70c1" for k in ("primary", "onPrimary", "heading", "button", "secondaryButton", "background")
-                   if k in theme and not COLOR.match(str(theme[k]))]
-        if "font" in theme and not FONT.match(str(theme["font"])):
-            errors.append("theme.font must be a font family name such as \"Open Sans\"")
-        if theme.get("shape", "rounded") not in SHAPES:
-            errors.append(f"theme.shape must be one of {', '.join(SHAPES)}")
-        if "width" in theme and theme["width"] != "full" and not (isinstance(theme["width"], int) and 600 <= theme["width"] <= 3000):
-            errors.append('theme.width must be a number of pixels (600-3000) or "full"')
-        if theme.get("buttonAlign", "left") not in ALIGN:
-            errors.append(f"theme.buttonAlign must be one of {', '.join(ALIGN)}")
+    """Check an app spec's theme file and banner; returns error messages. On success spec["theme"] holds the
+    loaded theme and spec["banner"] the banner to show (the theme's product and logo with the app's title and text)."""
+    theme, errors = load_theme(spec.get("theme"), project)
+    banner = spec.get("banner")
     if banner is not None:
         if not isinstance(banner, dict):
             return errors + ["banner must be an object"]
-        errors += [f"banner.{k} is not a banner setting; use {', '.join(sorted(BANNER_KEYS))}" for k in banner if k not in BANNER_KEYS]
-        if banner.get("logo"):
-            path = (project / banner["logo"]).resolve()
-            if project.resolve() not in path.parents or not path.is_file():
-                errors.append(f"banner.logo {banner['logo']!r} must be an image file inside the project")
-            elif path.suffix.lower() not in LOGO_TYPES:
-                errors.append(f"banner.logo must be one of {', '.join(LOGO_TYPES)}")
-            elif path.stat().st_size > LOGO_LIMIT:
-                errors.append(f"banner.logo is larger than {LOGO_LIMIT // 1000} KB; crop or compress it")
-            else:
-                banner["logoData"] = f"data:{LOGO_TYPES[path.suffix.lower()]};base64,{base64.b64encode(path.read_bytes()).decode()}"
+        errors += [f"banner.{k} is not an app banner setting; use {', '.join(sorted(APP_BANNER_KEYS))} "
+                   "(the product name and logo go in the theme file)" for k in banner if k not in APP_BANNER_KEYS]
+    if not errors:
+        spec["theme"] = theme
+        if banner is not None or theme.get("banner") is not None:
+            spec["banner"] = {**(theme.get("banner") or {}), **(banner or {})}
     return errors
 
 

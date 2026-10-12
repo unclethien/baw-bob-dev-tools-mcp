@@ -47,38 +47,21 @@ Write down, top to bottom and left to right:
 
 ## 3. Read the look
 
-Add a `theme` whenever the screenshot has its own colours, and a `banner` when it has a header strip. Sample every colour with `image_colors` on the screenshot file: `box` is `[left, top, right, bottom]` as fractions of the image, so `[0, 0, 1, 0.15]` is the top 15 %. Take the colour with the largest share in a box drawn tightly inside the element.
+Write the screenshot's look as a theme file with the app-theme skill (its section 3 maps each part of a screenshot to a theme setting): sample every colour with `image_colors`, cut the logo out with `crop_image`, and save `work/<acr>.theme.json`. When the user already has a theme file for this look, reuse it and only check it against the screenshot.
 
-| In the screenshot | Theme setting |
-|---|---|
-| Header strip, section title bars, icon boxes | `primary` |
-| Text and icons drawn on those | `onPrimary` (usually `#ffffff`) |
-| Title and product name in the header, when coloured differently | `heading` |
-| Main button (Submit / Next) and the active tab | `button` |
-| Second button (Cancel / Back) when it is filled with a colour | `secondaryButton`. Leave it out for an outlined button |
-| Page behind the form | `background` |
-| Font that looks like Open Sans, Roboto, Lato, Arial … | `font` |
-| Corners: sharp / slightly rounded / fully round buttons | `shape`: `square` / `rounded` / `pill` |
-| A small coloured square with an icon before each input | `"fieldIcons": true`, and per field `icon`: `text`, `file`, `user`, `users`, `calendar`, `list`, `options`, `check`, `hash`, `search`, `id`, `mail`, `phone`, `building`, `dollar`, `info`, `briefcase`. Pick the closest; dates and types without `icon` get a default |
-| Form spread across a wide screen | `"width": "full"` (or a pixel width) |
-| Buttons at the right / centre of the page | `"buttonAlign": "right"` / `"center"` |
+Two parts of the look belong in the app spec, not the theme file:
 
-The `banner` replaces the plain page title with a header strip in `primary`:
-
-- `title`: the heading in the strip (default: the coach title);
-- `product`: a product or system name shown large, e.g. "QUOTE DESK";
-- `text`: a short greeting or note at the right;
-- `logo`: cut the logo out with `crop_image` (`dest` in `work/`, e.g. `work/<acr>-logo.png`) and point to that file. Check the returned crop and adjust the box until the whole logo is in and the edges are clean. Keep logos in `work/`, never in `app-specs/`.
+- **Header title and greeting:** the spec's `banner`: `title` (the heading in the strip; default: the coach title) and `text` (a short greeting or note at the right).
+- **Field icons:** when the theme sets `"fieldIcons": true`, give each field the closest `icon`: `text`, `file`, `user`, `users`, `calendar`, `list`, `options`, `check`, `hash`, `search`, `id`, `mail`, `phone`, `building`, `dollar`, `info`, `briefcase`. Dates and types without `icon` get a default.
 
 ## 4. Write the spec
 
-Path: `work/<ACRONYM>.app.json`. Follow the baw-app-builder skill for the `app`, `businessObject` and `service` keys. Use `app-specs/example-supplier-registration.json` as the model for sections and choices, and `app-specs/example-themed-quote.json` for tabs, theme, banner, placed columns, field icons and Cancel:
+Path: `work/<ACRONYM>.app.json`. Follow the baw-app-builder skill for the `app`, `businessObject` and `service` keys. Use `app-specs/example-supplier-registration.json` as the model for sections and choices, and `app-specs/example-themed-quote.json` (with `app-specs/example-quote-desk.theme.json`) for tabs, banner, placed columns, field icons and Cancel:
 
 ```json
 { "layout": "tabs",
-  "theme": { "primary": "#5aa9d6", "heading": "#1f5f99", "button": "#2f74c0", "secondaryButton": "#e8a33d",
-             "background": "#f5f6f8", "font": "Open Sans", "shape": "pill", "fieldIcons": true, "width": "full", "buttonAlign": "right" },
-  "banner": { "product": "QUOTE DESK", "text": "Good afternoon", "logo": "work/zzqd-logo.png" },
+  "theme": "work/zzqd.theme.json",
+  "banner": { "text": "Good afternoon" },
   "form": { "title": "New Quote", "nextLabel": "Submit", "cancelLabel": "Cancel" },
   "steps": [
     { "title": "General", "sections": [
@@ -95,7 +78,7 @@ Build only the screens in the screenshots, plus what they clearly lead to. If th
 
 ## 5. Build, install, compare
 
-1. `create_app` with the spec. Fix every problem it lists. For a new app, ask the user which installed app to match and pass it as `base`, as in the baw-app-builder skill.
+1. `create_app` with the spec. Fix every problem it lists, in the spec or the theme file. For a new app, ask the user which installed app to match and pass it as `base`, as in the baw-app-builder skill.
    If it returns `install`, there is no BAW server: stop here, give the user the `.twx` and its import steps, and ask them to compare the screens with the screenshots after importing.
 2. `install_app` with the returned `.twx`. Continue only when `"ok": true`.
 3. `test_service` with `fill: false`. It returns a screenshot for each coach.
@@ -107,13 +90,13 @@ Build only the screens in the screenshots, plus what they clearly lead to. If th
    - **buttons:** labels, colours, order and position (left, centre or right);
    - **colours overall:** page background, buttons and bars match the sampled colours.
 
-   Fix the spec, bump `app.snapshot`, and repeat from 1 until all of them match. Font rendering and exact pixel spacing may differ slightly; anything else is a difference to fix.
+   Fix the spec (layout, fields, buttons, banner text) or the theme file (colours, font, shapes, product name, logo), bump `app.snapshot`, and repeat from 1 until all of them match. Font rendering and exact pixel spacing may differ slightly; anything else is a difference to fix.
 
 ## 6. Report
 
 - The app, acronym, snapshot and run URL (`list_services`).
 - For each screen, its sections, with the field and column counts.
-- The theme colours you sampled and where each one is used.
+- The theme file, the colours you sampled and where each one is used.
 - **Assumptions**, for example dropdown options you chose and help texts you wrote.
 - **Not built**: things in the screenshot that the app spec cannot express, such as tables, file uploads, links and menus. For each one, offer to add it in a React screen.
 
@@ -121,7 +104,7 @@ Build only the screens in the screenshots, plus what they clearly lead to. If th
 
 Only when the user asks for the screens to be modernized:
 
-1. `inspect_coaches` on the `.twx`. It writes the coach spec with the sections, columns (in reading order), dropdown and radio options, and required flags you built.
+1. `inspect_coaches` on the `.twx`. It writes the coach spec with the sections, columns (in reading order), dropdown and radio options, and required flags you built. Set its `"theme"` to the same theme file, so the React screens keep the screenshot's look.
 2. Follow the coach-inventory, react-coach-screen and coach-modernize skills.
 
 A React screen can follow the screenshot's layout more closely. `Field` renders `select` and `radio`. `<div className="pp-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>` gives exactly two columns. The screen can also add the items listed under "Not built".

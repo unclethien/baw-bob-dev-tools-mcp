@@ -1,0 +1,12 @@
+{
+  "primary": "#2c4a6e",
+  "onPrimary": "#ffffff",
+  "button": "#2c4a6e",
+  "background": "#eef1f5",
+  "font": "Arial",
+  "shape": "square",
+  "buttonAlign": "right",
+  "banner": {
+    "product": "Acme Procurement Portal"
+  }
+}

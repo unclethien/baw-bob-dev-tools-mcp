@@ -2,8 +2,8 @@
 """
 Add React + Carbon copies of an app's client-side human services, driven by a coach spec.
 
-For every service marked "modernize" in the spec (from coach_inventory.py) and every
-theme, the service is copied as "<name> (Modernized)" or "<name> (Modernized - Carbon)".
+For every service marked "modernize" in the spec (from coach_inventory.py), the service is
+copied as "<name> (Modernized)", styled by the spec's theme file (see coach_theme.py).
 In the copy, each coach's layout is replaced by one React form screen bound to the
 service's business object, rendered from the coach's spec. The coach's original
 buttons move into a hidden layout and the React buttons press them, so the coach
@@ -29,11 +29,13 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 from coach_inventory import view_names
+from coach_theme import load_theme
 from coach_builder import SYSTEM_TYPES
 from react_coach_view import react_assets, react_view
 from twx_clone import UUID_RE, foreign_uuids
 
-THEME_SUFFIX = {"brand": " (Modernized)", "carbon": " (Modernized - Carbon)"}
+SUFFIX = " (Modernized)"
+PROJECT = Path(__file__).resolve().parent.parent
 DESIGNER_NS = "http://www.ibm.com/bpm/CoachDesignerNG"
 XSI_NS = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
 REACT_ITEM, ACTIONS_ITEM = "PPReactScreen1", "PPNativeActions"
@@ -85,9 +87,9 @@ def view_item(p, item_id, view_id, options, binding=None, children=None):
     return xml + f"</{p}:layoutItem>"
 
 
-def screen_spec(app, brand, service, coach):
+def screen_spec(app, service, coach):
     return {
-        "app": app, "brand": brand, "title": coach["title"], "intro": coach.get("intro", ""),
+        "app": app, "title": coach["title"], "intro": coach.get("intro", ""),
         "steps": [c["title"] for c in service["coaches"]], "step": service["coaches"].index(coach),
         "sectionStyle": coach["sectionStyle"],
         "sections": [{"title": s["title"], "fields": [{k: f[k] for k in SPEC_KEYS if k in f} for f in s["fields"]]} for s in coach["sections"]],
@@ -100,7 +102,7 @@ def new_layout(old, p, coach, react_view_id, actions_view_id, theme, variable, s
     by_id = {vid: old[s:e] for s, e, vid in spans}
     react = view_item(p, REACT_ITEM, react_view_id, [
         ("@label", ""), ("@helpText", ""), ("@labelVisibility", "HIDE"),
-        ("screen", coach.get("screen", "form")), ("theme", theme), ("spec", json.dumps(spec, separators=(",", ":")))], binding=f"tw.local.{variable}")
+        ("screen", coach.get("screen", "form")), ("theme", json.dumps(theme, separators=(",", ":"))), ("spec", json.dumps(spec, separators=(",", ":")))], binding=f"tw.local.{variable}")
     buttons = [retag(by_id[b["viewId"]], p, "contributions") for b in coach["buttons"] if b["viewId"] in by_id]
     actions = view_item(p, ACTIONS_ITEM, actions_view_id, [("@label", "Actions"), ("@helpText", ""), ("@labelVisibility", "HIDE")], children=buttons)
     native = [retag(by_id[n["viewId"]], p, "layoutItem") for n in coach["native"] if n["viewId"] in by_id]
@@ -110,16 +112,16 @@ def new_layout(old, p, coach, react_view_id, actions_view_id, theme, variable, s
 # ---------------------------------------------------------------- service copies
 
 
-def copy_service(text, service, app, brand, theme, react_view_id, actions_view_id, owned):
+def copy_service(text, service, app, theme, react_view_id, actions_view_id, owned):
     p = re.search(rf'xmlns:(\w+)="{re.escape(DESIGNER_NS)}"', text).group(1)
     for coach in service["coaches"]:
         at = text.index(f'id="{coach["id"]}"')
         open_tag = re.compile(rf"<{p}:layout(?:\s[^>]*)?>").search(text, at)
         close = text.index(f"</{p}:layout>", open_tag.end())
         layout = new_layout(text[open_tag.end():close], p, coach, react_view_id, actions_view_id, theme, service["variable"],
-                            screen_spec(app, brand, service, coach))
+                            screen_spec(app, service, coach))
         text = text[:open_tag.end()] + layout + text[close:]
-    name = escape(service["name"] + THEME_SUFFIX.get(theme, f" (Modernized - {theme})"), {'"': "&quot;"})
+    name = escape(service["name"] + SUFFIX, {'"': "&quot;"})
     text = re.sub(r'(<process id="[^"]+" name=")[^"]*(")', rf"\g<1>{name}\g<2>", text, count=1)
     text = re.sub(r'(globalUserTask\b[^>]*?\bname=")[^"]*(")', rf"\g<1>{name}\g<2>", text, count=1)
     mapping = {u: uid() for u in owned}
@@ -149,7 +151,8 @@ def owned_uuids(twx, package, service_id):
     return set(UUID_RE.findall(text)) - elsewhere
 
 
-def modernize(source: Path, spec: dict, bundle: Path, dest: Path, themes, snapshot=None):
+def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, snapshot=None):
+    """theme: a theme file loaded by coach_theme.load_theme."""
     services = [s for s in spec["services"] if s["modernize"]]
     if not services:
         raise SystemExit("Nothing to modernize: no service in the spec has \"modernize\": true")
@@ -185,11 +188,10 @@ def modernize(source: Path, spec: dict, bundle: Path, dest: Path, themes, snapsh
         for service in services:
             text = twx.read(f"objects/{service['id']}.xml").decode("utf-8")
             owned = owned_uuids(twx, package, service["id"])
-            for theme in themes:
-                pid, version, name, xml = copy_service(text, service, spec["app"], spec.get("brand", ""), theme, views[service["classRef"]], actions_view_id, owned)
-                objects.append(f'<object id="{pid}" versionId="{version}" name="{name}" type="process"/>')
-                files[f"objects/{pid}.xml"] = xml.encode("utf-8")
-                created.append(name)
+            pid, version, name, xml = copy_service(text, service, spec["app"], theme, views[service["classRef"]], actions_view_id, owned)
+            objects.append(f'<object id="{pid}" versionId="{version}" name="{name}" type="process"/>')
+            files[f"objects/{pid}.xml"] = xml.encode("utf-8")
+            created.append(name)
 
         package = package.replace("</objects>", "".join(f"\n        {o}" for o in objects) + "\n    </objects>", 1)
         if file_entries:
@@ -218,14 +220,16 @@ def main():
     parser.add_argument("twx", type=Path, help="Exported process app (the spec's source)")
     parser.add_argument("spec", type=Path, help="Coach spec from coach_inventory.py")
     parser.add_argument("dest", type=Path)
-    parser.add_argument("--bundle", type=Path, default=Path(__file__).resolve().parent.parent / "react-coach" / "bundle",
+    parser.add_argument("--bundle", type=Path, default=PROJECT / "react-coach" / "bundle",
                         help="Built React bundle directory (npm run build in react-coach/)")
-    parser.add_argument("--themes", help="Comma-separated themes (default: the spec's themes)")
+    parser.add_argument("--theme", help="Theme file (default: the spec's theme)")
     parser.add_argument("--snapshot", help="Install as this new snapshot of the same app")
     args = parser.parse_args()
     spec = json.loads(args.spec.read_text())
-    themes = args.themes.split(",") if args.themes else spec["themes"]
-    for name in modernize(args.twx, spec, args.bundle, args.dest, themes, args.snapshot):
+    theme, errors = load_theme(args.theme or spec.get("theme"), PROJECT, "the coach spec's theme")
+    if errors:
+        raise SystemExit("Invalid theme:\n  " + "\n  ".join(errors))
+    for name in modernize(args.twx, spec, args.bundle, args.dest, theme, args.snapshot):
         print(f"Added service: {name}")
     print(f"Wrote {args.dest}")
 

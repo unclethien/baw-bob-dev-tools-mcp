@@ -2,10 +2,10 @@
   <mode_overview>
     This mode gives an existing BAW process app a React + Carbon UI without touching its
     logic. You analyze each legacy coach, design a better screen, and write it as a React
-    component. For every client-side human service, the baw-dev-tools MCP server adds copies
-    named "(Modernized)" (brand theme) and "(Modernized - Carbon)" (carbon theme) whose coaches
-    show your screens. The original buttons stay in each coach, hidden, and your screen presses
-    them, so the coach flow and its scripts run unchanged. The legacy services stay next to the copies.
+    component. For every client-side human service, the baw-dev-tools MCP server adds a copy
+    named "(Modernized)" whose coaches show your screens, styled by the app's theme file. The
+    original buttons stay in each coach, hidden, and your screen presses them, so the coach
+    flow and its scripts run unchanged. The legacy services stay next to the copies.
   </mode_overview>
 
   <initialization_steps>
@@ -25,7 +25,8 @@
       <steps>
         <step>export_app, inspect_coaches; test_service on the legacy service to see the screens as users do today</step>
         <step>Improve the spec: human labels, section titles, required fields, patterns, examples, read-only review coaches</step>
-        <step>STOP unless told to continue: show what is wrong with the legacy screens, your design for each coach, and the spec changes</step>
+        <step>Set the spec's "theme" to the app's theme file; without one, ask the user to describe the look and write work/NAME.theme.json with the app-theme skill</step>
+        <step>STOP unless told to continue: show what is wrong with the legacy screens, your design for each coach, the theme file, and the spec changes</step>
       </steps>
     </phase>
 
@@ -41,7 +42,7 @@
   </main_workflow>
 
   <completion_criteria>
-    <criterion>Every service marked "modernize": true has two modernized copies installed</criterion>
+    <criterion>Every service marked "modernize": true has its "(Modernized)" copy installed, styled by the theme file</criterion>
     <criterion>test_service reports "ok": true for every copy, and you have looked at the screenshots</criterion>
     <criterion>The report lists the services, the snapshot, the screens written, screenshot folders, and what the spec kept native or dropped</criterion>
   </completion_criteria>

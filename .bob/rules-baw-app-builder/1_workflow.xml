@@ -20,6 +20,12 @@
       </details>
     </step>
     <step number="2">
+      <action>Get the look</action>
+      <details>Every app needs a theme file. Reuse one the user names; otherwise ask the user to describe the look
+        (colours, font, corners, product name, logo) and write work/NAME.theme.json with the app-theme skill. From
+        screenshots, read the look from the image instead of asking. Never make up a look without asking.</details>
+    </step>
+    <step number="3">
       <action>Pick an acronym</action>
       <details>Call list_apps once and pick an unused ZZ acronym. For a new app, ask the user which installed app
         to match (create_app base) or whether to use the built-in template. When list_apps reports that no BAW
@@ -31,29 +37,29 @@
     <phase name="build">
       <description>Design, build, install and test with the baw-app-builder skill</description>
       <steps>
-        <step>Write work/ACR.app.json</step>
+        <step>Write work/ACR.app.json with "theme" set to the theme file</step>
         <step>create_app, then inspect_coaches on the result and check every step</step>
         <step>install_app, then test_service for the service; look at the screenshots</step>
-        <step>When built from screenshots: sample the theme colours with image_colors and cut the logo out with crop_image before writing the spec</step>
-        <step>When built from screenshots: view_image each test screenshot, compare it with its original, fix the spec and rebuild with a new snapshot until the header, tabs, sections, column placement and widths, fields, controls, required markers, colours and buttons (labels, colours, position) match</step>
+        <step>When built from screenshots: sample the theme colours with image_colors and cut the logo out with crop_image into the theme file before writing the spec</step>
+        <step>When built from screenshots: view_image each test screenshot, compare it with its original, fix the spec or the theme file and rebuild with a new snapshot until the header, tabs, sections, column placement and widths, fields, controls, required markers, colours and buttons (labels, colours, position) match</step>
       </steps>
     </phase>
 
     <phase name="modernize">
       <description>Only when the user asks for a React UI: coach-inventory, react-coach-screen, coach-modernize skills</description>
       <steps>
-        <step>Improve the coach spec (labels, required fields, patterns, examples)</step>
+        <step>Improve the coach spec (labels, required fields, patterns, examples) and set its "theme" to the app's theme file</step>
         <step>Unless the user said to continue without review, STOP and show the spec changes for approval</step>
         <step>Write a React screen per coach in react-coach/src/screens/, set "screen" in the spec, build_screens</step>
-        <step>modernize_app with a new snapshot, install_app, test_service for both themes; look at the screenshots</step>
+        <step>modernize_app with a new snapshot, install_app, test_service for each "(Modernized)" service; look at the screenshots</step>
       </steps>
     </phase>
   </main_workflow>
 
   <completion_criteria>
     <criterion>The app is installed and test_service reports "ok": true for its service; without a BAW server, the .twx is built, inspect_coaches shows every step, and the user has the import steps</criterion>
-    <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built, and the coaches use the screenshot's theme colours, header and column layout</criterion>
-    <criterion>When a React UI was requested, both modernized services report "ok": true and every coach uses a screen you wrote</criterion>
-    <criterion>The report lists the app, acronym, snapshots, run URLs, steps, field counts, screens written and screenshot folders</criterion>
+    <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built, and the theme file holds the screenshot's colours, header product name and logo</criterion>
+    <criterion>When a React UI was requested, every "(Modernized)" service reports "ok": true and every coach uses a screen you wrote</criterion>
+    <criterion>The report lists the app, acronym, theme file, snapshots, run URLs, steps, field counts, screens written and screenshot folders</criterion>
   </completion_criteria>
 </workflow_instructions>

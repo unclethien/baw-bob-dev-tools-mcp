@@ -35,7 +35,7 @@ function Requester({ field, read, fire, options }) {
 
   return (
     <>
-      <Header theme={options.theme} brand={spec.brand} subtitle={spec.app} title={spec.title} steps={spec.steps} step={spec.step} />
+      <Header theme={options.theme} subtitle={spec.app} title={spec.title} steps={spec.steps} step={spec.step} />
       {Object.keys(errors).length > 0 && <InlineNotification kind="error" lowContrast hideCloseButton title="Check the highlighted fields" />}
       <div className="pp-section">
         <div className="pp-grid">
@@ -60,14 +60,14 @@ registerScreen('zzeq-requester', Requester);
 | `field(path)` | `{ value, set(value) }` for a path under the business object, e.g. `field('address.city')` |
 | `read(path)` | Current value. Dates are `Date` objects, numbers are numbers, checkboxes are booleans |
 | `fire(viewId)` | Presses the coach's own button; the coach flow moves on exactly as the legacy coach did |
-| `options.theme` | `"brand"` or `"carbon"`; pass it and `spec.brand` to `Header`, which draws the matching header |
-| `options.spec` | `app`, `brand`, `title`, `intro`, `steps[]`, `step`, `sections[].fields[]` (`path`, `label`, `type`, `options`, `required`, `pattern`, `message`, `example`, `readonly`) and `buttons[]` (`label`, `viewId`, `primary`) |
+| `options.theme` | The app's theme file (colours, font, shape, `banner.product`, the logo as `banner.logoData`). Pass it to `Header`, which draws the logo and product name. The page already follows its colours, font and shapes, so screens never set colours themselves |
+| `options.spec` | `app`, `title`, `intro`, `steps[]`, `step`, `sections[].fields[]` (`path`, `label`, `type`, `options`, `required`, `pattern`, `message`, `example`, `readonly`) and `buttons[]` (`label`, `viewId`, `primary`) |
 
 ### Building blocks
 
 - `../components.jsx`: `Header`, `Field` (`field`, `binding`, `error`; picks the Carbon input from `type`: `text`, `textarea`, `date`, `checkbox`, `number`, `select`, `radio`; `select` and `radio` need `options: [{ value, label }]` from the spec), `formatValue(field, value)` for read-only display (shows an option's label).
 - Any `@carbon/react` component (Tabs, Tile, Accordion, ProgressIndicator, InlineNotification, StructuredList…).
-- Layout classes: `pp-section`, `pp-section-title`, `pp-grid` (two-column field grid), `pp-span` (full-width cell), `pp-panel`, `pp-stack`, `pp-lead`, `pp-note`, `pp-review-tile`, `pp-review-row`, `pp-actions`. For anything else use inline `style`.
+- Layout classes: `pp-section`, `pp-section-title`, `pp-grid` (two-column field grid), `pp-span` (full-width cell), `pp-panel`, `pp-stack`, `pp-lead`, `pp-note`, `pp-review-tile`, `pp-review-row`, `pp-actions`. For anything else use inline `style`, but take colours from the theme (CSS variables such as `var(--pp-theme-primary)`), never hard-coded ones.
 
 ### Rules the tester relies on
 
@@ -81,4 +81,4 @@ registerScreen('zzeq-requester', Requester);
 
 1. `build_screens` compiles every screen. On an error, fix the file at the reported line and build again.
 2. In the coach spec, add `"screen": "<registered name>"` to that coach. Coaches without `screen` keep the generic form.
-3. `modernize_app` with a new snapshot, then `install_app`, then `test_service` for both themes. Open the screenshots and check your screen looks as designed. If not, change the screen and repeat with a new snapshot.
+3. `modernize_app` with a new snapshot, then `install_app`, then `test_service` for `<service> (Modernized)`. Open the screenshots and check your screen looks as designed. If not, change the screen and repeat with a new snapshot.

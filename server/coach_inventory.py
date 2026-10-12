@@ -10,7 +10,8 @@ and anything the React form cannot render (kept native) or will leave out (dropp
 Review the spec before running modernize_coaches.py. Fix labels, mark fields
 "required" or give them a "pattern" (a regular expression), a "message" and an
 "example" (shown as the placeholder, and typed by verify-service.mjs --fill), set
-"modernize" to false for services to skip, and set "intro" for a coach's lead text.
+"modernize" to false for services to skip, set "intro" for a coach's lead text, and set "theme" to
+the app's theme file (*.theme.json, see coach_theme.py).
 
 Example:
     python3 server/coach_inventory.py zzeq.twx -o zzeq.coaches.json
@@ -273,7 +274,7 @@ def inventory(twx_path: Path):
                     services.append(service)
     return {
         "source": twx_path.name, "app": project.group(1), "acronym": project.group(2), "snapshot": snapshot.group(1),
-        "brand": "", "themes": ["brand", "carbon"], "services": services,
+        "theme": None, "services": services,
     }
 
 

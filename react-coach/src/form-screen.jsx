@@ -76,7 +76,7 @@ function FormScreen({ field, read, fire, options }) {
   const body = (section) => <Section section={section} field={field} read={read} errorFor={errorFor} />;
   return (
     <>
-      <Header theme={options.theme} brand={spec.brand} subtitle={spec.app} title={spec.title} steps={spec.steps} step={spec.step} />
+      <Header theme={options.theme} subtitle={spec.app} title={spec.title} steps={spec.steps} step={spec.step} />
       {spec.intro && <p className="pp-lead">{spec.intro}</p>}
       {errors.length > 0 && (
         <InlineNotification kind="error" lowContrast hideCloseButton
