@@ -199,7 +199,7 @@ footer p{max-width:76ch;margin-bottom:6px}
       <span class="tag tag-blue">CP4BA · BAW 26.0.0</span>
       <span class="tag tag-gray">Swagger 2.0</span>
       <span class="tag tag-gray">gateway /bas</span>
-      <span class="tag tag-green">8 endpoints used</span>
+      <span class="tag tag-green">12 endpoints used</span>
       <span class="tag tag-yellow">6 of 200 documented operations</span>
       <span class="tag tag-purple">8 October 2026</span>
     </div>
@@ -280,21 +280,25 @@ footer p{max-width:76ch;margin-bottom:6px}
 
 <section id="used">
   <h2>Endpoints used</h2>
-  <p>Eight endpoints in total. All of them read data except install, which the server only allows for apps
-  whose name and acronym start with <code>ZZ</code>.</p>
+  <p>Twelve endpoints in total. All of them read data except install and starting a workflow, which the server
+  only allows for apps whose acronym starts with <code>ZZ</code> (install also checks the app name).</p>
 
   <div class="tablewrap" role="region" tabindex="0" aria-label="Endpoints used by the MCP server, scrollable">
     <table>
       <thead><tr><th scope="col">#</th><th scope="col">Endpoint</th><th scope="col">Source</th><th scope="col">MCP tools</th><th scope="col">Code</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td class="mono">POST /icp4d-api/v1/authorize</td><td>Cloud Pak Platform API</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:75<br>verify-service.mjs:47</td></tr>
+        <tr><td>1</td><td class="mono">POST /icp4d-api/v1/authorize</td><td>Cloud Pak Platform API</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:75<br>verify-service.mjs:51</td></tr>
         <tr><td>2</td><td class="mono">POST /bas/bpm/system/login</td><td>BPM REST · System</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:80</td></tr>
         <tr><td>3</td><td class="mono">GET /bas/ops/std/bpm/containers</td><td>Ops REST · Container</td><td><code>list_apps</code></td><td class="mono">baw_ops.py:94</td></tr>
         <tr><td>4</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions</td><td>Ops REST · Version</td><td><code>list_snapshots</code>, <code>export_app</code>, <code>create_app</code>, <code>modernize_app</code>, <code>install_app</code></td><td class="mono">baw_ops.py:97</td></tr>
         <tr><td>5</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions/{version}/export</td><td>Ops REST · Version</td><td><code>export_app</code>, <code>create_app</code></td><td class="mono">baw_ops.py:100</td></tr>
-        <tr><td>6</td><td class="mono">POST /bas/ops/std/bpm/containers/install</td><td>Ops REST · Container</td><td><code>install_app</code></td><td class="mono">baw_ops.py:113</td></tr>
-        <tr><td>7</td><td class="mono">GET /bas/ops/system/queue/{id}</td><td>Ops REST · System</td><td><code>install_app</code> (status polling)</td><td class="mono">baw_ops.py:126</td></tr>
-        <tr><td>8</td><td class="mono">GET /bas/rest/bpm/wle/v1/exposed/service</td><td>BPM REST, older API</td><td><code>list_services</code>, <code>test_service</code></td><td class="mono">baw_ops.py:107<br>verify-service.mjs:54</td></tr>
+        <tr><td>6</td><td class="mono">POST /bas/ops/std/bpm/containers/install</td><td>Ops REST · Container</td><td><code>install_app</code></td><td class="mono">baw_ops.py:133</td></tr>
+        <tr><td>7</td><td class="mono">GET /bas/ops/system/queue/{id}</td><td>Ops REST · System</td><td><code>install_app</code> (status polling)</td><td class="mono">baw_ops.py:149</td></tr>
+        <tr><td>8</td><td class="mono">GET /bas/rest/bpm/wle/v1/exposed/service</td><td>BPM REST, older API</td><td><code>list_services</code>, <code>test_service</code></td><td class="mono">baw_ops.py:107<br>verify-service.mjs:60</td></tr>
+        <tr><td>9</td><td class="mono">GET /bas/rest/bpm/wle/v1/exposed/process</td><td>BPM REST, older API</td><td><code>test_process</code></td><td class="mono">baw_ops.py:116</td></tr>
+        <tr><td>10</td><td class="mono">POST /bas/rest/bpm/wle/v1/process?action=start&amp;bpdId=…&amp;processAppId=…&amp;parts=all</td><td>BPM REST, older API</td><td><code>test_process</code></td><td class="mono">baw_ops.py:122</td></tr>
+        <tr><td>11</td><td class="mono">GET /bas/rest/bpm/wle/v1/process/{piid}?parts=all</td><td>BPM REST, older API</td><td><code>test_process</code></td><td class="mono">baw_ops.py:126</td></tr>
+        <tr><td>12</td><td class="mono">GET /bas/rest/bpm/wle/v1/task/{tkiid}/clientSettings/IBM_WLE_Coach</td><td>BPM REST, older API</td><td><code>test_process</code></td><td class="mono">baw_ops.py:129</td></tr>
       </tbody>
     </table>
   </div>
@@ -303,6 +307,11 @@ footer p{max-width:76ch;margin-bottom:6px}
   (<code>/bas/teamworks/executecf?modelID=…&amp;branchID=…</code>) in headless Chrome. It is a page load,
   not a REST call, and is authenticated with the same bearer token set as the
   <code>ibm-private-cloud-session</code> cookie.</p>
+  <p><code>test_process</code> starts an instance with the <code>startURL</code> from step 9, then repeats steps 11
+  and 12 while the instance has an open task: it opens the task's coach URL
+  (<code>/bas/teamworks/process.lsw?zWorkflowState=1&amp;zTaskId=…</code>) in the same headless browser. The
+  coach claims and completes the task when its button is pressed, as it does for a person, so no REST call
+  claims or finishes tasks.</p>
 
   <h3>Fields read from each response</h3>
   <div class="tablewrap" role="region" tabindex="0" aria-label="Response fields read, scrollable">
@@ -317,6 +326,10 @@ footer p{max-width:76ch;margin-bottom:6px}
         <tr><td class="mono">/containers/install</td><td class="mono">url</td><td>Address of the queue entry to poll</td></tr>
         <tr><td class="mono">/system/queue/{id}</td><td class="mono">state, result</td><td>Install outcome returned to the agent</td></tr>
         <tr><td class="mono">/exposed/service</td><td class="mono">processAppAcronym, display, snapshotName, tip, runURL</td><td>Find a service by app, name and snapshot (or tip) and get its run URL</td></tr>
+        <tr><td class="mono">/exposed/process</td><td class="mono">processAppAcronym, display, snapshotName, tip, startURL</td><td>Find a workflow by app, name and snapshot (or tip) and get its start URL</td></tr>
+        <tr><td class="mono">/process?action=start</td><td class="mono">piid</td><td>The new instance</td></tr>
+        <tr><td class="mono">/process/{piid}</td><td class="mono">tasks (tkiid, name, status), executionState</td><td>The next open task, and the final state (<span class="mono">Completed</span> means the workflow ended)</td></tr>
+        <tr><td class="mono">/task/{tkiid}/clientSettings/IBM_WLE_Coach</td><td class="mono">url</td><td>The browser address of the task's coaches</td></tr>
       </tbody>
     </table>
   </div>
@@ -339,7 +352,7 @@ footer p{max-width:76ch;margin-bottom:6px}
         <tr><td>Ops · System</td><td>8</td><td><span class="tag tag-green">1 used</span></td><td>The async queue for install status. Its <span class="mono">/system/login</span> works too; the BPM copy is used instead.</td></tr>
         <tr><td>BPM · System</td><td>1</td><td><span class="tag tag-green">used</span></td><td>CSRF token.</td></tr>
         <tr><td>BPM · Exposed Service</td><td>1</td><td><span class="tag tag-red">rejected</span></td><td>Returns REST services only, with no run URL. See below.</td></tr>
-        <tr><td>BPM · Process, User Task</td><td>9</td><td><span class="tag tag-gray">not used</span></td><td>Start and complete process instances and tasks. Testing drives the real UI instead.</td></tr>
+        <tr><td>BPM · Process, User Task</td><td>9</td><td><span class="tag tag-gray">not used</span></td><td>Start and complete process instances and tasks. <code>test_process</code> starts instances with the older <span class="mono">/rest/bpm/wle/v1</span> API, which also gives each task's coach URL, and completes tasks through the real UI.</td></tr>
         <tr><td>Case · all groups</td><td>33</td><td><span class="tag tag-gray">not used</span></td><td>Case solutions, cases, activities and stages. The tools build process apps with client-side human services, not case solutions.</td></tr>
         <tr><td>Ops · Process Instance Move, Health Management, Event Manager, Logging, User Management, Federated Data Repository, and others</td><td>101</td><td><span class="tag tag-gray">not used</span></td><td>Server administration, outside the build-and-test loop.</td></tr>
       </tbody>
@@ -472,6 +485,7 @@ browser (test_service)            cookie ibm-private-cloud-session=&lt;token&gt;
       <tbody>
         <tr><td>Install only <code>ZZ</code> apps (name and acronym)</td><td>Target read from <span class="mono">META-INF/package.xml</span> inside the <span class="mono">.twx</span> before <span class="mono">containers/install</span> is called.</td></tr>
         <tr><td>Refuse a snapshot name that already exists</td><td>Checked against <span class="mono">versions</span> (both <span class="mono">version</span> and <span class="mono">version_name</span>) before build and install, because BAW would keep the old content.</td></tr>
+        <tr><td>Start workflows only in <code>ZZ</code> apps</td><td><code>test_process</code> refuses any other acronym before calling <span class="mono">process?action=start</span>.</td></tr>
         <tr><td>No delete tool</td><td>The documented <span class="mono">DELETE</span> container and version routes are never called.</td></tr>
         <tr><td>Paths limited to the project</td><td>Exports and installs read and write only inside the repository.</td></tr>
       </tbody>
@@ -501,8 +515,8 @@ browser (test_service)            cookie ibm-private-cloud-session=&lt;token&gt;
       page. All 80 apps came back in one page here, but a larger server could hide apps or snapshots.</li>
     <li><strong>Send <code>refresh_groups: false</code></strong> in the login body to match the documented
       schema.</li>
-    <li><strong>Track the run-URL dependency.</strong> <code>/bas/rest/bpm/wle/v1/exposed/service</code> is
-      outside the published specs; check it on each BAW upgrade, or move to a documented route if one starts
+    <li><strong>Track the run-URL dependency.</strong> <code>/bas/rest/bpm/wle/v1/exposed/service</code> and the
+      other <code>/rest/bpm/wle/v1</code> routes that <code>test_process</code> uses are outside the published specs; check it on each BAW upgrade, or move to a documented route if one starts
       returning human services with run URLs.</li>
     <li><strong>Settle certificate trust</strong> before pointing the tools at anything other than a test
       cluster.</li>

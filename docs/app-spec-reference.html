@@ -271,6 +271,7 @@ h3[id]{scroll-margin-top:var(--s06)}
     <li><a href="#review">review and confirmation</a></li>
     <li><a href="#theme">theme</a></li>
     <li><a href="#banner">banner</a></li>
+    <li><a href="#process">process</a></li>
     <li><a href="#errors">Validation errors</a></li>
     <li><a href="#limits">What a spec cannot express</a></li>
     <li><a href="#examples">Example specs</a></li>
@@ -362,6 +363,7 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td class="mono"><a href="#review">confirmation</a></td><td>No</td><td>off</td><td>An object adds a confirmation screen with a reference number</td></tr>
         <tr><td class="mono"><a href="#theme">theme</a></td><td>Yes</td><td></td><td>Path of the theme file: colours, font, shapes, field icons, width, button placement, header product name and logo</td></tr>
         <tr><td class="mono"><a href="#banner">banner</a></td><td>No</td><td>off</td><td>The header strip's title and text</td></tr>
+        <tr><td class="mono"><a href="#process">process</a></td><td>No</td><td>off</td><td>A workflow on top of the form: lanes, an optional approval task, and Send Back to the form</td></tr>
       </tbody>
     </table>
   </div>
@@ -636,7 +638,8 @@ h3[id]{scroll-margin-top:var(--s06)}
     </table>
   </div>
   <p>Colours are <code>#rgb</code> or <code>#rrggbb</code>. When building from a screenshot, the agent reads them with
-  <code>image_colors</code> instead of guessing, and cuts the logo out with <code>crop_image</code> into <code>work/</code>.</p>
+  <code>image_colors</code> instead of guessing. For the logo it uses a logo file you give or one already in the project;
+  without one, it asks, and cuts the logo out of the screenshot with <code>crop_image</code> only when you say so.</p>
 <pre><code>{
   "primary": "#5aa9d6", "onPrimary": "#ffffff", "heading": "#1f5f99",
   "button": "#2f74c0", "secondaryButton": "#e8a33d", "background": "#f5f6f8",
@@ -680,6 +683,56 @@ h3[id]{scroll-margin-top:var(--s06)}
 
 <hr class="rule" aria-hidden="true">
 
+<section id="process">
+  <h2>process</h2>
+  <p>Optional. Adds a workflow (a business process definition) that users start from Workplace. The service
+  becomes the workflow's first task. With <code>approval</code>, a review task follows in a second lane: it shows
+  every field read-only, with a comments box and two buttons. Approve ends the workflow; Send Back returns the work
+  to the first task with everything entered so far, and the loop repeats until it is approved.</p>
+  <ol class="flow" aria-label="Workflow">
+    <li>Start</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li class="hl">Form task</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li class="opt-step">Approval task</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li class="opt-step">Approved?</li><li class="arrow" aria-hidden="true">&rarr;</li>
+    <li>End</li>
+  </ol>
+  <p>The diagram opens in Business Automation Studio's process editor, where you can move, add and connect steps
+  like in any process you drew yourself. <code>test_process</code> runs it end to end.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="process keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">name</td><td>required</td><td>The workflow's name, as users see it when they start it, and what you pass to <code>test_process</code></td></tr>
+        <tr><td class="mono">description</td><td>the name</td><td>Shown in the process editor</td></tr>
+        <tr><td class="mono">formTask.name</td><td>the service name</td><td>Name of the first task</td></tr>
+        <tr><td class="mono">formTask.lane</td><td>Requester</td><td>Lane of the first task</td></tr>
+        <tr><td class="mono">approval</td><td>off</td><td>An object (<code>{}</code> for the defaults) adds the approval task</td></tr>
+        <tr><td class="mono">approval.name</td><td>Review</td><td>Name of the approval task and title of its screen</td></tr>
+        <tr><td class="mono">approval.lane</td><td>Approver</td><td>Lane of the approval task, the gateway and the end</td></tr>
+        <tr><td class="mono">approval.intro</td><td>none</td><td>Text under the approval screen's title</td></tr>
+        <tr><td class="mono">approval.approveLabel</td><td>Approve</td><td>Text of the button that ends the workflow</td></tr>
+        <tr><td class="mono">approval.returnLabel</td><td>Send Back</td><td>Text of the button that returns the work to the first task; also the label of that path in the diagram</td></tr>
+        <tr><td class="mono">approval.commentsLabel</td><td>Comments</td><td>Label of the comments box</td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>"process": {
+  "name": "Quote Workflow",
+  "formTask": { "name": "Enter Quote Info", "lane": "Sales" },
+  "approval": {
+    "name": "Review Quote",
+    "lane": "Underwriting",
+    "intro": "Check the quote, then approve it or send it back to Sales."
+  }
+}</code></pre>
+  <p>The approval task adds two text fields to the business object: <code>decision</code> ("Approved" or
+  "Sent back") and <code>reviewComments</code>, so no field of the spec may use those names. Every lane is
+  open to all users; change who works on each lane in the process editor. The form service can still be
+  launched on its own by URL; the approval service runs only as a task of the workflow.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
 <section id="errors">
   <h2>Validation errors</h2>
   <p>The generator checks the whole spec and its theme file and lists every problem before it builds anything. A
@@ -697,7 +750,7 @@ Invalid app spec:
       <thead><tr><th scope="col">Message contains</th><th scope="col">Fix</th></tr></thead>
       <tbody>
         <tr><td class="mono">must be an identifier</td><td>Use letters, digits and <code>_</code> only, no spaces, not starting with a digit: <code>startDate</code></td></tr>
-        <tr><td class="mono">is used twice (or is reserved)</td><td>Rename one of the fields; names are shared by all steps. Do not name a field <code>referenceNumber</code> when there is a confirmation</td></tr>
+        <tr><td class="mono">is used twice (or is reserved)</td><td>Rename one of the fields; names are shared by all steps. Do not name a field <code>referenceNumber</code> when there is a confirmation, or <code>decision</code> or <code>reviewComments</code> when there is an approval</td></tr>
         <tr><td class="mono">needs options</td><td>Add <code>"options": [...]</code> to the Select or Radio field</td></tr>
         <tr><td class="mono">needs a column from 1 to N</td><td>One field in the section has a <code>column</code>, so all non-wide fields need one</td></tr>
         <tr><td class="mono">widths must list N positive numbers</td><td>Give exactly one width per column</td></tr>
@@ -706,6 +759,8 @@ Invalid app spec:
         <tr><td class="mono">is not a theme setting</td><td>Check the spelling against the <a href="#theme">theme keys</a>; they are case-sensitive</td></tr>
         <tr><td class="mono">is not an app banner setting</td><td>Move <code>product</code> and <code>logo</code> from the spec's banner to the theme file's <code>banner</code></td></tr>
         <tr><td class="mono">banner.logo &hellip; must be an image file inside the project</td><td>Save the image under the project folder (e.g. <code>work/</code>) and give the path relative to it</td></tr>
+        <tr><td class="mono">process.name is required</td><td>Give the workflow a name: <code>"process": { "name": "Quote Workflow" }</code></td></tr>
+        <tr><td class="mono">process.approval must be an object</td><td>Use <code>{}</code> for the default approval task, or an object with your names and labels</td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>From <code>create_app</code> or <code>install_app</code>: bump <code>app.snapshot</code></td></tr>
         <tr><td class="mono">Refusing to install into</td><td>From <code>install_app</code>: the name and acronym must both start with ZZ</td></tr>
       </tbody>
@@ -722,8 +777,9 @@ Invalid app spec:
     <li><strong>Tables, file uploads, links and menus.</strong> Add them in a React screen with the coach-modernize skill.</li>
     <li><strong>Validation and rules.</strong> No required-field blocking, no field-to-field rules, no show/hide logic.</li>
     <li><strong>Lookups and integrations.</strong> Dropdown options are fixed in the spec; nothing calls another system.</li>
-    <li><strong>Processes and tasks.</strong> The app has one service that a user launches by URL. There is no BPD,
-    no task routing and no approvals between people.</li>
+    <li><strong>Workflows beyond one approval.</strong> <a href="#process"><code>process</code></a> builds a form task
+    and an optional approval with Send Back. More steps, timers, parallel paths and per-lane teams are added in the
+    process editor.</li>
   </ul>
 </section>
 

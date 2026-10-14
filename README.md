@@ -23,6 +23,7 @@ An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com
 | `modernize_app` | Add a React + Carbon copy of each service, styled by the app's theme file, as a new snapshot |
 | `install_app` | Install a `.twx` and wait for the result |
 | `test_service` | Walk a service in a browser: screenshot each screen, fill sample values, press the forward button |
+| `test_process` | Start an app's workflow and work every task it creates in a browser, pressing the buttons you name (e.g. Send Back once), until it completes |
 
 Guard rails:
 - Only apps whose name starts with "ZZ" and whose acronym starts with `ZZ` can be installed.
@@ -40,7 +41,7 @@ Agent (Bob) ── writes ──▶ work/*.theme.json, work/*.app.json, work/*.c
 ```
 
 - **Theme file** (`*.theme.json`): the look of an app, which Bob writes from the user's description or a screenshot: colours, font, corner shape, field icon boxes, width, button placement, and the header's product name and logo. Bob asks for a look when none is given; there is no default. The same file styles the classic coaches `create_app` builds and the React screens `modernize_app` adds, so changing the look means editing one file and rebuilding. Examples: `app-specs/example-*.theme.json`.
-- **App spec** (`app-specs/`): business object, steps or tabs (`"layout": "tabs"`), titled sections with 1-6 columns (fields placed per column, relative column widths), fields (text, text area, date, checkbox, integer, decimal, dropdown, radio group; required markers and help text), button labels including Cancel, review and confirmation, the `theme` file it uses and an optional `banner` (the header strip's title and text). `create_app` turns it into a client-side human service exposed as a URL, built from standard UI Toolkit views. `example-equipment-request.json` is a simple multi-step form; `example-supplier-registration.json` was written from `screenshots/example-supplier-registration.png`; `example-themed-quote.json` shows tabs, a banner, placed columns, field icons and Cancel.
+- **App spec** (`app-specs/`): business object, steps or tabs (`"layout": "tabs"`), titled sections with 1-6 columns (fields placed per column, relative column widths), fields (text, text area, date, checkbox, integer, decimal, dropdown, radio group; required markers and help text), button labels including Cancel, review and confirmation, the `theme` file it uses and an optional `banner` (the header strip's title and text). `create_app` turns it into a client-side human service exposed as a URL, built from standard UI Toolkit views. `example-equipment-request.json` is a simple multi-step form; `example-supplier-registration.json` was written from `screenshots/example-supplier-registration.png`; `example-themed-quote.json` shows tabs, a banner, placed columns, field icons and Cancel. An optional `process` section adds a workflow on top: the form becomes the first task of a process with lanes, and an `approval` adds a review task in a second lane with Approve and Send Back, where Send Back returns the work to the form. The diagram opens and can be edited in Business Automation Studio's process editor.
 - **Coach spec**: written by `inspect_coaches` and refined by the agent: labels, required fields, patterns, examples, and the `theme` file for the React screens. A coach with `"screen": "<name>"` shows a React screen the agent wrote in `react-coach/src/screens/<name>.jsx`; other coaches use a generic form. The legacy coach flow, scripts and buttons keep running underneath, and the React screen presses the coach's own buttons.
 
 ## Requirements
@@ -74,9 +75,9 @@ Settings are read from the environment first, then `.env`:
    - **🏗️ BAW App Builder** turns a written requirement, or screenshots of the screens, into a running app.
    - **✨ BAW Coach Modernizer** gives an existing app a React UI that Bob writes.
 
-   Both modes edit only `work/`, `app-specs/` and `react-coach/src/screens/`, and do everything else through the MCP tools.
+   Bob switches between them in the same chat: ask for a React UI after building an app and it moves to the Modernizer; ask the Modernizer for a new app or new fields, steps or a workflow and it moves back to the App Builder. To skip the switch prompt, allow **Mode** in Bob's auto-approve settings. Both modes edit only `work/` and `app-specs/` (the Modernizer also `react-coach/src/screens/`), and do everything else through the MCP tools.
 2. Copy `.bob/mcp.example.json` to `.bob/mcp.json` and set the absolute path to `server/baw_mcp.py`. To switch servers without editing `.env`, add an `"env": { "BAW_URL": "..." }` block there.
-3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 13 tools.
+3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 14 tools.
 4. Try it in BAW App Builder mode:
 
    ```
@@ -92,9 +93,9 @@ Settings are read from the environment first, then `.env`:
    Install it, test it and compare the result with the screenshot.
    ```
 
-   Bob reads the screen with the screenshot-to-app skill: its layout (tabs, sections, columns and their widths, which field sits where), its controls (labels, dropdowns, radio groups, checkboxes, required markers, help icons, buttons) and its look (colours sampled with `image_colors`, the header banner with the logo cut out by `crop_image`, field icons, shapes, button placement). It writes the theme file and the app spec, builds and installs it, then compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
+   Bob reads the screen with the screenshot-to-app skill: its layout (tabs, sections, columns and their widths, which field sits where), its controls (labels, dropdowns, radio groups, checkboxes, required markers, help icons, buttons) and its look (colours sampled with `image_colors`, the header banner with the logo cut out by `crop_image`, field icons, shapes, button placement). It writes the theme file and the app spec, shows you the design and waits for your approval, builds it, asks whether to import it into BAW, then installs it and compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
 
-Bob asks for approval before `create_app`, `modernize_app` and `install_app`; the read and test tools run without asking.
+Before building a new app, Bob shows you the design (look, screens, fields, buttons, assumptions) and waits for your approval. After building, it asks whether to import the app into BAW. Bob's tool prompts also ask before `create_app`, `crop_image`, `modernize_app` and `install_app`; the read and test tools run without asking.
 
 ## Without a BAW server
 

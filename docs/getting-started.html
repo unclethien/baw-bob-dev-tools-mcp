@@ -260,7 +260,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <h2>Where you will end up</h2>
   <ul>
     <li>The project on your laptop, connected to a BAW test server.</li>
-    <li>IBM Bob showing the <code>baw-dev-tools</code> MCP server with 13 tools and two modes:
+    <li>IBM Bob showing the <code>baw-dev-tools</code> MCP server with 14 tools and two modes:
     🏗️ BAW App Builder and ✨ BAW Coach Modernizer.</li>
     <li>A small ZZ app you asked Bob for, installed on the server, tested in a browser, with a link you can open.</li>
   </ul>
@@ -276,7 +276,7 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td><a href="#step-5">5</a></td><td>Install the screen tools</td><td><code>npm install</code> finishes</td></tr>
         <tr><td><a href="#step-6">6</a></td><td>Check the connection</td><td>Your server's apps are listed</td></tr>
         <tr><td><a href="#step-7">7</a></td><td>Build a package</td><td>A <code>.twx</code> is written to <code>work/</code></td></tr>
-        <tr><td><a href="#step-8">8</a></td><td>Connect Bob</td><td>13 tools in Bob's MCP panel</td></tr>
+        <tr><td><a href="#step-8">8</a></td><td>Connect Bob</td><td>14 tools in Bob's MCP panel</td></tr>
         <tr><td><a href="#step-9">9</a></td><td>Build your first app</td><td>Bob reports a run URL</td></tr>
         <tr><td><a href="#step-10">10</a></td><td>Look at the result and change it</td><td>The app opens in your browser</td></tr>
       </tbody>
@@ -328,7 +328,7 @@ node --version</code></pre>
         <tr><td>uv</td><td>any</td><td>Runs the MCP server with its pinned packages</td><td class="mono">brew install uv</td></tr>
         <tr><td>Python</td><td>3.11 or newer</td><td>The server and the build scripts</td><td class="mono">brew install python</td></tr>
         <tr><td>Node.js</td><td>18 or newer</td><td>React screens and the browser tests</td><td class="mono">brew install node</td></tr>
-        <tr><td>Chrome or Brave</td><td>installed in <code>/Applications</code></td><td>The browser tests (<code>test_service</code>)</td><td>From the vendor's website</td></tr>
+        <tr><td>Chrome or Brave</td><td>installed in <code>/Applications</code></td><td>The browser tests (<code>test_service</code>, <code>test_process</code>)</td><td>From the vendor's website</td></tr>
       </tbody>
     </table>
   </div>
@@ -410,15 +410,15 @@ grep baw_mcp.py .bob/mcp.json</code></pre>
   hand; the first run downloads its packages, so Bob does not time out waiting for them later:</p>
 <pre><code>uv run --quiet --script server/baw_mcp.py &lt; /dev/null &amp;&amp; echo "Server starts"</code></pre>
   <p>Now open this folder as the workspace in Bob and open Bob's MCP panel.</p>
-  <p><strong>Check:</strong> <code>baw-dev-tools</code> shows as connected with <strong>13 tools</strong>:</p>
-  <div class="tablewrap" role="region" tabindex="0" aria-label="The 13 tools, scrollable">
+  <p><strong>Check:</strong> <code>baw-dev-tools</code> shows as connected with <strong>14 tools</strong>:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="The 14 tools, scrollable">
     <table>
       <thead><tr><th scope="col">Group</th><th scope="col">Tools</th><th scope="col">Bob asks first?</th></tr></thead>
       <tbody>
         <tr><td>Read the server</td><td class="mono">list_apps, list_snapshots, list_services, export_app</td><td>No</td></tr>
         <tr><td>Read screenshots</td><td class="mono">view_image, image_colors, crop_image</td><td>Only <code>crop_image</code>, which writes a file</td></tr>
         <tr><td>Build</td><td class="mono">inspect_coaches, create_app, build_screens, modernize_app</td><td><code>create_app</code> and <code>modernize_app</code></td></tr>
-        <tr><td>Install and test</td><td class="mono">install_app, test_service</td><td><code>install_app</code></td></tr>
+        <tr><td>Install and test</td><td class="mono">install_app, test_service, test_process</td><td><code>install_app</code></td></tr>
       </tbody>
     </table>
   </div>
@@ -432,22 +432,28 @@ item, quantity and needed-by date, then a review screen. Navy header, white text
 rounded buttons, "Office Supplies" as the product name. Install it and test it.</code></pre>
   <p>What Bob does, and where you come in:</p>
   <ol>
-    <li>Reads the server (<code>list_apps</code>) to pick a ZZ acronym nobody uses, and asks you which installed app
-    the package should match. Any app works, since only its BAW version is used; or say "the built-in template".</li>
+    <li>Reads the server (<code>list_apps</code>) to pick a ZZ acronym nobody uses.</li>
     <li>Writes the look you described to a theme file, <code>work/&lt;name&gt;.theme.json</code>. Without a look in
     your message, Bob asks you to describe one first: colours, font, corners, product name, logo.</li>
     <li>Writes the app spec to <code>work/&lt;ACRONYM&gt;.app.json</code>. You can open it; the
     <a href="app-spec-reference.html">app spec reference</a> explains every key.</li>
-    <li>Calls <code>create_app</code>. <strong>Approve it.</strong> It builds the <code>.twx</code> in <code>work/</code>.</li>
-    <li>Checks the screens with <code>inspect_coaches</code>.</li>
-    <li>Calls <code>install_app</code>. <strong>Approve it.</strong> The install usually takes one to three minutes.</li>
+    <li><strong>Stops for your approval.</strong> Bob shows the design: the look, each screen with its fields and
+    buttons, and what it assumed. It also asks which installed app the package should match. Any app works, since
+    only its BAW version is used; or say "the built-in template". Ask for changes, or approve.</li>
+    <li>Calls <code>create_app</code>, which builds the <code>.twx</code> in <code>work/</code>, and checks the screens
+    with <code>inspect_coaches</code>.</li>
+    <li><strong>Asks whether to import it into BAW.</strong> Say yes, and Bob calls <code>install_app</code>; the
+    install usually takes one to three minutes. Say no, and Bob gives you the <code>.twx</code> and the steps to
+    import it yourself later.</li>
     <li>Runs <code>test_service</code>: a headless browser opens each screen, fills sample values and presses Next.</li>
     <li>Reports the app, acronym, snapshot, run URL and the screenshot folder.</li>
   </ol>
   <p><strong>Check:</strong> Bob's report includes a run URL and says the test passed (<code>"ok": true</code>).</p>
   <p>Have a screenshot of a form instead? Save it in <code>work/</code> and ask: <em>"Build a ZZ app whose screen looks
   like work/my-form.png. Install it, test it and compare the result with the screenshot."</em> Bob then uses the
-  screenshot-to-app skill, which also copies the layout, and writes the colours, header and logo to a theme file.</p>
+  screenshot-to-app skill, which also copies the layout, and writes the colours and header to a theme file. For the
+  logo it uses a logo file you have; without one, it asks whether to cut it out of the screenshot. It
+  stops at the same two points: approve the design, then say whether to import.</p>
 
   <h3 id="step-10"><span class="num">10</span>Look at the result and change it</h3>
   <ul>
@@ -458,8 +464,9 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
     snapshot name. The run URL stays the same.</li>
     <li><strong>Change the look:</strong> ask, e.g. <em>"Make the buttons pill-shaped and the header dark green."</em>
     Bob edits the theme file and rebuilds; every app using that file follows it.</li>
-    <li><strong>Give it a modern UI:</strong> switch to <strong>✨ BAW Coach Modernizer</strong> and ask Bob to modernize
-    the app. It writes React + Carbon screens in the same theme and installs them as another snapshot, next to the
+    <li><strong>Give it a modern UI:</strong> ask Bob for a React UI in the same chat. It switches to
+    <strong>✨ BAW Coach Modernizer</strong> by itself (allow <strong>Mode</strong> in Bob's auto-approve settings to skip
+    the prompt), then writes React + Carbon screens in the same theme and installs them as another snapshot, next to the
     classic service: "&lt;service&gt; (Modernized)".</li>
   </ul>
   <p><strong>Check:</strong> the app opens, and the screens match the screenshots.</p>
@@ -535,7 +542,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
       <thead><tr><th scope="col">You see</th><th scope="col">Why</th><th scope="col">Fix</th></tr></thead>
       <tbody>
         <tr><td><code>baw-dev-tools</code> is not connected in Bob</td><td>Wrong path in <code>.bob/mcp.json</code>, or uv not on Bob's path</td><td>Redo step 8; run the <code>uv run</code> line and read its error</td></tr>
-        <tr><td>Fewer than 13 tools</td><td>An old copy of the project</td><td><code>git pull</code>, then restart the server from Bob's MCP panel</td></tr>
+        <tr><td>Fewer than 14 tools</td><td>An old copy of the project</td><td><code>git pull</code>, then restart the server from Bob's MCP panel</td></tr>
         <tr><td class="mono">Login to BAW_URL &hellip; failed with HTTP 401</td><td>Wrong credentials</td><td>Fix <code>.env</code>; check with step 6</td></tr>
         <tr><td class="mono">Cannot reach BAW_URL</td><td>Wrong host, or no VPN</td><td>Fix <code>BAW_URL</code>; check with step 6</td></tr>
         <tr><td class="mono">Invalid app spec</td><td>The spec breaks a rule</td><td>Each line names the problem; see <a href="app-spec-reference.html#errors">validation errors</a></td></tr>
