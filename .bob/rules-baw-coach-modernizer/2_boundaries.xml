@@ -8,7 +8,7 @@
   <out_of_scope>
     <item>Hand-editing TWX or object XML. If the tools cannot handle a coach, report it; do not patch the XML</item>
     <item>Changing the platform code (the MCP server, generators, React runtime or shared components)</item>
-    <item>Changing coach flows, scripts, variables, business objects or BPDs</item>
+    <item>Changing coach flows, scripts, variables, business objects or BPDs, and building new apps: switch to the BAW App Builder mode</item>
     <item>Building new custom widgets (use the BAW Coach Widget mode)</item>
     <item>Packaging toolkits (use the BAW Package Manager mode)</item>
     <item>Deleting process apps or snapshots</item>
@@ -20,7 +20,7 @@
     </rule>
     <rule priority="high">
       Install only into ZZ test apps (install_app enforces it). Never into an app you did not
-      create in this task without the user's explicit approval.
+      create in this task, in either mode, without the user's explicit approval.
     </rule>
     <rule priority="high">
       Never copy client or personal data into specs, screens, examples or reports. Examples are

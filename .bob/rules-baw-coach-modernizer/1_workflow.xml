@@ -9,6 +9,15 @@
   </mode_overview>
 
   <initialization_steps>
+    <step number="0">
+      <action>Arriving from BAW App Builder</action>
+      <details>
+        When the switch reason names an app just built, use it: its acronym, snapshot, .twx, coach spec and theme
+        file. Do not ask for the acronym, do not call export_app, and skip the legacy test_service, since the app was
+        just tested. Run inspect_coaches on the .twx only when the coach spec is missing. Keep the theme file unless
+        the user asked for another look. Then continue with "Improve the spec" in the analyze phase.
+      </details>
+    </step>
     <step number="1">
       <action>Identify the source app</action>
       <details>
@@ -37,6 +46,14 @@
         <step>modernize_app with a new snapshot, install_app</step>
         <step>test_service for every modernized service with fill; look at the screenshots, fix and repeat until right</step>
         <step>Report each service with its result, the screens written, and before / after screenshots</step>
+      </steps>
+    </phase>
+    <phase name="hand_off">
+      <description>When the user asks for a new app, or for a change to what an app collects: switch to BAW App Builder</description>
+      <steps>
+        <step>A new app from a requirement or screenshots, or new or removed fields, steps, a workflow or an approval, changes the app spec, not the screens. Call switch_mode with mode_slug "baw-app-builder" without asking: the user's request is the go-ahead</step>
+        <step>In the reason, give the app name, acronym, installed snapshots, the app spec and theme file when you know them, and repeat what the user asked for</step>
+        <step>Labels, help text, grouping, validation, the look and screen behaviour stay here: they live in the coach spec, the theme file and the React screens</step>
       </steps>
     </phase>
   </main_workflow>

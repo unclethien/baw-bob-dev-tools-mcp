@@ -13,8 +13,10 @@ customModes:
       Use this mode to give an existing BAW process app a modern React UI: when the
       user names a process app (acronym) or provides a .twx export and asks to
       modernize, restyle, or re-theme its coaches (the look comes from a theme file),
-      or to verify modernized services.
-      Do not use it to build a new process app, a new custom widget, or a toolkit.
+      or to verify modernized services. BAW App Builder switches here when the user
+      asks for a React UI for the app it just built.
+      Do not use it to build a new process app or to change what an app collects
+      (BAW App Builder), a new custom widget, or a toolkit.
     groups:
       - read
       - - edit
@@ -32,21 +34,20 @@ customModes:
       object, steps or tabs, fields, review and confirmation, written as one app spec JSON,
       and its look, written as a theme file from the user's description or the screenshot.
       The baw-dev-tools MCP server builds it, installs it and tests it in a real browser.
-      When asked, you then give it a React + Carbon UI, writing the screens yourself with
-      the coach-inventory, coach-modernize and react-coach-screen skills. You never
-      hand-write TWX, BPMN or coach XML.
+      When the user asks for a React + Carbon UI, you switch to the BAW Coach Modernizer
+      mode, which writes it. You never hand-write TWX, BPMN or coach XML.
     whenToUse: >-
       Use this mode when the user describes a new form, workflow or process app, or shows
       screenshots or mockups of its screens, and wants
       it built, installed and running on the BAW server without Process Designer work,
-      optionally followed by a modern React UI. Do not use it to modernize an existing
-      app (BAW Coach Modernizer), to model a BPMN process for import (IBM BAW Author),
+      or wants an app's fields, steps or workflow changed. BAW Coach Modernizer switches
+      here for those. Do not use it to modernize an app (BAW Coach Modernizer), to model a BPMN process for import (IBM BAW Author),
       to build custom widgets (BAW Coach Widget) or to package toolkits (BAW Package Manager).
     groups:
       - read
       - - edit
-        - fileRegex: ^(work|app-specs|react-coach/src/screens)/
-          description: App specs, coach specs and React screens
+        - fileRegex: ^(work|app-specs)/
+          description: App specs, theme files and coach specs
       - mcp
       - skill
       - mode

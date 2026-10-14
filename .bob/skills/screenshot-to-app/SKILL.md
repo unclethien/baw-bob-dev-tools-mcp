@@ -7,14 +7,16 @@ description: Build a running BAW process app (.twx) whose coaches reproduce the 
 
 You read the screenshots and write **one app spec**. The baw-dev-tools MCP tools build, install and test it, and you compare their screenshots with the originals. Never write TWX, coach XML or CSS.
 
+**STOP RULES:** after reading the screenshots, stop and wait for approval before building (section 5, step 1); after building, ask before importing into BAW (step 3). Skip a stop only when the user said to go ahead without it.
+
 The result must match the screenshot in **layout and look**, not only in fields: same columns, same theme colours, same header, same button placement. You may make it cleaner, for example with even spacing and aligned fields, but never swap the screenshot's theme for a default one.
 
 ## 1. Get the images
 
 - **A file in the project** (for example `work/form.png`): call `view_image` with its path. `screenshots/example-supplier-registration.png` is a demo.
-- **Attached in the chat:** you can see it, but `image_colors` and `crop_image` need a file. Ask the user to save it in `work/` (not committed, so client screens stay private) so you can read exact colours and cut out the logo. If they can't, read the colours by eye and report the logo as not built.
+- **Attached in the chat:** you can see it, but `image_colors` and `crop_image` need a file. Ask the user to save it in `work/` (not committed, so client screens stay private) so you can read exact colours, and cut out the logo if they ask for that. If they can't, read the colours by eye.
 - **An attached image and a named file that show different screens:** the attached image is the one the user means. Say which one you built from.
-- Several screenshots are several steps, in the order the user gives them. A screenshot with tabs across the top is one screen with `"layout": "tabs"`, one step per tab.
+- Several screenshots are several steps, in the order the user gives them, unless they are one long page captured while scrolling: the same header or tab at the top, and fields that repeat from one picture to the next. Then merge them into one step, keep each repeated field once, and tell the user where a picture cuts a section off. A screenshot with tabs across the top is one screen with `"layout": "tabs"`, one step per tab.
 
 ## 2. Read the layout and the fields
 
@@ -47,7 +49,7 @@ Write down, top to bottom and left to right:
 
 ## 3. Read the look
 
-Write the screenshot's look as a theme file with the app-theme skill (its section 3 maps each part of a screenshot to a theme setting): sample every colour with `image_colors`, cut the logo out with `crop_image`, and save `work/<acr>.theme.json`. When the user already has a theme file for this look, reuse it and only check it against the screenshot.
+Write the screenshot's look as a theme file with the app-theme skill (its section 3 maps each part of a screenshot to a theme setting): sample every colour with `image_colors`, get the logo as its "The logo" section says (a logo file first; `crop_image` only when the user asks), and save `work/<acr>.theme.json`. When the user already has a theme file for this look, reuse it and only check it against the screenshot.
 
 Two parts of the look belong in the app spec, not the theme file:
 
@@ -76,13 +78,23 @@ Path: `work/<ACRONYM>.app.json`. Follow the baw-app-builder skill for the `app`,
 
 Build only the screens in the screenshots, plus what they clearly lead to. If the last screen's forward button says "Continue" or "Next", the user expects something after it: add a read-only review (`"review": { "title": ... }`) and, for a submission, a `confirmation`. If it says "Submit" and the user asked for nothing more, set `"review": false`.
 
-## 5. Build, install, compare
+A screenshot shows one screen, not who works on it next. When the user asks for a workflow around it (a hand-off, a review, an approval, a BPMN diagram), add a `process` section as in the baw-app-builder skill: the form becomes the first task in its lane, and an `approval` adds a review task in a second lane with Approve and Send Back. After step 5 below, also run `test_process` with `press: ["<Send Back label>"]`.
 
-1. `create_app` with the spec. Fix every problem it lists, in the spec or the theme file. For a new app, ask the user which installed app to match and pass it as `base`, as in the baw-app-builder skill.
-   If it returns `install`, there is no BAW server: stop here, give the user the `.twx` and its import steps, and ask them to compare the screens with the screenshots after importing.
-2. `install_app` with the returned `.twx`. Continue only when `"ok": true`.
-3. `test_service` with `fill: false`. It returns a screenshot for each coach.
-4. **Compare.** `view_image` each test screenshot next to its original and check, in order:
+## 5. Approve, build, import, compare
+
+1. **STOP: approve the design.** Do not call `create_app` yet. Show the user what you read, as in step 3 of the baw-app-builder skill: the theme file with the colours you sampled and the logo file you use, or, when no logo file was found, the question whether to cut it out of the screenshot, use a file they send, or go without, each screen's sections and columns with their fields, controls, required markers and buttons, your assumptions, and what the spec cannot express. For a new app on a server, also ask which installed app to match, or the built-in template. Then ask:
+   > Approve this design, or tell me what to change. When approved, I will build the app.
+
+   Change the spec or the theme file as asked and show the changes again, until the user approves.
+2. `create_app` with the spec, and the chosen app as `base`. Fix every problem it lists, in the spec or the theme file. Then `inspect_coaches` on the `.twx` and check every screen is there.
+   If `create_app` returns `install`, there is no BAW server: stop here, give the user the `.twx` and its import steps, and ask them to compare the screens with the screenshots after importing.
+3. **STOP: ask before importing.** Do not call `install_app` yet. Tell the user the `.twx` path, the app, acronym and snapshot, then ask:
+   > The app is built. Do you want me to import it into BAW now?
+
+   If the user says no, stop and give them the `.twx` path and the import steps (Workflow Center, Process Apps, Import).
+4. `install_app` with the returned `.twx`. Continue only when `"ok": true`.
+5. `test_service` with `fill: false`. It returns a screenshot for each coach.
+6. **Compare.** `view_image` each test screenshot next to its original and check, in order:
    - **header:** banner colour, logo, title, product name and text in the same places;
    - **tabs and sections:** titles, order, active tab colour, section bar colour;
    - **columns:** the same number, the same relative widths, and every field in the same column and order;
@@ -90,7 +102,7 @@ Build only the screens in the screenshots, plus what they clearly lead to. If th
    - **buttons:** labels, colours, order and position (left, centre or right);
    - **colours overall:** page background, buttons and bars match the sampled colours.
 
-   Fix the spec (layout, fields, buttons, banner text) or the theme file (colours, font, shapes, product name, logo), bump `app.snapshot`, and repeat from 1 until all of them match. Font rendering and exact pixel spacing may differ slightly; anything else is a difference to fix.
+   List the differences and the fixes for the user, and wait for their approval. Then fix the spec (layout, fields, buttons, banner text) or the theme file (colours, font, shapes, product name, logo), bump `app.snapshot`, build, import and compare again (steps 2 and 4 to 6; the user already said yes to importing), until all of them match. Font rendering and exact pixel spacing may differ slightly; anything else is a difference to fix.
 
 ## 6. Report
 
@@ -105,6 +117,6 @@ Build only the screens in the screenshots, plus what they clearly lead to. If th
 Only when the user asks for the screens to be modernized:
 
 1. `inspect_coaches` on the `.twx`. It writes the coach spec with the sections, columns (in reading order), dropdown and radio options, and required flags you built. Set its `"theme"` to the same theme file, so the React screens keep the screenshot's look.
-2. Follow the coach-inventory, react-coach-screen and coach-modernize skills.
+2. Call `switch_mode` to `baw-coach-modernizer` without asking, with the app, acronym, snapshot, `.twx`, coach spec and theme file in the reason, and the items listed under "Not built". That mode follows the coach-inventory, react-coach-screen and coach-modernize skills.
 
 A React screen can follow the screenshot's layout more closely. `Field` renders `select` and `radio`. `<div className="pp-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>` gives exactly two columns. The screen can also add the items listed under "Not built".

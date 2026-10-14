@@ -5,7 +5,7 @@ description: Give a BAW app's client-side human services a React + Carbon UI fro
 
 # Coach modernize
 
-Inputs: an app `.twx` in `work/` and an **approved** coach spec from `inspect_coaches` whose `"theme"` names the app's theme file. If the spec has not been reviewed, use the coach-inventory skill first; without a theme file, use the app-theme skill.
+Inputs: an app `.twx` in `work/` and an **approved** coach spec from `inspect_coaches` whose `"theme"` names the app's theme file. If the spec has not been reviewed, use the coach-inventory skill first; without a theme file, use the app-theme skill. When the user gives a picture of the new look, write a new theme file from it with the app-theme skill, set the coach spec's `"theme"` to that file, and follow the picture's grouping, columns and button placement in the React screens.
 
 ## Steps
 

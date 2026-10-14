@@ -48,7 +48,17 @@ Turning a description into values:
 - A named colour ("navy", "forest green", "our orange") becomes a `#rrggbb` close to it. Use the exact value when the user gives one.
 - When the user gives only one colour, use it for `primary` and `button`, a white `onPrimary`, and a very light tint of it, or `#f4f6f8`, for `background`.
 - Keep text readable: `onPrimary` must contrast with `primary`, and the buttons must contrast with white text.
-- A logo the user supplies goes in `work/`. To take one from a screenshot, use `crop_image`.
+- The logo: follow "The logo" below.
+
+## The logo
+
+Never cut a logo out of a picture on your own. In this order:
+
+1. **A logo file the user gives or names:** use it. An attached logo must be saved in `work/` first, since `banner.logo` needs a file.
+2. **A logo file already in the project:** look for `banner.logo` in the theme files in `work/` and `app-specs/` for the same brand, and for image files with "logo" in the name in `work/` and in the screenshots' folder. Use the one that matches the brand and tell the user which file it is.
+3. **None found:** leave `banner.logo` out and ask the user, at the design stop, to choose: save the official logo file in `work/`, have you cut it out of the screenshot with `crop_image`, or go without a logo.
+
+Use `crop_image` only when the user asks for it, here or in their request ("cut out its logo"). Then save the crop in `work/` (e.g. `work/<name>-logo.png`), check it with `view_image`, and adjust the box until the whole logo is in and the edges are clean.
 
 ## 3. From a screenshot
 
@@ -68,7 +78,7 @@ Sample every colour with `image_colors` on the screenshot file. `box` is `[left,
 | Form spread across a wide screen | `"width": "full"` (or a pixel width) |
 | Buttons at the right / centre of the page | `"buttonAlign": "right"` / `"center"` |
 | Product or system name in the header | `banner.product` |
-| Logo in the header | `banner.logo`: cut it out with `crop_image` (`dest` in `work/`, e.g. `work/<name>-logo.png`), check the crop and adjust the box until the whole logo is in and the edges are clean |
+| Logo in the header | `banner.logo`: a logo file, found or asked for as in "The logo" above. Cut it out with `crop_image` only when the user asks |
 
 Keep screenshots and logos in `work/` (not committed), never in `app-specs/`.
 

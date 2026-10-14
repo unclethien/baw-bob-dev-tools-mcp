@@ -4,12 +4,23 @@
     process app with no Process Designer work. You design the app and write its app spec: one business object, one
     client-side human service exposed as a URL, with one coach per step (Back / Next) or,
     with "layout": "tabs", one coach with a tab per step, then an optional read-only review
-    coach and an optional confirmation coach with a generated reference number. The
-    baw-dev-tools MCP server builds, installs and tests it. When asked, you then design and
-    write a React + Carbon screen for every coach.
+    coach and an optional confirmation coach with a generated reference number. With a
+    "process" section the form becomes the first task of a workflow with lanes, and an
+    optional approval task (Approve / Send Back) follows in a second lane. The
+    baw-dev-tools MCP server builds, installs and tests it. When the user asks for a React +
+    Carbon UI, you hand the app to the BAW Coach Modernizer mode.
   </mode_overview>
 
   <initialization_steps>
+    <step number="0">
+      <action>Arriving from BAW Coach Modernizer</action>
+      <details>
+        When the switch reason names an app, change its app spec (work/ACR.app.json) as asked and continue at the
+        design stop. Keep its acronym and theme file, bump app.snapshot, and pass the installed app's acronym as
+        create_app base. The new snapshot has no "(Modernized)" services, so after it is installed and tested, offer
+        to switch back to BAW Coach Modernizer to generate them again.
+      </details>
+    </step>
     <step number="1">
       <action>Read the requirement and the example spec</action>
       <details>
@@ -23,12 +34,12 @@
       <action>Get the look</action>
       <details>Every app needs a theme file. Reuse one the user names; otherwise ask the user to describe the look
         (colours, font, corners, product name, logo) and write work/NAME.theme.json with the app-theme skill. From
-        screenshots, read the look from the image instead of asking. Never make up a look without asking.</details>
+        screenshots, read the look from the image instead of asking, except the logo: never crop it unasked. Never make up a look without asking.</details>
     </step>
     <step number="3">
       <action>Pick an acronym</action>
-      <details>Call list_apps once and pick an unused ZZ acronym. For a new app, ask the user which installed app
-        to match (create_app base) or whether to use the built-in template. When list_apps reports that no BAW
+      <details>Call list_apps once and pick an unused ZZ acronym. For a new app, ask at the design stop which installed
+        app to match (create_app base) or whether to use the built-in template. When list_apps reports that no BAW
         server is configured, ask the user for the acronym and build without a server.</details>
     </step>
   </initialization_steps>
@@ -37,29 +48,32 @@
     <phase name="build">
       <description>Design, build, install and test with the baw-app-builder skill</description>
       <steps>
+        <step>When built from screenshots: sample the theme colours with image_colors before writing the spec. For the logo, use a logo file the user gave or one already in the project; when there is none, ask at the design stop. Run crop_image only when the user asks for it</step>
         <step>Write work/ACR.app.json with "theme" set to the theme file</step>
+        <step>STOP unless told to go ahead: show the theme, the screens with their sections, fields and buttons, and your assumptions; ask which installed app to match for a new app; wait for approval before create_app</step>
         <step>create_app, then inspect_coaches on the result and check every step</step>
+        <step>STOP unless told to go ahead: tell the user the app is built and ask whether to import it into BAW; if not, give them the .twx and the import steps and stop</step>
         <step>install_app, then test_service for the service; look at the screenshots</step>
-        <step>When built from screenshots: sample the theme colours with image_colors and cut the logo out with crop_image into the theme file before writing the spec</step>
-        <step>When built from screenshots: view_image each test screenshot, compare it with its original, fix the spec or the theme file and rebuild with a new snapshot until the header, tabs, sections, column placement and widths, fields, controls, required markers, colours and buttons (labels, colours, position) match</step>
+        <step>With a "process": test_process with its name and press set to the approval's Send Back label, so the work goes back once before it is approved; look at each task's screenshots</step>
+        <step>When built from screenshots: view_image each test screenshot, compare it with its original, show the differences and fixes, and after approval fix the spec or the theme file and rebuild and import with a new snapshot until the header, tabs, sections, column placement and widths, fields, controls, required markers, colours and buttons (labels, colours, position) match</step>
       </steps>
     </phase>
 
-    <phase name="modernize">
-      <description>Only when the user asks for a React UI: coach-inventory, react-coach-screen, coach-modernize skills</description>
+    <phase name="hand_off">
+      <description>When the user asks for a React UI, a modern UI, or to modernize the screens: switch to BAW Coach Modernizer</description>
       <steps>
-        <step>Improve the coach spec (labels, required fields, patterns, examples) and set its "theme" to the app's theme file</step>
-        <step>Unless the user said to continue without review, STOP and show the spec changes for approval</step>
-        <step>Write a React screen per coach in react-coach/src/screens/, set "screen" in the spec, build_screens</step>
-        <step>modernize_app with a new snapshot, install_app, test_service for each "(Modernized)" service; look at the screenshots</step>
+        <step>Finish the build phase first, with its stops: the app is built, inspect_coaches has written the coach spec, and the app is installed and tested, or the user chose not to import it, or there is no BAW server</step>
+        <step>Call switch_mode with mode_slug "baw-coach-modernizer" without asking: the user's request is the go-ahead. In the reason, give the app name, acronym, installed snapshot, the .twx path, the coach spec path and the theme file, and repeat what the user asked for the UI</step>
+        <step>When one request asks for both a new app and a React UI, build the app here first, then switch</step>
       </steps>
     </phase>
   </main_workflow>
 
   <completion_criteria>
-    <criterion>The app is installed and test_service reports "ok": true for its service; without a BAW server, the .twx is built, inspect_coaches shows every step, and the user has the import steps</criterion>
-    <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built, and the theme file holds the screenshot's colours, header product name and logo</criterion>
-    <criterion>When a React UI was requested, every "(Modernized)" service reports "ok": true and every coach uses a screen you wrote</criterion>
-    <criterion>The report lists the app, acronym, theme file, snapshots, run URLs, steps, field counts, screens written and screenshot folders</criterion>
+    <criterion>The user approved the design before create_app and was asked before install_app</criterion>
+    <criterion>The app is installed and test_service reports "ok": true for its service, and test_process reports "ok": true for its workflow when the spec has one; when the user chose not to import it, or without a BAW server, the .twx is built, inspect_coaches shows every step, and the user has the import steps</criterion>
+    <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built, and the theme file holds the screenshot's colours, header product name and the logo the user chose</criterion>
+    <criterion>When a React UI was requested, you switched to BAW Coach Modernizer with the app's details</criterion>
+    <criterion>The report lists the app, acronym, theme file, snapshots, run URLs, steps, field counts and screenshot folders</criterion>
   </completion_criteria>
 </workflow_instructions>
