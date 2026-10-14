@@ -16,3 +16,7 @@ __pycache__/
 *.pyc
 .DS_Store
 plans/
+.engram/
+
+# Client screenshots for the demo: never commit them, the repository is public
+screenshots/Quote/
