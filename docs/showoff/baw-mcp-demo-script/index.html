@@ -43,8 +43,11 @@
     <ol>
       <li><a href="#hero"><time>00:00</time><span>Open</span></a></li>
       <li><a href="#setup"><time>T&minus;30</time><span>Prep</span></a></li>
-      <li><a href="#act-1"><time>02:00</time><span>Act 1</span></a></li>
-      <li><a href="#act-2"><time>16:00</time><span>Act 2</span></a></li>
+      <li><a href="#mcp"><time>02:00</time><span>MCP</span></a></li>
+      <li><a href="#tools"><time>06:00</time><span>Tools &amp; modes</span></a></li>
+      <li><a href="#prompts"><time>12:00</time><span>Prompt 101</span></a></li>
+      <li><a href="#act-1"><time>15:00</time><span>Act 1</span></a></li>
+      <li><a href="#act-2"><time>30:00</time><span>Act 2</span></a></li>
       <li><a href="#guardrails"><time>48:00</time><span>Q&amp;A</span></a></li>
       <li><a href="#close"><time>52:00</time><span>Feedback</span></a></li>
     </ol>
@@ -56,7 +59,7 @@
       <div class="hero-copy">
         <p class="kicker">IBM Bob × BAW Dev Tools MCP</p>
         <h1 id="hero-title" class="display">Screenshot in. Running BAW app&nbsp;out.</h1>
-        <p class="lead">A one-hour working session. Bob turns screenshots of an old CRM tab into a BAW app, then a React + Carbon app in the client's layout and brand, with dynamic fields and connected tabs.</p>
+        <p class="lead">A one-hour working session. First how it works: MCP, the tools, the modes and how to prompt them. Then Bob turns screenshots of an old CRM tab into a BAW app, then a React + Carbon app in the client's layout, and you explain every step as it runs.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="#setup">Start the script</a>
           <a class="btn btn-quiet" href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">Open the repo</a>
@@ -79,10 +82,26 @@
     </section>
 
     <!-- SETUP ----------------------------------------------------------- -->
-    <section id="setup" class="section setup" aria-labelledby="setup-title">
+    <section id="setup" class="section prep" aria-labelledby="setup-title">
       <header class="sec-head">
         <h2 id="setup-title" class="h2">Set the stage before anyone arrives.</h2>
-        <p class="lead">Bob designs and writes the specs. The MCP server packages, installs, inspects and tests them on BAW.<sup><a href="#ref-1">1</a> <a href="#ref-3">3</a></sup></p>
+        <p class="lead">Thirty minutes before: the server connected, the screenshots in place, one rehearsal done.</p>
+      </header>
+      <ol class="checklist">
+        <li>Fill <code>.env</code> with <code>BAW_URL</code>, <code>BAW_USER</code> and a password or API key. Keep it off screen.</li>
+        <li>Open the repo in Bob. The MCP panel shows <b>baw-dev-tools</b> with 14 tools.</li>
+        <li>Rehearse the whole run once, so you know how long each install takes. Keep each rehearsal snapshot as a backup.</li>
+        <li>Put the six legacy screenshots and the newer quote screen <code>generate-quote.png</code> in <code>screenshots/Quote/</code> (git ignores it, so client screens stay private). Switch to <b>BAW App Builder</b> mode and allow <b>Mode</b> in Bob's auto-approve settings, so Bob moves to BAW Coach Modernizer in Act 2 by itself. Enlarge the font.</li>
+        <li>Log in to Business Automation Studio in a second tab, to show the BPMN and run the services. There is no delete tool, so clean up the ZZ apps afterwards.</li>
+      </ol>
+    </section>
+
+    <!-- PART 1: MCP ------------------------------------------------------ -->
+    <section id="mcp" class="section setup" aria-labelledby="mcp-title">
+      <header class="sec-head">
+        <p class="timecode">02:00 <span aria-hidden="true">/</span> 06:00</p>
+        <h2 id="mcp-title" class="h2">Part 1. What MCP is.</h2>
+        <p class="lead">An open standard for giving an AI agent tools. Bob is the client; our server gives it the tools to build, install and test BAW apps.<sup><a href="#ref-1">1</a> <a href="#ref-3">3</a></sup></p>
       </header>
 
       <figure class="diagram" aria-labelledby="diagram-cap">
@@ -158,12 +177,65 @@
         <div><dt>0</dt><dd>lines of XML by hand</dd></div>
       </dl>
 
-      <ol class="checklist">
-        <li>Fill <code>.env</code> with <code>BAW_URL</code>, <code>BAW_USER</code> and a password or API key. Keep it off screen.</li>
-        <li>Open the repo in Bob. The MCP panel shows <b>baw-dev-tools</b> with 14 tools.</li>
-        <li>Rehearse the whole run once, so you know how long each install takes. Keep each rehearsal snapshot as a backup.</li>
-        <li>Put the six legacy screenshots, the newer quote screen <code>generate-quote.png</code>, and the client's old homepage, saved as <code>brand-reference.png</code>, in <code>screenshots/Quote/</code> (git ignores it, so client screens stay private). Switch to <b>BAW App Builder</b> mode and allow <b>Mode</b> in Bob's auto-approve settings, so Bob moves to BAW Coach Modernizer in Act 2 by itself. Enlarge the font.</li>
-        <li>Log in to Business Automation Studio in a second tab, to show the BPMN and run the services. There is no delete tool, so clean up the ZZ apps afterwards.</li>
+      <div class="talk">
+        <p class="cue-do"><b>Do</b> <span>Open Bob's MCP panel: <b>baw-dev-tools</b>, connected, 14 tools. Expand <code>test_service</code> to show its description and inputs.</span></p>
+        <blockquote class="cue-say">“A tool server tells the agent: here are my tools, what each needs and what it returns. The agent decides when to call them; a person stays in the loop.”</blockquote>
+        <blockquote class="cue-say">“Think of it as a USB port for AI agents. Any MCP client could plug into this same server.”</blockquote>
+        <blockquote class="cue-say">“The server holds the BAW login, so Bob never sees a password. Bob writes a small JSON spec; the server builds, installs and tests the real app.”</blockquote>
+      </div>
+    </section>
+
+    <!-- PART 2: TOOLS AND MODES ------------------------------------------ -->
+    <section id="tools" class="section tools" aria-labelledby="tools-title">
+      <header class="sec-head">
+        <p class="timecode">06:00 <span aria-hidden="true">/</span> 12:00</p>
+        <h2 id="tools-title" class="h2">Part 2. The tools and the modes.</h2>
+        <p class="lead">The mode is the job description, the skills are the playbooks, the MCP tools are the hands.<sup><a href="#ref-2">2</a></sup></p>
+      </header>
+
+      <div class="ledger">
+        <table>
+          <caption>14 tools, in four groups</caption>
+          <tbody>
+            <tr><th>Look at the server</th><td><code>list_apps</code> <code>list_snapshots</code> <code>list_services</code> <code>export_app</code><br>Read-only: which apps, snapshots and services exist; download an app.</td></tr>
+            <tr><th>Look at pictures</th><td><code>view_image</code> <code>image_colors</code> <code>crop_image</code><br>Show Bob a screenshot, sample its exact colours, cut out a region such as a logo.</td></tr>
+            <tr><th>Build</th><td><code>create_app</code> <code>inspect_coaches</code> <code>build_screens</code> <code>modernize_app</code><br>Spec to app, app back to spec, compile the React screens, add a React copy of each service.</td></tr>
+            <tr><th>Run on the server</th><td><code>install_app</code> <code>test_service</code> <code>test_process</code><br>Install, walk a service in a browser, run a workflow task by task.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ledger">
+        <table>
+          <caption>Two Bob modes</caption>
+          <tbody>
+            <tr><th>🏗️ BAW App Builder</th><td>A requirement or screenshots become a running app, optionally with a workflow. Edits <code>work/</code> and <code>app-specs/</code>. Skills: screenshot-to-app, app-theme, baw-app-builder.</td></tr>
+            <tr><th>✨ BAW Coach Modernizer</th><td>An existing app gets a React + Carbon UI as a "(Modernized)" service. Also edits <code>react-coach/src/screens/</code>. Skills: coach-inventory, react-coach-screen, coach-modernize, app-theme.</td></tr>
+          </tbody>
+        </table>
+        <blockquote class="cue-say">“Most tools only read. <code>create_app</code>, <code>modernize_app</code>, <code>install_app</code> and <code>crop_image</code> ask first. Each mode stops to show the design, and again before it imports. When the work changes, Bob switches mode by itself.”</blockquote>
+      </div>
+    </section>
+
+    <!-- PART 3: PROMPT 101 ----------------------------------------------- -->
+    <section id="prompts" class="section act-2" aria-labelledby="prompts-title">
+      <header class="sec-head">
+        <p class="timecode">12:00 <span aria-hidden="true">/</span> 15:00</p>
+        <h2 id="prompts-title" class="h2">Part 3. Prompt 101.</h2>
+        <p class="lead">Say what you want, not how. No tool names, no BAW terms: Bob picks the tools.</p>
+      </header>
+
+      <figure class="prompt anatomy">
+        <figcaption>The Act 1 prompt, in parts</figcaption>
+        <pre><code><mark data-n="1">Build a ZZ app</mark> <mark data-n="2">from the screenshots in screenshots/Quote, image (1).png to image (6).png.</mark> <mark data-n="3">They show one long page, scrolled, so some parts appear twice.</mark> <mark data-n="5">Install it, test it and compare the result with the screenshots.</mark></code></pre>
+      </figure>
+
+      <ol class="track">
+        <li><b>Outcome</b><span>What you want at the end: "Build a ZZ app".</span></li>
+        <li><b>Inputs</b><span>The files to work from, by path. Bob opens them itself.</span></li>
+        <li><b>What Bob cannot know</b><span>Context that is not in the files, like pictures that overlap.</span></li>
+        <li><b>Constraints</b><span>Layout, look and rules in the words users see. Act 2 adds them.</span></li>
+        <li class="track-stop"><b>How far, where to stop</b><span>Install and test, or "show me before you build". Answer a stop with "Approved."</span></li>
       </ol>
     </section>
 
@@ -171,7 +243,7 @@
     <section id="act-1" class="section act act-1" aria-labelledby="act1-title">
       <div class="act1-script">
         <header class="sec-head">
-          <p class="timecode">02:00 <span aria-hidden="true">/</span> 16:00</p>
+          <p class="timecode">15:00 <span aria-hidden="true">/</span> 30:00</p>
           <h2 id="act1-title" class="h2">Act 1. The old screen, rebuilt in BAW.</h2>
         </header>
 
@@ -180,6 +252,10 @@
           <pre><code>Build a ZZ app from the screenshots in screenshots/Quote, image (1).png to image (6).png. They show one long page, scrolled, so some parts appear twice. Install it, test it and compare the result with the screenshots.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
+        <div class="notes">
+          <p class="cue-do"><b>Prompt 101</b> <span>Outcome, inputs, what Bob cannot know, how far. No field list and no colours: the screenshots are the spec.</span></p>
+          <p class="cue-bob"><b>Tools, in order</b> <span><code>use_skill</code> screenshot-to-app → <code>view_image</code> ×6 → <code>image_colors</code> → <code>list_apps</code> → design stop → <code>create_app</code> → <code>inspect_coaches</code> → import question → <code>install_app</code> → <code>test_service</code> → <code>view_image</code> to compare.</span></p>
+        </div>
 
         <div class="cues" data-cues>
           <div class="cue-tabs" role="tablist" aria-label="Act 1 beats">
@@ -227,6 +303,10 @@
               <pre><code>Put this screen in a workflow: Sales fills it in, then Underwriting reviews it and approves it or sends it back to Sales with comments. Import it and run it once with a send-back.</code></pre>
               <button class="copy" type="button" data-copy>Copy</button>
             </figure>
+            <div class="notes">
+          <p class="cue-do"><b>Prompt 101</b> <span>"This screen" builds on the chat. The process in business words: who, what each does, the loop back. No BPMN terms.</span></p>
+          <p class="cue-bob"><b>Tools, in order</b> <span>lanes stop → <code>create_app</code> → import question → <code>install_app</code> → <code>test_process</code>, pressing Send Back once.</span></p>
+        </div>
             <p class="cue-do"><b>Do</b> <span>Paste the workflow prompt and approve the lanes. In Business Automation Studio, open the app, then Processes: two lanes, the review task and the Send Back path. Click the Send Back line to show its condition, then drag a task to show the diagram is editable.</span></p>
             <p class="cue-bob"><b>Bob does</b> <span>Adds a <code>process</code> to the spec, stops for approval, builds a new snapshot, asks before importing, then <code>test_process</code> sends the work back once and approves it.</span></p>
             <blockquote class="cue-say">“A real BAW process, not a picture. Your developers open it in Studio and change it like anything they drew themselves.”</blockquote>
@@ -250,30 +330,38 @@
     <!-- ACT 2 ----------------------------------------------------------- -->
     <section id="act-2" class="section act act-2" aria-labelledby="act2-title">
       <header class="sec-head act2-head">
-        <p class="timecode">16:00 <span aria-hidden="true">/</span> 48:00</p>
-        <h2 id="act2-title" class="h2">Act 2. A modern, branded React version.</h2>
-        <p class="lead">Both working sessions in one go: the client's newer screen gives the layout, their old homepage the brand, IBM Carbon the components. Then fields and tabs that react to each other, and a live fix.</p>
+        <p class="timecode">30:00 <span aria-hidden="true">/</span> 48:00</p>
+        <h2 id="act2-title" class="h2">Act 2. A modern React version.</h2>
+        <p class="lead">Both working sessions in one go: the client's newer screen gives the layout, IBM Carbon the components. Then fields and tabs that react to each other.</p>
       </header>
 
       <ol class="track">
-        <li><b>Look</b><span>Bob switches to BAW Coach Modernizer by itself. <code>image_colors</code> reads the homepage's colours; the prompt asks for the logo, so <code>crop_image</code> cuts it out.</span></li>
+        <li><b>Look</b><span>Bob switches to BAW Coach Modernizer by itself. It views <code>generate-quote.png</code>, samples its blue with <code>image_colors</code>, and writes a theme file: that blue on a white page.</span></li>
         <li class="track-stop"><b>Approve</b><span><code>inspect_coaches</code> reads every coach. Bob plans tabs by section and four columns like <code>generate-quote.png</code>, improves labels, help text and validation, then waits for you.</span></li>
         <li><b>Build</b><span>One React screen per coach, <code>build_screens</code> until it compiles, then a "(Modernized)" copy of the service in a new snapshot.<sup><a href="#ref-4">4</a></sup></span></li>
         <li><b>Behaviour</b><span>"Other" boxes and commission amounts appear only when needed; a tab unlocks after a choice; Submit opens the first tab with a problem.</span></li>
-        <li><b>Test and fix</b><span>Types, picks options, presses every button. Run it in Studio, then fix an issue the room picks, in a new snapshot.</span></li>
+        <li><b>Test</b><span>Types, picks options, presses every button. Then run it in Studio and show the room.</span></li>
       </ol>
 
       <div class="prompt-grid">
         <figure class="prompt">
-          <figcaption>1 · The look: the client's layout and brand</figcaption>
-          <pre><code>Give the app you just built a React UI with IBM Carbon components. Lay it out like screenshots/Quote/generate-quote.png, the client's newer quote screen: the fields split into tabs by section, four columns, labels close to their fields, the title in the header, Submit and Cancel at the bottom right. Take the brand from screenshots/Quote/brand-reference.png, the client's old homepage: cut out its logo, and take its colours from the blue-violet bar, the cyan line, the beige section headings and the light blue panels. Improve the labels and add help text and validation. Inspect the coaches, improve the coach spec and show me before you build.</code></pre>
+          <figcaption>1 · The look: the client's layout</figcaption>
+          <pre><code>Give the app you just built a React UI with IBM Carbon components. Lay it out like screenshots/Quote/generate-quote.png, the client's newer quote screen: the fields split into tabs by section, four columns, labels close to their fields, the title in the header, Submit and Cancel at the bottom right. Use a clean look in the client's blue from that screen, on a white page. Improve the labels and add help text and validation. Inspect the coaches, improve the coach spec and show me before you build.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
+        <div class="notes">
+          <p class="cue-do"><b>Prompt 101</b> <span>All five parts: outcome, the input by path, constraints in users' words (tabs, four columns, the blue on white), quality asks, and where to stop.</span></p>
+          <p class="cue-bob"><b>Tools, in order</b> <span><code>switch_mode</code> to the Modernizer → <code>use_skill</code> coach-inventory → <code>view_image</code> → <code>image_colors</code> → <code>inspect_coaches</code> → design stop.</span></p>
+        </div>
         <figure class="prompt">
           <figcaption>2 · After you review the spec</figcaption>
           <pre><code>Approved. Write a React screen for each coach, then modernize, install and test it.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
+        <div class="notes">
+          <p class="cue-do"><b>Prompt 101</b> <span>After a stop, a short follow-up: the plan is agreed, so say go and how far.</span></p>
+          <p class="cue-bob"><b>Tools, in order</b> <span><code>use_skill</code> react-coach-screen → writes the screens → <code>build_screens</code> → <code>modernize_app</code> → import question → <code>install_app</code> → <code>test_service</code>.</span></p>
+        </div>
         <figure class="prompt">
           <figcaption>3 · Then, the behaviour: dynamic fields, connected tabs</figcaption>
           <pre><code>Now make the screen react to what the user enters:
@@ -285,16 +373,15 @@
 Build, install and test it.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
-        <figure class="prompt">
-            <figcaption>4 · Then, fix an issue (or one the room picks)</figcaption>
-            <pre><code>The Broker Commission % field accepts 250. Only allow 0 to 100 and show a clear error. Rebuild, install and test it.</code></pre>
-            <button class="copy" type="button" data-copy>Copy</button>
-          </figure>
+        <div class="notes">
+          <p class="cue-do"><b>Prompt 101</b> <span>Rules as a list, one per line, each as "when this, then that", with the labels users see.</span></p>
+          <p class="cue-bob"><b>Tools, in order</b> <span>writes the rules into the screen → <code>build_screens</code> → <code>modernize_app</code> → import question → <code>install_app</code> → <code>test_service</code>.</span></p>
+        </div>
       </div>
 
       <div class="act2-body">
         <div class="act2-prompts">
-          <blockquote class="pull">“The layout is the client's own newer screen, the brand is theirs, the components are IBM Carbon. The old coach flow, scripts and buttons keep running underneath.”</blockquote>
+          <blockquote class="pull">“The layout is the client's own newer screen; the components are IBM Carbon. The old coach flow, scripts and buttons keep running underneath.”</blockquote>
           <blockquote class="pull">“The look lives in one theme file. The rules run in the screen, and the data still goes into the same BAW business object.”</blockquote>
         </div>
         <div class="duo" aria-label="The modernized app">
@@ -365,10 +452,10 @@ Build, install and test it.</code></pre>
       <div class="close-main">
         <p class="timecode">52:00</p>
         <h2 id="close-title" class="display close-title">Agree on what comes next.</h2>
-        <p class="lead">Screenshots became a BAW app you can edit in Studio, then a React + Carbon app in the client's layout and brand, with rules and connected tabs. A person approved every change to the server.</p>
+        <p class="lead">Screenshots became a BAW app you can edit in Studio, then a React + Carbon app in the client's layout, with rules and connected tabs. A person approved every change to the server.</p>
         <ol class="checklist">
           <li>Does the rebuilt Info tab match the old one? Which dropdown options did Bob guess wrong?</li>
-          <li>Is the branded screen right for production? Can they send the official logo file?</li>
+          <li>Should the production screen use their own brand? Can they send the official logo file?</li>
           <li>Which fields drive other fields, and which tabs depend on each other, in the real process?</li>
           <li>Which tab or screen comes next?</li>
           <li>Which data should come from a database, and from which system?</li>
