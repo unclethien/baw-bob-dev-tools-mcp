@@ -1,14 +1,16 @@
-/* Page behaviour: theme, language, cue tabs, copy buttons, rehearsal timer, run-of-show rail. */
+/* Page behaviour: theme, cue tabs, copy buttons, rehearsal timer, run-of-show rail. */
 (() => {
   const root = document.documentElement;
-  const VI = window.I18N_VI || {};
-  const UI = window.I18N_UI || { en: {}, vi: {} };
+  const UI = {
+    system: 'System', light: 'Light', dark: 'Dark', theme: 'Theme',
+    copied: 'Copied', toast: 'Prompt copied. Paste it in Bob.', copyFail: 'Copy failed. Select the text and copy it.',
+    timerStart: 'Start rehearsal timer', timerPause: 'Pause rehearsal timer. Hold to reset.', timerReset: 'Timer reset'
+  };
   const store = {
     get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
   };
-  let lang = root.lang === 'vi' ? 'vi' : 'en';
-  const t = key => UI[lang][key] || UI.en[key];
+  const t = key => UI[key];
 
   /* ---------------------------------------------------------------- toast */
   const toast = document.querySelector('[data-toast]');
@@ -37,34 +39,6 @@
     store.set('demo-theme', mode);
     paintTheme();
   });
-
-  /* ---------------------------------------------------------------- language */
-  const nodes = [...document.querySelectorAll('[data-i18n]')];
-  const isSvg = n => n instanceof SVGElement;
-  const EN = new Map(nodes.map(n => [n, isSvg(n) ? n.textContent : n.innerHTML]));
-  const langBtns = [...document.querySelectorAll('[data-lang]')];
-
-  function applyLang(next) {
-    lang = next;
-    root.lang = next;
-    const missing = [];
-    for (const n of nodes) {
-      const key = n.dataset.i18n;
-      let html = EN.get(n);
-      if (next === 'vi') {
-        if (key in VI) html = VI[key]; else missing.push(key);
-      }
-      if (isSvg(n)) n.textContent = html; else n.innerHTML = html;
-    }
-    if (missing.length) console.warn('Missing Vietnamese copy:', [...new Set(missing)]);
-    langBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === next)));
-    paintTheme();
-    paintTimer();
-  }
-  langBtns.forEach(b => b.addEventListener('click', () => {
-    store.set('demo-lang', b.dataset.lang);
-    applyLang(b.dataset.lang);
-  }));
 
   /* ---------------------------------------------------------------- tabs (act 1 cues, guardrails ledger) */
   document.querySelectorAll('[data-cues]').forEach(group => {
@@ -165,5 +139,6 @@
   }, { rootMargin: '-45% 0px -50% 0px' });
   document.querySelectorAll('main > section[id]').forEach(s => spy.observe(s));
 
-  applyLang(lang);
+  paintTheme();
+  paintTimer();
 })();

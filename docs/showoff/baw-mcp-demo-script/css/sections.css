@@ -21,7 +21,6 @@
 .hero { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: center; gap: var(--s-12); }
 .hero-copy { display: grid; gap: var(--s-6); align-content: center; }
 .hero .display { max-width: 11ch; }
-.hero .display:lang(vi) { max-width: 15ch; }
 .cta-row { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-2); }
 
 .sheets { position: relative; height: min(68dvh, 640px); }
@@ -102,7 +101,7 @@
 .act1-script { display: grid; gap: var(--s-6); }
 
 .cues { display: grid; gap: var(--s-4); }
-.cue-tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; background: var(--rule-strong); }
+.cue-tabs { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--rule-strong); }
 .cue-tabs button {
   display: grid; justify-items: start; gap: var(--s-1);
   min-height: 64px; padding: var(--s-2) var(--s-4);
@@ -159,6 +158,7 @@
 
 .act2-body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--s-12); align-items: center; }
 .act2-prompts { display: grid; gap: var(--s-4); }
+.prompt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); align-items: start; }
 .pull {
   margin-top: var(--s-2);
   font: 300 var(--t-lg) / 1.29 var(--font-display); letter-spacing: 0;
@@ -220,6 +220,7 @@
 .close-main { display: grid; gap: var(--s-6); justify-items: start; }
 .close-title { max-width: 12ch; }
 .close .prompt { width: 100%; max-width: 60ch; }
+.close .checklist { grid-area: auto; width: 100%; max-width: 60ch; }
 .refs { display: grid; gap: var(--s-3); border-top: var(--hairline-strong); padding-top: var(--s-4); align-self: end; }
 .refs h3 { font-size: var(--t-sm); font-weight: 600; letter-spacing: 0.16px; color: var(--ink); }
 .refs ol { counter-reset: r; display: grid; gap: var(--s-2); }
@@ -238,7 +239,7 @@
   .sheets { height: min(56dvh, 118vw); }
   .setup { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "diagram" "figures" "list"; }
   .act-1 { grid-template-columns: minmax(0, 1fr); row-gap: var(--s-12); }
-  .act2-body { grid-template-columns: minmax(0, 1fr); }
+  .act2-body, .prompt-grid { grid-template-columns: minmax(0, 1fr); }
   .guard { grid-template-columns: minmax(0, 1fr); row-gap: var(--s-6); }
   .close { grid-template-columns: minmax(0, 1fr); row-gap: var(--s-12); }
 }
@@ -248,7 +249,7 @@
   .diagram-wide { display: none; }
   .diagram-tall { display: block; max-width: 420px; }
   .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--s-4); }
-  .cue-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cue-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .cue-do, .cue-bob { grid-template-columns: 1fr; gap: var(--s-1); }
   .compare { grid-template-columns: 1fr; gap: var(--s-8); }
   .cmp-arrow { position: static; transform: rotate(90deg); justify-self: center; }
