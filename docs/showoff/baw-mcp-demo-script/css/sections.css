@@ -64,6 +64,23 @@
   row-gap: var(--s-8);
 }
 .setup .sec-head { grid-area: head; }
+.talk { grid-area: list; display: grid; gap: var(--s-3); align-self: start; }
+.talk .cue-say { margin-top: 0; }
+
+/* ---------------------------------------------------------------- prep, tools and modes */
+.prep { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: var(--s-12); align-items: start; }
+.prep .checklist { grid-area: auto; }
+.tools { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--s-12); align-items: start; }
+.tools .sec-head { grid-column: 1 / -1; }
+.tools .ledger th { width: 32%; }
+.ledger caption { caption-side: top; text-align: left; padding-bottom: var(--s-3); font-size: var(--t-sm); font-weight: 600; letter-spacing: 0.16px; color: var(--ink-2); }
+.ledger td code { margin-right: var(--s-1); }
+
+/* ---------------------------------------------------------------- prompt notes and anatomy */
+.notes { display: grid; gap: var(--s-3); align-content: start; padding: var(--s-4); border-left: 3px solid var(--accent); background: var(--paper-2); }
+.notes .cue-do, .notes .cue-bob { font-size: var(--t-sm); grid-template-columns: 7.5rem 1fr; }
+.anatomy mark { background: var(--accent-soft); color: inherit; padding: 1px 2px; }
+.anatomy mark::before { content: attr(data-n); margin-right: 4px; font-size: var(--t-xs); color: var(--accent); vertical-align: super; }
 .diagram { grid-area: diagram; display: grid; gap: var(--s-3); }
 .diagram svg { width: 100%; height: auto; overflow: visible; }
 .diagram-tall { display: none; }
@@ -238,6 +255,7 @@
   .hero .display { max-width: 13ch; }
   .sheets { height: min(56dvh, 118vw); }
   .setup { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "diagram" "figures" "list"; }
+  .prep, .tools { grid-template-columns: minmax(0, 1fr); row-gap: var(--s-8); }
   .act-1 { grid-template-columns: minmax(0, 1fr); row-gap: var(--s-12); }
   .act2-body, .prompt-grid { grid-template-columns: minmax(0, 1fr); }
   .guard { grid-template-columns: minmax(0, 1fr); row-gap: var(--s-6); }
@@ -250,13 +268,13 @@
   .diagram-tall { display: block; max-width: 420px; }
   .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--s-4); }
   .cue-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .cue-do, .cue-bob { grid-template-columns: 1fr; gap: var(--s-1); }
+  .cue-do, .cue-bob, .notes .cue-do, .notes .cue-bob { grid-template-columns: 1fr; gap: var(--s-1); }
   .compare { grid-template-columns: 1fr; gap: var(--s-8); }
   .cmp-arrow { position: static; transform: rotate(90deg); justify-self: center; }
   .track { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
   .duo { aspect-ratio: auto; display: grid; gap: var(--s-4); }
   .duo figure { position: static; width: 100%; }
-  .ledger th { width: auto; display: block; padding-bottom: 0; border: 0; }
+  .ledger th, .tools .ledger th { width: auto; display: block; padding-bottom: 0; border: 0; }
   .ledger td { display: block; padding-top: var(--s-1); }
   .ledger tr { display: block; border-bottom: var(--hairline); }
 }
