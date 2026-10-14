@@ -85,22 +85,13 @@ a:focus-visible { outline-offset: 1px; }
 }
 button.ctl:hover { background: var(--shell-hover); }
 button.ctl:active { background: #393939; }
-.ctl:focus-visible, .seg button:focus-visible { outline-color: #fff; }
+.ctl:focus-visible { outline-color: #fff; }
 .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; }
 .timer[aria-pressed="true"] { background: var(--btn-primary); color: #fff; }
 .timer[aria-pressed="true"]:hover { background: var(--btn-primary-hover); }
 .timer-read { font: 400 var(--t-sm) / 1 var(--font-code); color: var(--shell-text-2); min-width: 5ch; }
 .timer[aria-pressed="true"] .timer-read { color: #fff; }
 
-.seg { padding: 0; gap: 0; }
-.seg button {
-  min-height: var(--header-h); min-width: 48px; padding: 0 var(--s-3);
-  font: 400 var(--t-sm) / 1 var(--font-body); color: var(--shell-text-2);
-  background: transparent; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
-  transition: background-color var(--d-state) var(--ease-out-quart), color var(--d-state) var(--ease-out-quart);
-}
-.seg button:hover { color: var(--shell-text); background: var(--shell-hover); }
-.seg button[aria-pressed="true"] { color: var(--shell-text); font-weight: 600; border-bottom-color: var(--btn-primary); }
 .theme .ico { display: none; }
 .theme[data-mode="system"] .ico-system, .theme[data-mode="light"] .ico-light, .theme[data-mode="dark"] .ico-dark { display: block; }
 
@@ -194,7 +185,6 @@ button.ctl:active { background: #393939; }
   .wordmark-ibm + span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .wordmark-sub, .theme-label, .timer > span { display: none; }
   .ctl { padding: 0 var(--s-3); }
-  .seg button { min-width: 40px; padding: 0 var(--s-2); }
 }
 
 @media (prefers-reduced-motion: reduce) {
