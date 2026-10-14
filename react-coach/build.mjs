@@ -6,7 +6,7 @@
 // Dojo instead of the bundle and break.
 import { build } from 'esbuild';
 import { compile } from 'sass';
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 
 mkdirSync('bundle', { recursive: true });
 
@@ -15,7 +15,11 @@ mkdirSync('bundle', { recursive: true });
 const screens = existsSync('src/screens') ? readdirSync('src/screens').filter((f) => f.endsWith('.jsx')).sort() : [];
 const entry = ["export { mount } from './runtime.jsx';", "import './form-screen.jsx';", ...screens.map((f) => `import './screens/${f}';`)].join('\n');
 
-const css = compile('src/styles.scss', { loadPaths: ['node_modules'], style: 'compressed', quietDeps: true }).css;
+// Carbon sizes everything in rem for a 16px root, but BAW's bpmUI.css sets the coach page's
+// root to 62.5% (10px), which shrinks the screen to 62.5%. Fixed pixels keep Carbon's sizes.
+// The same applies to the CSS and inline styles in our own .jsx files.
+const toPx = (css) => css.replace(/(?<![\w.-])(-?\d*\.?\d+)rem(?![\w-])/g, (_, n) => `${+(n * 16).toFixed(3)}px`);
+const css = toPx(compile('src/styles.scss', { loadPaths: ['node_modules'], style: 'compressed', quietDeps: true }).css);
 writeFileSync('bundle/pp-react.css', css);
 
 await build({
@@ -28,6 +32,10 @@ await build({
   target: 'es2019',
   define: { 'process.env.NODE_ENV': '"production"' },
   loader: { '.scss': 'empty' },
+  plugins: [{
+    name: 'rem-to-px',
+    setup: (b) => b.onLoad({ filter: /[\\/]src[\\/].*\.jsx$/ }, ({ path }) => ({ contents: toPx(readFileSync(path, 'utf8')), loader: 'jsx' })),
+  }],
   banner: { js: '(function(define){' },
   footer: { js: 'window.PPReact=PPReact;})();' },
   outfile: 'bundle/pp-react.js',
