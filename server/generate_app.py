@@ -9,6 +9,15 @@ The app holds one client-side human service, exposed as a URL, with one coach pe
                               and so is the confirmation (with its generated reference number).
 
 With "layout": "tabs" the steps become tabs of one form coach instead (Next goes to Review).
+
+"process" adds a workflow (a BPD) that users start from Workplace and edit in Business Automation Studio:
+the service becomes the first task, in its own lane; an optional "approval" task in a second lane
+shows every field read-only with a comments box and Approve / Send back buttons, and Send back
+returns the work to the first task:
+
+    Start -> <form task> -> <approval task> -> Approved? -> End
+                  ^-------------- Send back ------'
+
 A step lists its fields, or "sections" of fields, each a titled panel; "columns": 2 to 6 lays the
 fields out side by side ("wide": true keeps a field full width). By default fields fill the columns left
 to right, row by row; give every field a "column" (1, 2, ...) to place it, top to bottom, in that column,
@@ -40,6 +49,7 @@ from pathlib import Path
 import app_template
 import coach_theme
 from coach_builder import SYSTEM_TYPES, Layout, coachflow, uid, write_twx
+from process_builder import process_xml
 
 FIELD_TYPES = {  # spec type -> (business object type, input view)
     "String": ("String", "Text"),
@@ -56,6 +66,8 @@ MAX_COLUMNS = 6
 PROJECT = Path(__file__).resolve().parent.parent
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 REFERENCE = "referenceNumber"
+DECISION, COMMENTS = "decision", "reviewComments"  # set by the approval task
+APPROVED, SENT_BACK = "Approved", "Sent back"
 
 
 def visibility(value):
@@ -100,6 +112,14 @@ def load_spec(path: Path) -> dict:
     if not steps:
         errors.append("steps must list at least one step")
     seen = {REFERENCE} if spec.get("confirmation") else set()
+    process = spec.get("process")
+    if process is not None:
+        if not isinstance(process, dict) or not process.get("name"):
+            errors.append("process.name is required (the workflow's name)")
+        elif process.get("approval") is not None and not isinstance(process["approval"], dict):
+            errors.append('process.approval must be an object, e.g. {"name": "Review", "lane": "Underwriting"}')
+        elif process.get("approval") is not None:
+            seen |= {DECISION, COMMENTS}
     for i, step in enumerate(steps, 1):
         if not step.get("title"):
             errors.append(f"step {i}: title is required")
@@ -198,11 +218,12 @@ def column_widths(count, weights=None):
     return [f"{int((100 - count) * w / sum(weights) * 10) / 10}%" for w in weights]
 
 
-def columns(lay, var, fields, count, weights=None):
+def columns(lay, var, fields, count, weights=None, make=input_view):
     """Lay fields out in count columns; a "wide" field takes the full width.
-    Fields fill the columns row by row, unless they say which "column" they belong to."""
+    Fields fill the columns row by row, unless they say which "column" they belong to.
+    make builds each field's view: input_view, or output for a read-only screen."""
     if count <= 1:
-        return [input_view(lay, var, f) for f in fields]
+        return [make(lay, var, f) for f in fields]
     widths = column_widths(count, weights)
     width = lambda c: [("@width", json.dumps({"isResponsiveData": True, "values": [{"deviceConfigID": "LargeID", "value": widths[c]}]}))]
     out, run = [], []
@@ -210,9 +231,9 @@ def columns(lay, var, fields, count, weights=None):
     def flush():
         if run:
             if any("column" in f for f in run):
-                groups = [[input_view(lay, var, f) for f in run if f["column"] == c + 1] for c in range(count)]
+                groups = [[make(lay, var, f) for f in run if f["column"] == c + 1] for c in range(count)]
             else:
-                views = [input_view(lay, var, f) for f in run]
+                views = [make(lay, var, f) for f in run]
                 groups = [views[c::count] for c in range(min(count, len(views)))]
             cols = [lay.view("Vertical Layout", f"Column {c + 1}", children=g, options=width(c), show_label=False) for c, g in enumerate(groups)]
             out.append(lay.view("Horizontal Layout", "Columns", children=cols, show_label=False))
@@ -221,7 +242,7 @@ def columns(lay, var, fields, count, weights=None):
     for f in fields:
         if f.get("wide"):
             flush()
-            out.append(input_view(lay, var, f))
+            out.append(make(lay, var, f))
         else:
             run.append(f)
     flush()
@@ -307,6 +328,8 @@ def init_script(spec):
     lines += [f"tw.local.{var}.{f['name']} = false;" for f in fields(spec) if f.get("type") == "Boolean"]
     if spec.get("confirmation"):
         lines.append(f'tw.local.{var}.{REFERENCE} = "";')
+    if spec.get("process"):  # a process task gets the object from the process; start fresh only the first time
+        return f"if (!tw.local.{var}) {{\n  " + "\n  ".join(lines) + "\n}"
     return "\n".join(lines)
 
 
@@ -343,6 +366,62 @@ def flow(spec):
     return steps, flows
 
 
+# ---------------------------------------------------------------- process
+
+
+def approval_coach(spec):
+    """Every field read-only, section by section, then a comments box and Approve / Send back."""
+    var, appr = spec["businessObject"]["variable"], spec["process"]["approval"]
+    lay = Layout()
+    panels = [lay.view("Panel", s["title"], children=columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"), make=output))
+              for step in spec["steps"] for s in step["sections"]]
+    comments = lay.view("Panel", "Decision", children=[lay.view("Text Area", appr.get("commentsLabel") or "Comments", binding=f"tw.local.{var}.{COMMENTS}")])
+    bar, events = actions(lay, [("approve", appr.get("approveLabel") or "Approve", "P"), ("sendBack", appr.get("returnLabel") or "Send Back", "W")])
+    title = appr.get("name") or "Review"
+    return Layout.wrap([header(spec, lay, title, appr.get("intro", ""), editable=False), *panels, comments, bar]), events
+
+
+def approval_flow(spec):
+    var = spec["businessObject"]["variable"]
+    steps = [("init", "Initialize", f"if (!tw.local.{var}) {{ tw.local.{var} = {{}}; }}"),
+             ("s0", spec["process"]["approval"].get("name") or "Review", approval_coach(spec)),
+             ("ok", APPROVED, f"tw.local.{var}.{DECISION} = {json.dumps(APPROVED)};"),
+             ("back", SENT_BACK, f"tw.local.{var}.{DECISION} = {json.dumps(SENT_BACK)};")]
+    flows = [("start", "init", None, "rightCenter", "leftCenter"), ("init", "s0", None, "rightCenter", "leftCenter"),
+             ("s0", "ok", "approve", "rightCenter", "leftCenter"), ("s0", "back", "sendBack", "bottomCenter", "leftCenter"),
+             ("ok", "end", None, "rightCenter", "leftCenter"), ("back", "end", None, "rightCenter", "bottomCenter")]
+    return steps, flows
+
+
+def process_definition(spec, form, approval, bo_id):
+    """The workflow as an extra .twx object (id, versionId, name, type, xml).
+    form, approval: (service id, (input id, output id)); approval may be None."""
+    proc, var = spec["process"], spec["businessObject"]["variable"]
+    task = proc.get("formTask") or {}
+    first_lane = task.get("lane") or "Requester"
+    nodes = [{"key": "start", "kind": "start", "name": "Start", "lane": first_lane, "x": 30},
+             {"key": "form", "kind": "task", "name": task.get("name") or spec["service"]["name"], "lane": first_lane, "x": 120,
+              "service": form[0], "io": form[1]}]
+    flows = [{"from": "start", "to": "form"}]
+    lanes = [first_lane]
+    if approval:
+        appr = proc["approval"]
+        lane = appr.get("lane") or "Approver"
+        lanes += [lane] if lane != first_lane else []
+        nodes += [{"key": "approval", "kind": "task", "name": appr.get("name") or "Review", "lane": lane, "x": 300, "service": approval[0], "io": approval[1]},
+                  {"key": "decision", "kind": "gateway", "name": f"{APPROVED}?", "lane": lane, "x": 470},
+                  {"key": "end", "kind": "end", "name": "End", "lane": lane, "x": 600}]
+        flows += [{"from": "form", "to": "approval"}, {"from": "approval", "to": "decision"},
+                  {"from": "decision", "to": "form", "name": appr.get("returnLabel") or "Send Back", "out": "topCenter", "in": "bottomCenter",
+                   "condition": f"tw.local.{var} != null && tw.local.{var}.{DECISION} == {json.dumps(SENT_BACK)}"},
+                  {"from": "decision", "to": "end", "name": APPROVED}]
+    else:
+        nodes.append({"key": "end", "kind": "end", "name": "End", "lane": first_lane, "x": 300})
+        flows.append({"from": "form", "to": "end"})
+    pid, version = "25." + uid(), uid()
+    return pid, version, proc["name"], "bpd", process_xml(pid, version, proc["name"], var, bo_id, lanes, nodes, flows, "generate_app", proc.get("description", ""))
+
+
 # ---------------------------------------------------------------- package
 
 
@@ -351,12 +430,30 @@ def generate(spec: dict, dest: Path, base: Path | None = None):
     props = [(f["name"], FIELD_TYPES[f.get("type", "String")][0]) for f in fields(spec)]
     if spec.get("confirmation"):
         props.append((REFERENCE, "String"))
+    proc = spec.get("process")
+    approval = proc and proc.get("approval") is not None
+    if approval:
+        props += [(DECISION, "String"), (COMMENTS, "String")]
+    bo_id = "12." + uid()
     steps, flows = flow(spec)
     service = {"name": svc["name"], "description": svc.get("description", svc["name"])}
-    services = [("1." + uid(), uid(), "2056." + uid(), service, lambda b, v: coachflow(service, steps, flows, b, v, bo["variable"]))]
+    io = lambda: ("2055." + uid(), "2055." + uid()) if proc else None
+    form_io = io()
+    services = [("1." + uid(), uid(), form_io or "2056." + uid(), service,
+                 lambda b, v: coachflow(service, steps, flows, b, v, bo["variable"], io=form_io))]
+    extra = []
+    if proc:
+        approval_ids = None
+        if approval:
+            a_io, a_steps, a_flows = io(), *approval_flow(spec)
+            a_service = {"name": proc["approval"].get("name") or "Review", "description": f"{proc['name']}: {proc['approval'].get('name') or 'Review'}",
+                         "exposed": False}  # opened only as the process's approval task
+            services.append(("1." + uid(), uid(), a_io, a_service, lambda b, v: coachflow(a_service, a_steps, a_flows, b, v, bo["variable"], io=a_io)))
+            approval_ids = (services[-1][0], a_io)
+        extra.append(process_definition(spec, (services[0][0], form_io), approval_ids, bo_id))
     write_twx(dest, {"name": app["name"], "acronym": app["acronym"], "snapshot": app.get("snapshot", "1.0.0")},
-              {"id": "12." + uid(), "version": uid(), "name": bo["name"], "props": props}, bo["variable"], services, "generate_app",
-              app_template.read_base(base) if base else None)
+              {"id": bo_id, "version": uid(), "name": bo["name"], "props": props}, bo["variable"], services, "generate_app",
+              app_template.read_base(base) if base else None, extra)
 
 
 def main():
@@ -371,6 +468,10 @@ def main():
     print(f"Wrote {args.dest}: app {app['name']} ({app['acronym']}), snapshot {app.get('snapshot', '1.0.0')}")
     print(f"Service: {spec['service']['name']}, {len(spec['steps'])} step(s) as {'tabs' if spec.get('layout') == 'tabs' else 'screens'}, {len(fields(spec))} field(s)"
           + (", review" if spec.get("review", True) else "") + (", confirmation" if spec.get("confirmation") else ""))
+    if spec.get("process"):
+        proc = spec["process"]
+        print(f"Process: {proc['name']}, task {(proc.get('formTask') or {}).get('name') or spec['service']['name']}"
+              + (f", then approval task {proc['approval'].get('name') or 'Review'} (Send back returns to the first task)" if proc.get("approval") is not None else ""))
 
 
 if __name__ == "__main__":

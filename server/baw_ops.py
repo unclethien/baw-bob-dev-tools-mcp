@@ -110,6 +110,26 @@ class BawOps:
         mine = [i for i in items if i.get("processAppAcronym") == acronym]
         return [i for i in mine if (i.get("snapshotName") == snapshot if snapshot else i.get("tip"))]
 
+    def post(self, path, body=b""):
+        return self._request("POST", path, body, self._headers({"Content-Type": "application/json"}))
+
+    def processes(self, acronym, snapshot=None):
+        """Startable processes (BPDs) of an app: the tip snapshot unless a snapshot name is given."""
+        items = self.get("/bas/rest/bpm/wle/v1/exposed/process")["data"]["exposedItemsList"]
+        mine = [i for i in items if i.get("processAppAcronym") == acronym]
+        return [i for i in mine if (i.get("snapshotName") == snapshot if snapshot else i.get("tip"))]
+
+    def start(self, process):
+        """Start an instance of an exposed process (an item from processes()); returns the instance."""
+        return self.post(process["startURL"] + "&parts=all")["data"]
+
+    def instance(self, piid):
+        return self.get(f"/bas/rest/bpm/wle/v1/process/{piid}?parts=all")["data"]
+
+    def task_url(self, tkiid):
+        """The browser URL that opens a task's coaches."""
+        return self.get(f"/bas/rest/bpm/wle/v1/task/{tkiid}/clientSettings/IBM_WLE_Coach")["data"]["url"]
+
     def install(self, twx: Path, poll_seconds=5, max_wait=900):
         boundary = uuid.uuid4().hex
         body = (

@@ -106,11 +106,13 @@ LINK_VISUAL = ("<ns13:linkVisualInfo><ns13:sourcePortLocation>{src}</ns13:source
                "<ns13:saveExecutionContext>false</ns13:saveExecutionContext></ns13:linkVisualInfo>")
 
 
-def coachflow(service, steps, flows, bo_id, var_id, var):
+def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
     """Build the BPMN for a client-side human service.
 
     steps: (key, name, script text | (coach layout, {event: button item id})) in diagram order.
     flows: (source, target, coach event or None, source port, target port); "start" and "end" are implicit.
+    io: (input id, output id) to take the business object in and hand it back (a process task's
+    service); otherwise it is a private variable (var_id).
     """
     ids = {"start": uid(), "end": uid(), **{key: "2025." + uid() for key, _, _ in steps}}
     flow_ids = ["2027." + uid() for _ in flows]
@@ -141,17 +143,21 @@ def coachflow(service, steps, flows, bo_id, var_id, var):
         f"<ns2:navigationInstructions><ns2:targetType>Default</ns2:targetType></ns2:navigationInstructions></ns16:extensionElements>{incoming('end')}</ns16:endEvent>"
         + "".join(step_xml(i, *step) for i, step in enumerate(steps))
         + "".join(sequence_flow(i, *f) for i, f in enumerate(flows))
-        + f'<ns16:dataObject itemSubjectRef="itm.{bo_id}" isCollection="false" name="{var}" id="{var_id}" />'
+        + ("" if io else f'<ns16:dataObject itemSubjectRef="itm.{bo_id}" isCollection="false" name="{var}" id="{var_id}" />')
         + f'<ns2:htmlHeaderTag id="{uid()}"><ns2:tagName>viewport</ns2:tagName><ns2:content>width=device-width,initial-scale=1.0</ns2:content><ns2:enabled>true</ns2:enabled></ns2:htmlHeaderTag>'
     )
+    params = "".join(f'<ns16:{kind} name="{var}" itemSubjectRef="itm.{bo_id}" isCollection="false" id="{pid}" />'
+                     for kind, pid in zip(("dataInput", "dataOutput"), io)) if io else ""
     ns = " ".join(f'xmlns:ns{n}="{u}"' for n, u in [
         (16, "http://www.omg.org/spec/BPMN/20100524/MODEL"), (2, "http://www.ibm.com/xmlns/prod/bpm/bpmn/ext/process"),
         (13, "http://www.ibm.com/xmlns/prod/bpm/graph"), (19, "http://www.ibm.com/bpm/CoachDesignerNG")])
     return (f'<coachflow><ns16:definitions {ns} id="{uid()}" targetNamespace="" expressionLanguage="http://www.ibm.com/xmlns/prod/bpm/expression-lang/javascript">'
             f'<ns16:globalUserTask name="{service["name"]}" id="1.{uid()}"><ns16:documentation>{service["description"]}</ns16:documentation>'
             f'<ns16:extensionElements><ns2:userTaskImplementation id="{uid()}">{body}</ns2:userTaskImplementation>'
-            f"<ns2:mobileReady>true</ns2:mobileReady><ns2:participantRef>{ALL_USERS}</ns2:participantRef><ns2:exposedAs>URL</ns2:exposedAs></ns16:extensionElements>"
-            "<ns16:ioSpecification><ns16:inputSet /><ns16:outputSet /></ns16:ioSpecification></ns16:globalUserTask></ns16:definitions></coachflow>")
+            "<ns2:mobileReady>true</ns2:mobileReady>"
+            + (f"<ns2:participantRef>{ALL_USERS}</ns2:participantRef><ns2:exposedAs>URL</ns2:exposedAs>" if exposed(service) else "<ns2:exposedAs>NotExposed</ns2:exposedAs>")
+            + "</ns16:extensionElements>"
+            f"<ns16:ioSpecification>{params}<ns16:inputSet /><ns16:outputSet /></ns16:ioSpecification></ns16:globalUserTask></ns16:definitions></coachflow>")
 
 
 ITEM = """<item><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><processItemId>{item_id}</processItemId><processId>{pid}</processId>
@@ -164,6 +170,11 @@ ITEM = """<item><lastModified isNull="true" /><lastModifiedBy isNull="true" /><t
 NO_LINK_LAYOUT = "<layoutData><controlPoints /><showEndState>false</showEndState><showName>false</showName></layoutData>"
 
 
+def exposed(service):
+    """Whether users can start the service on its own; a service that only runs as a process task is not."""
+    return service.get("exposed", True)
+
+
 def service_xml(pid, version, bo_id, var_id, service, flow, var, author):
     wrapper, end = "2025." + uid(), "2025." + uid()
     exit_id = "3008." + uid()
@@ -172,10 +183,17 @@ def service_xml(pid, version, bo_id, var_id, service, flow, var, author):
     items += ITEM.format(item_id=end, pid=pid, name="End", component="ExitPoint", component_id=exit_id, guid=uid(), version=uid(), x=700,
                          component_xml=f'<TWComponent><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><exitPointId>{exit_id}</exitPointId>'
                                        f"<haltProcess>false</haltProcess><guid>{uid()}</guid><versionId>{uid()}</versionId></TWComponent>")
-    variable = (f'<processVariable name="{var}"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" />'
-                f'<processVariableId>{var_id}</processVariableId><description isNull="true" /><processId>{pid}</processId><namespace>2</namespace><seq>1</seq>'
-                f"<isArrayOf>false</isArrayOf><isTransient>false</isTransient><classId>/{bo_id}</classId><hasDefault>false</hasDefault>"
-                f'<defaultValue isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></processVariable>')
+    if isinstance(var_id, tuple):  # (input id, output id): the object comes in and goes back out
+        variable = "".join(
+            f'<processParameter name="{var}"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" />'
+            f"<processParameterId>{param_id}</processParameterId><processId>{pid}</processId><parameterType>{kind}</parameterType><isArrayOf>false</isArrayOf>"
+            f'<classId>/{bo_id}</classId><seq>{kind}</seq><hasDefault>false</hasDefault><defaultValue isNull="true" /><isLocked>false</isLocked>'
+            f'<description isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></processParameter>' for kind, param_id in ((1, var_id[0]), (2, var_id[1])))
+    else:
+        variable = (f'<processVariable name="{var}"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" />'
+                    f'<processVariableId>{var_id}</processVariableId><description isNull="true" /><processId>{pid}</processId><namespace>2</namespace><seq>1</seq>'
+                    f"<isArrayOf>false</isArrayOf><isTransient>false</isTransient><classId>/{bo_id}</classId><hasDefault>false</hasDefault>"
+                    f'<defaultValue isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></processVariable>')
     link = (f'<link name="Untitled"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><processLinkId>2027.{uid()}</processLinkId>'
             f'<processId>{pid}</processId><description isNull="true" /><fromProcessItemId>{wrapper}</fromProcessItemId><endStateId>Out</endStateId>'
             f"<toProcessItemId>{end}</toProcessItemId><guid>{uid()}</guid><versionId>{uid()}</versionId>{NO_LINK_LAYOUT}"
@@ -186,7 +204,7 @@ def service_xml(pid, version, bo_id, var_id, service, flow, var, author):
 <teamworks><process id="{pid}" name="{service["name"]}"><lastModified>0</lastModified><lastModifiedBy>{author}</lastModifiedBy>{null("tenantId")}
 <processId>{pid}</processId>{null("image", "tabGroup")}<startingProcessItemId>{wrapper}</startingProcessItemId><isRootProcess>false</isRootProcess><processType>10</processType>
 <isErrorHandlerEnabled>false</isErrorHandlerEnabled>{null("errorHandlerItemId")}<isLoggingVariables>false</isLoggingVariables><isTransactional>false</isTransactional>{null("processTimingLevel")}
-<participantRef>{TWSYS}/{ALL_USERS}</participantRef><exposedType>4</exposedType><isTrackingEnabled>true</isTrackingEnabled>{null("xmlData")}<cachingType>false</cachingType>
+{f"<participantRef>{TWSYS}/{ALL_USERS}</participantRef><exposedType>4</exposedType>" if exposed(service) else null("participantRef") + "<exposedType>0</exposedType>"}<isTrackingEnabled>true</isTrackingEnabled>{null("xmlData")}<cachingType>false</cachingType>
 {null("itemLabel", "cacheLength")}<mobileReady>true</mobileReady><sboSyncEnabled>true</sboSyncEnabled>{null("externalId")}<isSecured>false</isSecured><isAjaxExposed>false</isAjaxExposed>
 <isInvokedAsynchronously>false</isInvokedAsynchronously><isTransactionalFlow>false</isTransactionalFlow><description>{service["description"]}</description>
 <guid>{uid()}</guid><versionId>{version}</versionId>{null("dependencySummary", "jsonData", "businessDataAliases", "field1", "field2")}<field3>0</field3>{null("field4")}<field5>false</field5>
@@ -204,11 +222,12 @@ def business_object_xml(bo_id, version, name, props, author):
     return app_template.BUSINESS_OBJECT.format(id=bo_id, name=name, author=author, guid=uid(), version=version, properties=properties)
 
 
-def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, base: dict | None = None):
+def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, base: dict | None = None, extra=()):
     """Package a new process app in BAW's twxWithoutToolkits format (see app_template.py).
 
     app: {"name", "acronym", "snapshot"}. bo: {"id", "version", "name", "props"}.
-    services: (pid, versionId, variable id, {"name", "description"}, flow(bo_id, var_id)).
+    services: (pid, versionId, variable id, or (input id, output id) when the service takes the object in and hands it back,
+    {"name", "description"}, flow(bo_id, var_id)). extra: more objects, (id, versionId, name, type, xml).
     base: app_template.read_base() of an app exported from the target server, for its BAW build and
     toolkit versions; when it is the same app (same acronym), the package becomes a new snapshot of it.
     """
@@ -220,7 +239,7 @@ def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, 
     env, defaults = ("62." + uid(), uid()), ("63." + uid(), uid())
     objects = [(pid, version, service["name"], "process") for pid, version, _, service, _ in services]
     objects += [(bo["id"], bo["version"], bo["name"], "twClass"), (*env, "Environment Variables", "environmentVariableSet"),
-                (*defaults, "Process App Settings", "projectDefaults")]
+                (*defaults, "Process App Settings", "projectDefaults")] + [x[:4] for x in extra]
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
         for name, text in app_template.META_INF.items():
             out.writestr(name, text)
@@ -231,3 +250,5 @@ def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, 
         out.writestr(f"objects/{bo['id']}.xml", business_object_xml(bo["id"], bo["version"], bo["name"], bo["props"], author))
         for pid, version, var_id, service, flow in services:
             out.writestr(f"objects/{pid}.xml", service_xml(pid, version, bo["id"], var_id, service, flow(bo["id"], var_id), var, author))
+        for oid, _, _, _, xml in extra:
+            out.writestr(f"objects/{oid}.xml", xml)

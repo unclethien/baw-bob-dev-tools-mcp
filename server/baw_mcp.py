@@ -329,12 +329,13 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
     if not configured():
         raise offline()
     out = WORK / ("shots-" + re.sub(r"[^A-Za-z0-9]+", "-", f"{acronym}-{snapshot or 'tip'}-{service}").strip("-"))
-    args = ["node", "scripts/verify-service.mjs", "--app", acronym, "--service", service, "--out", str(out)]
-    if snapshot:
-        args += ["--snapshot", snapshot]
-    if fill:
-        args.append("--fill")
-    result = subprocess.run(args, cwd=REACT, capture_output=True, text=True, timeout=600)
+    args = ["--app", acronym, "--service", service] + (["--snapshot", snapshot] if snapshot else []) + (["--fill"] if fill else [])
+    return run_browser(args, out)
+
+
+def run_browser(args: list, out: Path) -> dict:
+    """Run verify-service.mjs and return its report, with screenshot paths relative to the project."""
+    result = subprocess.run(["node", "scripts/verify-service.mjs", *args, "--out", str(out)], cwd=REACT, capture_output=True, text=True, timeout=600)
     try:
         report = json.loads(result.stdout[result.stdout.index("{"):])
     except ValueError:
@@ -342,6 +343,43 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
     for step in report.get("steps", []):
         step["screenshot"] = rel((REACT / step["screenshot"]).resolve())
     return report
+
+
+@mcp.tool()
+def test_process(acronym: str, process: str, snapshot: str | None = None, press: list[str] | None = None, max_tasks: int = 8) -> dict:
+    """Run a workflow (process) of a "ZZ" app end to end: start an instance, then open each task as it
+    arrives in a real browser, fill empty fields, press the forward button and screenshot every screen.
+    press: button labels to press instead, in order, each on the first screen that shows it, e.g.
+    ["Send Back"] sends the work back once before it is approved. Reports every task and the final state."""
+    if not configured():
+        raise offline()
+    if not acronym.startswith("ZZ"):
+        raise ToolError(f"Refusing to start a process in {acronym}: only ZZ demo apps")
+    found = [p for p in ops().processes(acronym, snapshot) if p["display"] == process]
+    if not found:
+        raise ToolError(f"No startable process {process!r} in {acronym} {snapshot or '(tip)'}; "
+                        f"there are: {', '.join(p['display'] for p in ops().processes(acronym, snapshot)) or 'none'}")
+    instance = ops().start(found[0])
+    piid, queue, tasks = instance["piid"], list(press or []), []
+    out = WORK / ("shots-" + re.sub(r"[^A-Za-z0-9]+", "-", f"{acronym}-{process}-{piid}").strip("-"))
+    while len(tasks) < max_tasks:
+        instance = ops().instance(piid)
+        open_tasks = [t for t in instance.get("tasks", []) if t.get("status") not in ("Closed", "Completed")]
+        if not open_tasks:
+            break
+        task = open_tasks[0]
+        args = ["--url", ops().task_url(task["tkiid"]), "--fill"] + [a for label in queue for a in ("--press", label)]
+        report = run_browser(args, out / f"{len(tasks) + 1:02d}-task-{task['tkiid']}")
+        for step in report.get("steps", []):
+            if queue and step.get("button") == queue[0]:
+                queue.pop(0)
+        tasks.append({"task": task["name"], "id": task["tkiid"], "ok": report["ok"], "failure": report.get("failure"),
+                      "errors": report["errors"], "steps": report["steps"]})
+        if not report["ok"]:
+            break
+    state = ops().instance(piid)["executionState"]
+    return {"process": process, "instance": piid, "state": state, "tasks": tasks, "unpressed": queue,
+            "ok": state == "Completed" and all(t["ok"] for t in tasks) and not queue}
 
 
 if __name__ == "__main__":

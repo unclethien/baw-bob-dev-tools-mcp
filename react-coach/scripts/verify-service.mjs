@@ -2,6 +2,10 @@
 //
 // Usage:
 //   node scripts/verify-service.mjs --app ZZEQ --service "Equipment Request (Modernized)" [--snapshot 1.1.0] [--out shots] [--fill]
+//   node scripts/verify-service.mjs --url <a task's coach URL> [--press "Send Back"] ...
+//
+// --url opens a process task instead of an exposed service. --press (repeatable) presses the named
+// buttons in order, each on the first coach that shows it, instead of the forward button.
 //
 // Logs in with BAW_URL, BAW_USER and BAW_PASSWORD or BAW_APIKEY from the environment, else from the
 // repository's .env (token kept in memory, never printed), opens the service's run URL,
@@ -20,11 +24,11 @@ const { values: args } = parseArgs({
   options: {
     app: { type: 'string' }, service: { type: 'string' }, snapshot: { type: 'string' },
     out: { type: 'string', default: 'verify-shots' }, 'max-steps': { type: 'string', default: '12' },
-    fill: { type: 'boolean', default: false },
+    fill: { type: 'boolean', default: false }, url: { type: 'string' }, press: { type: 'string', multiple: true, default: [] },
   },
 });
-if (!args.app || !args.service) {
-  console.error('Usage: node scripts/verify-service.mjs --app <acronym> --service "<exposed service name>" [--snapshot <name>] [--out <dir>]');
+if (!args.url && (!args.app || !args.service)) {
+  console.error('Usage: node scripts/verify-service.mjs --app <acronym> --service "<exposed service name>" [--snapshot <name>] [--out <dir>], or --url <task URL>');
   process.exit(2);
 }
 
@@ -51,10 +55,14 @@ const auth = await fetch(`${BASE}/icp4d-api/v1/authorize`, {
 const { token } = await auth.json();
 if (!token) throw new Error(`Login failed (HTTP ${auth.status})`);
 
-const exposed = await (await fetch(`${BASE}/bas/rest/bpm/wle/v1/exposed/service`, { headers: { Authorization: `Bearer ${token}` } })).json();
-const item = exposed.data.exposedItemsList.find((i) => i.processAppAcronym === args.app && i.display === args.service
-  && (args.snapshot ? i.snapshotName === args.snapshot : i.tip));
-if (!item) throw new Error(`No exposed service "${args.service}" in ${args.app} ${args.snapshot || '(tip)'}`);
+let item = { runURL: args.url && new URL(args.url, BASE).href };
+if (!args.url) {
+  const exposed = await (await fetch(`${BASE}/bas/rest/bpm/wle/v1/exposed/service`, { headers: { Authorization: `Bearer ${token}` } })).json();
+  item = exposed.data.exposedItemsList.find((i) => i.processAppAcronym === args.app && i.display === args.service
+    && (args.snapshot ? i.snapshotName === args.snapshot : i.tip));
+  if (!item) throw new Error(`No exposed service "${args.service}" in ${args.app} ${args.snapshot || '(tip)'}`);
+}
+const presses = [...args.press];
 
 // Runs inside each frame: describe the coach and pick the forward button.
 function inspectCoach() {
@@ -68,7 +76,7 @@ function inspectCoach() {
     : buttons.find((b) => b.className.includes('btn-primary')) || [...buttons].reverse().find((b) => !back.test(b.textContent.trim()));
   const title = (react?.querySelector('h1') || document.querySelector('h1,.panel-title,.BPMSectionHeader'))?.textContent.trim();
   return {
-    react: !!react, title: title || document.title, button: forward?.textContent.trim(),
+    react: !!react, title: title || document.title, button: forward?.textContent.trim(), buttons: buttons.map((b) => b.textContent.trim()),
     alert: document.querySelector('.pp--inline-notification--error')?.textContent.trim(),
     signature: document.body.innerText.length + ':' + document.body.innerText.slice(0, 2000),
   };
@@ -112,7 +120,7 @@ const browser = await puppeteer.launch({
   executablePath, headless: 'new', acceptInsecureCerts: true,
   args: ['--no-first-run', '--ignore-certificate-errors', `--user-data-dir=${fs.mkdtempSync(path.join(os.tmpdir(), 'baw-verify-'))}`],
 });
-const report = { app: args.app, service: args.service, snapshot: item.snapshotName, steps: [], errors: [], ok: false };
+const report = { app: args.app, service: args.service || args.url, snapshot: item.snapshotName, steps: [], errors: [], ok: false };
 try {
   fs.mkdirSync(args.out, { recursive: true });
   const page = await browser.newPage();
@@ -142,9 +150,16 @@ try {
     await sleep(1500); // let React and BAW finish rendering
     current = (await coach()) || current;
     const file = path.join(args.out, `${String(step).padStart(2, '0')}-${current.info.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40)}.png`);
+    // The coach scrolls inside a frame as tall as the window, so grow the window to the whole coach first.
+    const top = (await (await current.frame.frameElement())?.boundingBox())?.y || 0;
+    const height = await current.frame.evaluate(() => document.documentElement.scrollHeight).catch(() => 0);
+    await page.setViewport({ width: 1400, height: Math.min(Math.max(1000, Math.ceil(top + height)), 8000) });
+    await sleep(300);
     const shot = await page.screenshot({ path: file, fullPage: true });
+    await page.setViewport({ width: 1400, height: 1000 });
     const hash = crypto.createHash('md5').update(shot).digest('hex');
-    const { signature, ...info } = current.info;
+    const { signature, buttons, ...info } = current.info;
+    if (presses.length && buttons.includes(presses[0])) info.button = presses.shift();
     report.steps.push({ step, ...info, screenshot: file, duplicate: hashes.has(hash) || undefined });
     hashes.add(hash);
     if (!info.button) { report.failure = 'no forward button'; break; }
