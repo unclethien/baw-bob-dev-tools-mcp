@@ -13,6 +13,8 @@ The result must match the screenshot in **layout and look**, not only in fields:
 
 ## 1. Get the images
 
+**Build only from the images the user names.** Other pictures in the same folder, such as other screens, a newer design, a homepage or a logo, are not part of the request: do not open them and do not take their layout, colours or logo, unless the user asks. A logo file is the only exception, found as the app-theme skill's "The logo" section says.
+
 - **A file in the project** (for example `work/form.png`): call `view_image` with its path. `screenshots/example-supplier-registration.png` is a demo.
 - **Attached in the chat:** you can see it, but `image_colors` and `crop_image` need a file. Ask the user to save it in `work/` (not committed, so client screens stay private) so you can read exact colours, and cut out the logo if they ask for that. If they can't, read the colours by eye.
 - **An attached image and a named file that show different screens:** the attached image is the one the user means. Say which one you built from.

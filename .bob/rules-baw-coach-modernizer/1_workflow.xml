@@ -51,7 +51,7 @@
     <phase name="hand_off">
       <description>When the user asks for a new app, or for a change to what an app collects: switch to BAW App Builder</description>
       <steps>
-        <step>A new app from a requirement or screenshots, or new or removed fields, steps, a workflow or an approval, changes the app spec, not the screens. Call switch_mode with mode_slug "baw-app-builder" without asking: the user's request is the go-ahead</step>
+        <step>A new app from a requirement or screenshots, or new or removed fields, steps, a workflow or an approval, changes the app spec, not the screens. Call switch_mode with mode_slug "baw-app-builder" without asking: the user's request is the go-ahead. Never in your first reply of a task (see .bob/rules/baw-mode-routing.md): when the request is the task's first message, call list_files on work/ first</step>
         <step>In the reason, give the app name, acronym, installed snapshots, the app spec and theme file when you know them, and repeat what the user asked for</step>
         <step>Labels, help text, grouping, validation, the look and screen behaviour stay here: they live in the coach spec, the theme file and the React screens</step>
       </steps>

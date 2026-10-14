@@ -48,7 +48,7 @@
     <phase name="build">
       <description>Design, build, install and test with the baw-app-builder skill</description>
       <steps>
-        <step>When built from screenshots: sample the theme colours with image_colors before writing the spec. For the logo, use a logo file the user gave or one already in the project; when there is none, ask at the design stop. Run crop_image only when the user asks for it</step>
+        <step>When built from screenshots: use only the screenshots the user named; never open or copy other images in their folder unless the user asks. Sample the theme colours from them with image_colors before writing the spec. For the logo, use a logo file the user gave or one already in the project; when there is none, ask at the design stop. Run crop_image only when the user asks for it</step>
         <step>Write work/ACR.app.json with "theme" set to the theme file</step>
         <step>STOP unless told to go ahead: show the theme, the screens with their sections, fields and buttons, and your assumptions; ask which installed app to match for a new app; wait for approval before create_app</step>
         <step>create_app, then inspect_coaches on the result and check every step</step>
@@ -63,7 +63,7 @@
       <description>When the user asks for a React UI, a modern UI, or to modernize the screens: switch to BAW Coach Modernizer</description>
       <steps>
         <step>Finish the build phase first, with its stops: the app is built, inspect_coaches has written the coach spec, and the app is installed and tested, or the user chose not to import it, or there is no BAW server</step>
-        <step>Call switch_mode with mode_slug "baw-coach-modernizer" without asking: the user's request is the go-ahead. In the reason, give the app name, acronym, installed snapshot, the .twx path, the coach spec path and the theme file, and repeat what the user asked for the UI</step>
+        <step>Call switch_mode with mode_slug "baw-coach-modernizer" without asking: the user's request is the go-ahead. Never in your first reply of a task (see .bob/rules/baw-mode-routing.md): when the request is the task's first message, call list_files on work/ first. In the reason, give the app name, acronym, installed snapshot, the .twx path, the coach spec path and the theme file, and repeat what the user asked for the UI</step>
         <step>When one request asks for both a new app and a React UI, build the app here first, then switch</step>
       </steps>
     </phase>
