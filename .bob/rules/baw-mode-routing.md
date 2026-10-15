@@ -19,6 +19,19 @@ In Agent, Plan, Ask or any other mode, switch without asking (the request is the
 | Build a new BAW app, form, workflow or approval process, from a written requirement or from screenshots; change an app's fields, steps or workflow | `baw-app-builder` |
 | Give an existing app a React or modern UI, modernize, restyle or re-theme its screens, or verify modernized services | `baw-coach-modernizer` |
 
+Ask mode has no `switch_mode`: there, answer in one line which mode to pick (🏗️ BAW App Builder or ✨ BAW Coach Modernizer) and ask the user to switch, instead of doing the work.
+
 In the reason, repeat what the user asked for, with any app, acronym, files or screenshots they named. Do not start the work before switching: do not load the BAW skills or call the baw-dev-tools build, install or test tools.
 
 Questions about this repository's code, documentation or the MCP server itself stay in the current mode.
+
+## 4. From a BAW mode, hand other work back
+
+The BAW modes edit only `work/`, `app-specs/` and, for the Modernizer, `react-coach/src/screens/`. When the user asks a BAW mode for something else, switch without asking, following section 1:
+
+| The user asks to | Mode slug |
+|---|---|
+| Change this repository's code, scripts, docs or the MCP server; run commands; any other coding task | `agent` |
+| Plan or design a larger change before building it | `plan` |
+
+Questions only need reading: answer those in place. In the reason, repeat what the user asked for and name the BAW app and files involved. When that work is done and the user returns to BAW work, switch back to the BAW mode that fits.
