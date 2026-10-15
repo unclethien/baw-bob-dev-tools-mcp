@@ -69,6 +69,19 @@ registerScreen('zzeq-requester', Requester);
 - Any `@carbon/react` component (Tabs, Tile, Accordion, ProgressIndicator, InlineNotification, StructuredList…).
 - Layout classes: `pp-section`, `pp-section-title`, `pp-grid` (two-column field grid), `pp-span` (full-width cell), `pp-panel`, `pp-stack`, `pp-lead`, `pp-note`, `pp-review-tile`, `pp-review-row`, `pp-actions`. For anything else use inline `style`, but take colours from the theme (CSS variables such as `var(--pp-theme-primary)`), never hard-coded ones.
 
+### Carbon guidance (carbon-mcp)
+
+When the carbon-mcp tools are available, use them for every screen:
+
+1. **Before writing:** `code_search` each `@carbon/react` component you plan to use beyond `Field` (for example "Tabs contained", "Tile", "InlineNotification", "ProgressIndicator") for its props and an example, and `docs_search` the usage guidance for the patterns you rely on (form layout, tabs, required fields and error messages).
+2. **After writing:** `code_audit` the screen (`code`: the file's content, `filename`, `framework: "react"`). Fix what it reports about component usage, accessibility, labels and error messages (for example `invalidText` on inputs that validate). Ignore the findings that do not apply inside a BAW coach:
+   - a missing `<Theme>`: the runtime already applies the theme to `.pp-app`;
+   - a missing `<Content>`, `<SkipToContent>` or UI shell `Header`: `Header` here is this project's own component, inside BAW's page;
+   - `Grid` / `Column` instead of inline grid styles: the bundle does not include Carbon's grid styles, so keep `pp-grid` or an inline grid;
+   - other tokens instead of the `pp` prefix (`pp--btn`, `--pp-*`) and the theme variables: keep those.
+
+Mention in your report which Carbon tools you used and what the audit changed. Without carbon-mcp, carry on with the building blocks above.
+
 ### Rules the tester relies on
 
 - Render `Header` (its `h1` is the screen title).
