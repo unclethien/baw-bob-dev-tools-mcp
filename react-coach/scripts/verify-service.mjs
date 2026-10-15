@@ -45,7 +45,8 @@ if (!BASE || !setting('BAW_USER') || !(secret.password || secret.api_key)) {
   process.exit(2);
 }
 const BROWSERS = [process.env.BROWSER_PATH, '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'];
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Helium.app/Contents/MacOS/Helium',
+  '/usr/bin/chromium', '/usr/bin/google-chrome'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const auth = await fetch(`${BASE}/icp4d-api/v1/authorize`, {

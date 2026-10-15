@@ -328,7 +328,7 @@ node --version</code></pre>
         <tr><td>uv</td><td>any</td><td>Runs the MCP server with its pinned packages</td><td class="mono">brew install uv</td></tr>
         <tr><td>Python</td><td>3.11 or newer</td><td>The server and the build scripts</td><td class="mono">brew install python</td></tr>
         <tr><td>Node.js</td><td>18 or newer</td><td>React screens and the browser tests</td><td class="mono">brew install node</td></tr>
-        <tr><td>Chrome or Brave</td><td>installed in <code>/Applications</code></td><td>The browser tests (<code>test_service</code>, <code>test_process</code>)</td><td>From the vendor's website</td></tr>
+        <tr><td>Chrome, Brave or Helium</td><td>installed in <code>/Applications</code></td><td>The browser tests (<code>test_service</code>, <code>test_process</code>)</td><td>From the vendor's website</td></tr>
       </tbody>
     </table>
   </div>
@@ -487,7 +487,7 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
   </ul>
 
   <h3 id="browser">Use another browser</h3>
-  <p>The browser test tries <code>BROWSER_PATH</code> first, then Brave, then Chrome. To use another Chromium browser
+  <p>The browser test tries <code>BROWSER_PATH</code> first, then Brave, Chrome and Helium. To use another Chromium browser
   with Bob, add it to the server's environment in <code>.bob/mcp.json</code>:</p>
 <pre><code>"env": { "BROWSER_PATH": "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" }</code></pre>
   <p>The same <code>"env"</code> block can hold <code>BAW_URL</code> to point Bob at another server without editing
@@ -550,7 +550,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
         <tr><td class="mono">Refusing to install into &hellip;</td><td>Name or acronym is not ZZ</td><td>Rename the app in the spec</td></tr>
         <tr><td>Install ends in <code>failure</code></td><td>Often an acronym already used by another app</td><td>Pick another acronym; read <code>details</code> in the result</td></tr>
         <tr><td class="mono">No BAW server is configured</td><td><code>.env</code> is missing a setting</td><td>Fix step 4, or <a href="#no-server">import the app yourself</a></td></tr>
-        <tr><td><code>test_service</code> cannot start a browser</td><td>No Chrome or Brave in the usual place</td><td>Install one, or set <a href="#browser"><code>BROWSER_PATH</code></a></td></tr>
+        <tr><td><code>test_service</code> cannot start a browser</td><td>No Chrome, Brave or Helium in the usual place</td><td>Install one, or set <a href="#browser"><code>BROWSER_PATH</code></a></td></tr>
       </tbody>
     </table>
   </div>
