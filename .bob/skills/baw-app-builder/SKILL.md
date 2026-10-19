@@ -17,7 +17,7 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 
    | Key | Rule |
    |---|---|
-   | `app.name`, `app.acronym` | New app: name starts with "ZZ ", acronym 2-8 upper-case letters or digits, not used on the server (`list_apps`; without a server, ask the user) |
+   | `app.name`, `app.acronym` | New app: any name; acronym 2-8 upper-case letters or digits, not used on the server (`list_apps`; without a server, ask the user) |
    | `app.snapshot` | `1.0.0` for a new app |
    | `businessObject.name` / `.variable` | e.g. `LeaveRequest` / `leave` (JavaScript identifiers) |
    | `service.name` | What users see, e.g. "Leave Request" |

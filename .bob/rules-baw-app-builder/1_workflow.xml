@@ -38,7 +38,7 @@
     </step>
     <step number="3">
       <action>Pick an acronym</action>
-      <details>Call list_apps once and pick an unused ZZ acronym. For a new app, ask at the design stop which installed
+      <details>Call list_apps once and pick an unused acronym. For a new app, ask at the design stop which installed
         app to match (create_app base) or whether to use the built-in template. When list_apps reports that no BAW
         server is configured, ask the user for the acronym and build without a server.</details>
     </step>

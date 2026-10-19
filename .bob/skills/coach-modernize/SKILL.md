@@ -11,7 +11,7 @@ Inputs: an app `.twx` in `work/` and an **approved** coach spec from `inspect_co
 
 1. **Write the screens** with the react-coach-screen skill: one screen per coach of every service marked `"modernize": true`, then `"screen": "<name>"` on each coach in the spec. Run `build_screens` until it compiles. A coach without `screen` uses the generic form (fine for a quick pass when the user asks for one).
 
-2. **Choose the target.** The output is a new snapshot of the same app, so the app must be a ZZ app (`install_app` refuses anything else). To modernize a non-ZZ app, first build or copy it as a ZZ app with the user.
+2. **Choose the target.** The output is a new snapshot of the same app. When you did not create the app in this task, tell the user the snapshot will be added to it and install only after they approve; to keep the original app untouched, build or copy it as a new app with the user first.
 
 3. **Generate:** `modernize_app` with the `.twx`, the coach spec and a snapshot name not used in the app (`list_snapshots`). It adds `<service> (Modernized)` next to each legacy service, styled by the spec's theme file: colours, font, shape, width, button placement, and the header's logo and product name. To change the look, edit the theme file and generate again with a new snapshot.
 

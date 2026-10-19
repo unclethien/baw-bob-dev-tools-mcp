@@ -9,7 +9,7 @@ build and modernize IBM BAW process apps, so the agent only designs and writes c
 
 The agent authors the artifacts (app specs, coach specs, React screens). These tools package,
 install, inspect and test them on the BAW server set by BAW_URL (environment first, then .env;
-see baw_ops.py). Credentials stay in this process and are never returned. Installs are limited to "ZZ" demo apps, and there is
+see baw_ops.py). Credentials stay in this process and are never returned. An install always adds a new snapshot, and there is
 no delete tool. Without a server, the build tools still work: the user imports the .twx in Workflow Center.
 
 Run:  uv run --script server/baw_mcp.py      (Bob starts it from .bob/mcp.json)
@@ -309,11 +309,9 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str) -> dict:
 
 @mcp.tool()
 def install_app(twx: str) -> dict:
-    """Install a .twx on the server and wait until it finishes. Only "ZZ" demo apps can be installed."""
+    """Install a .twx on the server as a new snapshot and wait until it finishes."""
     path = local(twx)
     target = target_of(path)
-    if not target["acronym"].startswith("ZZ") or not target["name"].startswith("ZZ"):
-        raise ToolError(f'Refusing to install into {target["acronym"]} ({target["name"]}): only apps named "ZZ ..." with a ZZ acronym')
     require_new_snapshot(target["acronym"], target["snapshot"])
     result = ops().install(path)
     state = str(result.get("state", result.get("status", ""))).lower()
@@ -347,14 +345,12 @@ def run_browser(args: list, out: Path) -> dict:
 
 @mcp.tool()
 def test_process(acronym: str, process: str, snapshot: str | None = None, press: list[str] | None = None, max_tasks: int = 8) -> dict:
-    """Run a workflow (process) of a "ZZ" app end to end: start an instance, then open each task as it
+    """Run a workflow (process) of an app end to end: start an instance, then open each task as it
     arrives in a real browser, fill empty fields, press the forward button and screenshot every screen.
     press: button labels to press instead, in order, each on the first screen that shows it, e.g.
     ["Send Back"] sends the work back once before it is approved. Reports every task and the final state."""
     if not configured():
         raise offline()
-    if not acronym.startswith("ZZ"):
-        raise ToolError(f"Refusing to start a process in {acronym}: only ZZ demo apps")
     found = [p for p in ops().processes(acronym, snapshot) if p["display"] == process]
     if not found:
         raise ToolError(f"No startable process {process!r} in {acronym} {snapshot or '(tip)'}; "

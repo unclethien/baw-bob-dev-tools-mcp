@@ -235,7 +235,7 @@ Agree the exact rules with the client before the session; the request above uses
 
 | Safety rule | Why it matters |
 |---|---|
-| Bob can only install test apps, whose names start with "ZZ" | It can never touch a real app |
+| Bob asks before changing an app it did not build | Your existing apps stay as they are unless you say yes |
 | Every install is a new version | Nothing is overwritten; you can always go back |
 | Bob cannot delete anything | No tool for it exists |
 | The password stays in the connector | Bob never sees it |

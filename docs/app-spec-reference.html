@@ -380,8 +380,8 @@ h3[id]{scroll-margin-top:var(--s06)}
     <table>
       <thead><tr><th scope="col">Key</th><th scope="col">Rule</th><th scope="col">Example</th></tr></thead>
       <tbody>
-        <tr><td class="mono">app.name</td><td>Required. Must start with <code>ZZ</code> to be installed by the tools</td><td class="mono">ZZ Leave Request</td></tr>
-        <tr><td class="mono">app.acronym</td><td>Required. 2 to 8 upper-case letters or digits, starting with a letter. Must start with <code>ZZ</code> to be installed, and must not be used by another app on the server</td><td class="mono">ZZLEAVE</td></tr>
+        <tr><td class="mono">app.name</td><td>Required. What users see in Workflow Center and the Process Portal</td><td class="mono">ZZ Leave Request</td></tr>
+        <tr><td class="mono">app.acronym</td><td>Required. 2 to 8 upper-case letters or digits, starting with a letter. Must not be used by another app on the server</td><td class="mono">ZZLEAVE</td></tr>
         <tr><td class="mono">app.snapshot</td><td>Optional, default <code>1.0.0</code>. Must be new for every build of the same app</td><td class="mono">1.0.0</td></tr>
         <tr><td class="mono">businessObject.name</td><td>Required. A JavaScript identifier: letters, digits and <code>_</code>, not starting with a digit</td><td class="mono">LeaveRequest</td></tr>
         <tr><td class="mono">businessObject.variable</td><td>Required. An identifier; the service stores the answers in <code>tw.local.&lt;variable&gt;</code></td><td class="mono">leave</td></tr>
@@ -393,8 +393,6 @@ h3[id]{scroll-margin-top:var(--s06)}
 
   <h3>Naming rules that protect the server</h3>
   <ul>
-    <li><strong>ZZ only.</strong> <code>install_app</code> refuses any app whose name does not start with "ZZ" or whose
-    acronym does not start with <code>ZZ</code>. The generator itself accepts other names, so the check happens at install.</li>
     <li><strong>New acronym for a new app.</strong> Run <code>list_apps</code> (or <code>python3 server/baw_ops.py list</code>) first.
     If the acronym belongs to another app, the install fails.</li>
     <li><strong>New snapshot name for every change.</strong> BAW silently keeps the old content when a snapshot name
@@ -762,7 +760,6 @@ Invalid app spec:
         <tr><td class="mono">process.name is required</td><td>Give the workflow a name: <code>"process": { "name": "Quote Workflow" }</code></td></tr>
         <tr><td class="mono">process.approval must be an object</td><td>Use <code>{}</code> for the default approval task, or an object with your names and labels</td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>From <code>create_app</code> or <code>install_app</code>: bump <code>app.snapshot</code></td></tr>
-        <tr><td class="mono">Refusing to install into</td><td>From <code>install_app</code>: the name and acronym must both start with ZZ</td></tr>
       </tbody>
     </table>
   </div>
@@ -800,7 +797,7 @@ Invalid app spec:
       </tbody>
     </table>
   </div>
-  <p>Each example uses a ZZ acronym that may already be on your server. Change <code>app.name</code> and
+  <p>Each example uses an acronym that may already be on your server. Change <code>app.name</code> and
   <code>app.acronym</code> in your copy before you build it.</p>
 </section>
 

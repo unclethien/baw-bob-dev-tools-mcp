@@ -280,8 +280,8 @@ footer p{max-width:76ch;margin-bottom:6px}
 
 <section id="used">
   <h2>Endpoints used</h2>
-  <p>Twelve endpoints in total. All of them read data except install and starting a workflow, which the server
-  only allows for apps whose acronym starts with <code>ZZ</code> (install also checks the app name).</p>
+  <p>Twelve endpoints in total. All of them read data except install, which always adds a new snapshot, and
+  starting a workflow.</p>
 
   <div class="tablewrap" role="region" tabindex="0" aria-label="Endpoints used by the MCP server, scrollable">
     <table>
@@ -483,9 +483,7 @@ browser (test_service)            cookie ibm-private-cloud-session=&lt;token&gt;
     <table>
       <thead><tr><th scope="col">Guard</th><th scope="col">API basis</th></tr></thead>
       <tbody>
-        <tr><td>Install only <code>ZZ</code> apps (name and acronym)</td><td>Target read from <span class="mono">META-INF/package.xml</span> inside the <span class="mono">.twx</span> before <span class="mono">containers/install</span> is called.</td></tr>
-        <tr><td>Refuse a snapshot name that already exists</td><td>Checked against <span class="mono">versions</span> (both <span class="mono">version</span> and <span class="mono">version_name</span>) before build and install, because BAW would keep the old content.</td></tr>
-        <tr><td>Start workflows only in <code>ZZ</code> apps</td><td><code>test_process</code> refuses any other acronym before calling <span class="mono">process?action=start</span>.</td></tr>
+        <tr><td>Refuse a snapshot name that already exists</td><td>The target is read from <span class="mono">META-INF/package.xml</span> inside the <span class="mono">.twx</span>, then checked against <span class="mono">versions</span> (both <span class="mono">version</span> and <span class="mono">version_name</span>) before build and install, because BAW would keep the old content.</td></tr>
         <tr><td>No delete tool</td><td>The documented <span class="mono">DELETE</span> container and version routes are never called.</td></tr>
         <tr><td>Paths limited to the project</td><td>Exports and installs read and write only inside the repository.</td></tr>
       </tbody>

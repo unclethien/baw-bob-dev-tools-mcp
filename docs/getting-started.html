@@ -286,7 +286,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <div class="note warn">
     <div class="body">
       <strong>Use a test server</strong>
-      <p>The tools install apps. They only install apps named "ZZ &hellip;" and never delete anything, but use a
+      <p>The tools install apps. Every install is a new snapshot and they never delete anything, but use a
       test or demo server, never production.</p>
     </div>
   </div>
@@ -432,7 +432,7 @@ item, quantity and needed-by date, then a review screen. Navy header, white text
 rounded buttons, "Office Supplies" as the product name. Install it and test it.</code></pre>
   <p>What Bob does, and where you come in:</p>
   <ol>
-    <li>Reads the server (<code>list_apps</code>) to pick a ZZ acronym nobody uses.</li>
+    <li>Reads the server (<code>list_apps</code>) to pick an acronym nobody uses.</li>
     <li>Writes the look you described to a theme file, <code>work/&lt;name&gt;.theme.json</code>. Without a look in
     your message, Bob asks you to describe one first: colours, font, corners, product name, logo.</li>
     <li>Writes the app spec to <code>work/&lt;ACRONYM&gt;.app.json</code>. You can open it; the
@@ -479,7 +479,7 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
 
   <h3 id="rules">The rules the tools follow</h3>
   <ul>
-    <li>Only apps whose name starts with "ZZ" and whose acronym starts with <code>ZZ</code> can be installed.</li>
+    <li>Bob installs into an app it did not create in the same task only after you approve. This is a rule of the Bob modes; the tools do not check it.</li>
     <li>A snapshot name can be used once per app; reusing it is refused, because BAW would silently keep the old content.</li>
     <li>There is no delete tool. To remove a test app, ask a BAW admin to archive it.</li>
     <li>Tools only read and write files inside this folder. Bob edits only <code>work/</code>, <code>app-specs/</code>
@@ -516,7 +516,7 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
 
   <h3 id="no-agent">Build an app without an agent</h3>
   <p>For a <strong>new</strong> app you can run the same build from the terminal. Copy an example, change its
-  <code>app.name</code> and <code>app.acronym</code> to an unused ZZ name, then:</p>
+  <code>app.name</code> and <code>app.acronym</code> to an unused name and acronym, then:</p>
 <pre><code>cp app-specs/example-equipment-request.json work/ZZOFFICE.app.json
 # edit work/ZZOFFICE.app.json: "name": "ZZ Office Request", "acronym": "ZZOFFICE"
 python3 server/generate_app.py work/ZZOFFICE.app.json work/ZZOFFICE-1.0.0.twx
@@ -525,7 +525,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
   <div class="note warn">
     <div class="body">
       <strong>The scripts skip the guard rails</strong>
-      <p><code>baw_ops.py install</code> does not check the ZZ name or the snapshot name; only the MCP tools do. And
+      <p><code>baw_ops.py install</code> does not check the snapshot name; only the MCP tools do. And
       for a new snapshot of an app that already exists, pass an export of that app as <code>--base</code>, so the build
       reuses its identity; <code>create_app</code> does this for you. To install by hand with <code>curl</code>, follow the
       <a href="baw-import-export-terminal-guide.html">terminal guide</a>, which includes those checks.</p>
@@ -547,7 +547,6 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
         <tr><td class="mono">Cannot reach BAW_URL</td><td>Wrong host, or no VPN</td><td>Fix <code>BAW_URL</code>; check with step 6</td></tr>
         <tr><td class="mono">Invalid app spec</td><td>The spec breaks a rule</td><td>Each line names the problem; see <a href="app-spec-reference.html#errors">validation errors</a></td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>The snapshot name is used</td><td>Bump <code>app.snapshot</code></td></tr>
-        <tr><td class="mono">Refusing to install into &hellip;</td><td>Name or acronym is not ZZ</td><td>Rename the app in the spec</td></tr>
         <tr><td>Install ends in <code>failure</code></td><td>Often an acronym already used by another app</td><td>Pick another acronym; read <code>details</code> in the result</td></tr>
         <tr><td class="mono">No BAW server is configured</td><td><code>.env</code> is missing a setting</td><td>Fix step 4, or <a href="#no-server">import the app yourself</a></td></tr>
         <tr><td><code>test_service</code> cannot start a browser</td><td>No Chrome, Brave or Helium in the usual place</td><td>Install one, or set <a href="#browser"><code>BROWSER_PATH</code></a></td></tr>
