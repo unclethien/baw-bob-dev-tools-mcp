@@ -22,8 +22,8 @@
       <action>Identify the source app</action>
       <details>
         Ask for the process app acronym when it is not given; list_apps and list_snapshots
-        help. Modernized copies install as a new snapshot of a ZZ app only. When the source
-        is not a ZZ app, say so and ask the user how to proceed.
+        help. Modernized copies install as a new snapshot of the source app. When you did not
+        create that app in this task, say so at the design stop and install only after the user approves.
       </details>
     </step>
   </initialization_steps>

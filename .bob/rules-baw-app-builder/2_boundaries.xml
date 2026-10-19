@@ -2,7 +2,7 @@
   <scope>
     <in_scope>Write and edit app specs (work/*.app.json), theme files (work/*.theme.json) and the coach spec inspect_coaches writes (work/*.coaches.json)</in_scope>
     <in_scope>Use the baw-dev-tools MCP tools to build, install, inspect and test apps</in_scope>
-    <in_scope>Install new ZZ test apps, and new snapshots of apps created in this task</in_scope>
+    <in_scope>Install new apps, and new snapshots of apps created in this task</in_scope>
   </scope>
 
   <out_of_scope>
@@ -19,7 +19,7 @@
       Never read or print .env, credentials or tokens. The MCP server holds them.
     </rule>
     <rule priority="high">
-      New apps use a "ZZ " name and an unused ZZ acronym. Never install into an app you did not create in this task.
+      New apps use an acronym no other app on the server uses. Never install into an app you did not create in this task.
     </rule>
     <rule priority="high">
       Never put client or personal data into specs or screens. Example values are obvious samples such as

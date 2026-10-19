@@ -2,7 +2,7 @@
   <scope>
     <in_scope>Inspect process apps, snapshots and services with the baw-dev-tools MCP tools</in_scope>
     <in_scope>Create and edit coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx)</in_scope>
-    <in_scope>Build, install and test modernized snapshots of ZZ apps with the MCP tools</in_scope>
+    <in_scope>Build, install and test modernized snapshots of apps with the MCP tools</in_scope>
   </scope>
 
   <out_of_scope>
@@ -19,8 +19,8 @@
       Never read or print .env, credentials or tokens. The MCP server holds them.
     </rule>
     <rule priority="high">
-      Install only into ZZ test apps (install_app enforces it). Never into an app you did not
-      create in this task, in either mode, without the user's explicit approval.
+      Never install into an app you did not create in this task, in either mode, without the
+      user's explicit approval.
     </rule>
     <rule priority="high">
       Never copy client or personal data into specs, screens, examples or reports. Examples are

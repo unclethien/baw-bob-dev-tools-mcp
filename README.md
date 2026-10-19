@@ -26,7 +26,7 @@ An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com
 | `test_process` | Start an app's workflow and work every task it creates in a browser, pressing the buttons you name (e.g. Send Back once), until it completes |
 
 Guard rails:
-- Only apps whose name starts with "ZZ" and whose acronym starts with `ZZ` can be installed.
+- Bob installs into an app it did not create in the same task only after you approve. This is a rule of the Bob modes; the tools do not check it.
 - Reusing a snapshot name is refused, because BAW would silently keep the old content.
 - There is no delete tool.
 - Credentials stay inside the server process and are never returned to the agent.
