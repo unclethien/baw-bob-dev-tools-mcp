@@ -117,6 +117,16 @@
 
 .pp-app .pp--inline-notification { max-width: none; margin: 0 0 1rem; }
 
+// A widget is one control in a native BAW layout: it fills its cell and adds no page background or padding.
+.pp-app.pp-widget {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+
+  .pp-actions { margin-top: 0; }
+}
+
 .pp-actions {
   display: flex;
   justify-content: var(--pp-theme-align, flex-end);
