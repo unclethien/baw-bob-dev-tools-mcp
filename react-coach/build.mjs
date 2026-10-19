@@ -15,8 +15,12 @@ mkdirSync('bundle', { recursive: true });
 const screens = existsSync('src/screens') ? readdirSync('src/screens').filter((f) => f.endsWith('.jsx')).sort() : [];
 // Widgets of the Modernizer Widgets toolkit live in src/widgets/*.jsx and register with registerWidget(kind, Component).
 const widgetFiles = existsSync('src/widgets') ? readdirSync('src/widgets').filter((f) => f.endsWith('.jsx')).sort() : [];
-const entry = ["export { mount, mountWidget } from './runtime.jsx';", "import './form-screen.jsx';",
-  ...widgetFiles.map((f) => `import './widgets/${f}';`), ...screens.map((f) => `import './screens/${f}';`)].join('\n');
+const widgets = widgetFiles.map((f) => `import './widgets/${f}';`);
+const entry = ["export { mount, mountWidget } from './runtime.jsx';", "import './form-screen.jsx';", ...widgets,
+  ...screens.map((f) => `import './screens/${f}';`)].join('\n');
+// The Modernizer Widgets toolkit ships its own bundle with the widgets only: screens written for one app's
+// coaches never go into a toolkit that every app shares.
+const toolkitEntry = ["export { mount, mountWidget } from './runtime.jsx';", ...widgets].join('\n');
 
 // Carbon sizes everything in rem for a 16px root, but BAW's bpmUI.css sets the coach page's
 // root to 62.5% (10px), which shrinks the screen to 62.5%. Fixed pixels keep Carbon's sizes.
@@ -24,9 +28,10 @@ const entry = ["export { mount, mountWidget } from './runtime.jsx';", "import '.
 const toPx = (css) => css.replace(/(?<![\w.-])(-?\d*\.?\d+)rem(?![\w-])/g, (_, n) => `${+(n * 16).toFixed(3)}px`);
 const css = toPx(compile('src/styles.scss', { loadPaths: ['node_modules'], style: 'compressed', quietDeps: true }).css);
 writeFileSync('bundle/pp-react.css', css);
+writeFileSync('bundle/mdw.css', css);
 
-await build({
-  stdin: { contents: entry, resolveDir: 'src', loader: 'jsx', sourcefile: 'index.jsx' },
+const bundle = (contents, outfile) => build({
+  stdin: { contents, resolveDir: 'src', loader: 'jsx', sourcefile: 'index.jsx' },
   bundle: true,
   format: 'iife',
   globalName: 'PPReact',
@@ -41,6 +46,9 @@ await build({
   }],
   banner: { js: '(function(define){' },
   footer: { js: 'window.PPReact=PPReact;})();' },
-  outfile: 'bundle/pp-react.js',
+  outfile,
   logLevel: 'info',
-}).catch(() => process.exit(1)); // esbuild has already printed the errors
+});
+
+await Promise.all([bundle(entry, 'bundle/pp-react.js'), bundle(toolkitEntry, 'bundle/mdw.js')])
+  .catch(() => process.exit(1)); // esbuild has already printed the errors

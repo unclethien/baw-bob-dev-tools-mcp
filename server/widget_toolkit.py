@@ -36,19 +36,37 @@ TOOLKITS = {
                    "projectId": "2066.bd5e169d-837c-4cc4-9754-348c6d267872", "branchId": "2063.c491e35e-3dcc-43da-8fd0-5c8af6a6970e"},
 }
 
-# kind: (view name, binding type or None, [(option, label)], emits a boundary event, preview sample value)
+# view: the name in the palette; binding: the bound type, or None; options: (option, label); boundary: fires the
+# view's boundary event; sample: the preview's value; tags: the palette categories, like the UI Toolkit's own views.
 WIDGETS = {
     "modernizer": {
-        "text": ("Text Field", "String", [("example", "Example"), ("pattern", "Pattern"), ("message", "Error message")], False, "Sample text"),
-        "button": ("Button", None, [("kind", "Kind (primary or secondary)"), ("validate", "Validate before firing")], True, None),
+        "text": {"view": "Text Field", "binding": "String", "options": [("example", "Example"), ("pattern", "Pattern"), ("message", "Error message")],
+                 "boundary": False, "sample": "Sample text", "tags": ["Basic", "Input"]},
+        "button": {"view": "Button", "binding": None, "options": [("kind", "Kind (primary or secondary)"), ("validate", "Validate before firing")],
+                   "boundary": True, "sample": None, "tags": ["Basic", "Input"]},
     },
 }
 
-BUNDLE_FILES = [("pp-react.js", "application/javascript"), ("pp-react.css", "text/css")]
+BUNDLE_FILES = [("mdw.js", "application/javascript"), ("mdw.css", "text/css")]
 
 
 def uid():
     return str(uuid.uuid4())
+
+
+def stable_ids(toolkit, name):
+    """IDs that stay the same in every build of a toolkit, so apps keep finding its views across snapshots:
+    the n-th call for the same toolkit and name always returns the same UUID."""
+    space = uuid.UUID(TOOLKITS[toolkit]["projectId"].split(".", 1)[1])
+    count = iter(range(1_000_000))
+    return lambda: str(uuid.uuid5(space, f"{name}/{next(count)}"))
+
+
+def metadata_xml(tags):
+    """META-INF/metadata.xml: the palette categories of each view. tags: {view id: [tag]}."""
+    objects = "".join(f'\n    <object id="{oid}">\n        <tags>' + "".join(f"\n            <tag>{escape(t)}</tag>" for t in names)
+                      + "\n        </tags>\n    </object>" for oid, names in tags.items())
+    return f'<?xml version="1.0" encoding="UTF-8"?>\n<metadata>{objects}\n</metadata>\n'
 
 
 def load_js(kind, options):
@@ -79,32 +97,39 @@ UNLOAD_JS = "if (this._ppWidget) this._ppWidget.unmount();"
 PREVIEW_HTML = '<div class="pp-preview"></div>\n'
 
 
-def preview_js(kind, acronym, sample):
+def preview_js(kind, acronym, sample, options):
     """Coach Designer preview: loads the toolkit's own bundle into Designer and mounts the real widget."""
     return f"""var mixObject = {{
   createPreview: function (containingDiv, labelText, callback) {{
     var self = this, doc = containingDiv.ownerDocument, win = doc.defaultView;
+    function initial(name) {{
+      try {{
+        var o = self.context.options && self.context.options[name];
+        return o && o.get ? o.get("value") : undefined;
+      }} catch (e) {{ return undefined; }}
+    }}
     this._ppState = {{ label: labelText, options: {{}} }};
+    {json.dumps([o for o, _ in options])}.forEach(function (name) {{ self._ppState.options[name] = initial(name); }});
     function url(name) {{ return self.context.getManagedAssetUrl(name, self.context.assetType_WEB, {json.dumps(acronym)}); }}
     function mount() {{
       try {{
         self._ppWidget = win.PPReact.mountWidget(containingDiv, {json.dumps(kind)}, {{
           read: function () {{ return {{ label: self._ppState.label, helpText: "", visibility: "EDITABLE", options: self._ppState.options, preview: true }}; }},
-          binding: {{ get: function () {{ return {json.dumps(sample)}; }}, set: function () {{}} }},
+          binding: {{ get: function () {{ return self._ppState.options.example ? "" : {json.dumps(sample)}; }}, set: function () {{}} }},
           trigger: function () {{}}
         }});
       }} finally {{ callback(); }}
     }}
-    if (!doc.getElementById("pp-react-css")) {{
+    if (!doc.getElementById("mdw-css")) {{
       var link = doc.createElement("link");
-      link.id = "pp-react-css"; link.rel = "stylesheet"; link.href = url("pp-react.css");
+      link.id = "mdw-css"; link.rel = "stylesheet"; link.href = url("mdw.css");
       doc.head.appendChild(link);
     }}
     if (win.PPReact && win.PPReact.mountWidget) return mount();
-    var script = doc.getElementById("pp-react-js");
+    var script = doc.getElementById("mdw-js");
     if (!script) {{
       script = doc.createElement("script");
-      script.id = "pp-react-js"; script.src = url("pp-react.js");
+      script.id = "mdw-js"; script.src = url("mdw.js");
       doc.head.appendChild(script);
     }}
     script.addEventListener("load", mount);
@@ -122,9 +147,9 @@ def preview_js(kind, acronym, sample):
 """
 
 
-def managed_file(name, mime, data, files, objects, file_entries):
-    asset_id, asset_uuid, version = "61." + uid(), uid(), uid()
-    files[f"objects/{asset_id}.xml"] = managed_asset_xml(asset_id, version, name, asset_uuid, mime, len(data))
+def managed_file(name, mime, data, files, objects, file_entries, new_id):
+    asset_id, asset_uuid, version = "61." + new_id(), new_id(), uid()
+    files[f"objects/{asset_id}.xml"] = managed_asset_xml(asset_id, version, name, asset_uuid, mime, len(data), guid=new_id())
     files[f"files/{asset_id}/{asset_uuid}"] = data
     objects.append((asset_id, version, name, "managedAsset"))
     file_entries.append((asset_uuid, asset_id))
@@ -132,38 +157,43 @@ def managed_file(name, mime, data, files, objects, file_entries):
 
 
 def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author="widget_toolkit"):
-    """Write the toolkit .twx. Returns the names of its widgets."""
+    """Write the toolkit .twx. Returns the names of its widgets. Object IDs are the same in every build;
+    versionIds and the snapshot ID are new, so BAW installs the new content as a new snapshot."""
     tk = TOOLKITS[toolkit]
     base = app_template.builtin()
-    files, objects, file_entries = {}, [], []
-    assets = [managed_file(name, mime, (bundle / name).read_bytes(), files, objects, file_entries) for name, mime in BUNDLE_FILES]
-    preview_html = managed_file("mdw-preview.html", "text/html", PREVIEW_HTML.encode(), files, objects, file_entries)
+    files, objects, file_entries, tags = {}, [], [], {}
+    asset = lambda name, mime, data: managed_file(name, mime, data, files, objects, file_entries, stable_ids(toolkit, f"file/{name}"))  # noqa: E731
+    assets = [asset(name, mime, (bundle / name).read_bytes()) for name, mime in BUNDLE_FILES]
+    preview_html = asset("mdw-preview.html", "text/html", PREVIEW_HTML.encode())
     string_ref = f"{TWSYS}/{SYSTEM_TYPES['String']}"
-    for kind, (name, binding, options, boundary, sample) in WIDGETS[toolkit].items():
+    for kind, w in WIDGETS[toolkit].items():
         icon_path = ICONS / f"{kind}.svg"
-        icon = managed_file(f"{kind}.svg", "image/svg+xml", icon_path.read_bytes(), files, objects, file_entries) if icon_path.exists() else None
-        preview = managed_file(f"{kind}-preview.js", "application/javascript", preview_js(kind, tk["acronym"], sample).encode(), files, objects, file_entries)
-        view_id, version = "64." + uid(), uid()
+        icon = asset(f"{kind}.svg", "image/svg+xml", icon_path.read_bytes()) if icon_path.exists() else None
+        preview = asset(f"{kind}-preview.js", "application/javascript", preview_js(kind, tk["acronym"], w["sample"], w["options"]).encode())
+        new_id = stable_ids(toolkit, f"view/{kind}")
+        view_id, version = "64." + new_id(), uid()
         files[f"objects/{view_id}.xml"] = view_xml(
-            view_id, version, escape(name), binding_ref=f"{TWSYS}/{SYSTEM_TYPES[binding]}" if binding else None,
-            options=[(o, label, string_ref) for o, label in options], asset_ids=assets,
-            load=load_js(kind, options), change=CHANGE_JS, unload=UNLOAD_JS, description=f"{tk['name']}: {name}",
-            palette_icon=icon, preview_html=preview_html, preview_js=preview, has_label=True, emit_boundary=boundary)
-        objects.append((view_id, version, name, "coachView"))
-    defaults = ("63." + uid(), uid())
+            view_id, version, escape(w["view"]), binding_ref=f"{TWSYS}/{SYSTEM_TYPES[w['binding']]}" if w["binding"] else None,
+            options=[(o, label, string_ref) for o, label in w["options"]], asset_ids=assets,
+            load=load_js(kind, w["options"]), change=CHANGE_JS, unload=UNLOAD_JS, description=f"{tk['name']}: {w['view']}",
+            palette_icon=icon, preview_html=preview_html, preview_js=preview, has_label=True, emit_boundary=w["boundary"], new_id=new_id)
+        objects.append((view_id, version, w["view"], "coachView"))
+        tags[view_id] = w["tags"] + [tk["name"]]
+    settings_id = stable_ids(toolkit, "settings")
+    defaults = ("63." + settings_id(), uid())
     files[f"objects/{defaults[0]}.xml"] = app_template.PROJECT_DEFAULTS.format(
-        id=defaults[0], version=defaults[1], guid=uid(), author=author, theme=app_template.DEFAULT_THEME, environment=base["environment"]
+        id=defaults[0], version=defaults[1], guid=settings_id(), author=author, theme=app_template.DEFAULT_THEME, environment=base["environment"]
     ).replace('name="Process App Settings"', 'name="Toolkit Settings"')
     objects.insert(0, (*defaults, "Toolkit Settings", "projectDefaults"))
     ids = {"projectId": tk["projectId"], "branchId": tk["branchId"], "branchName": "Main", "snapshotId": "2064." + uid()}
     app = {"name": tk["name"], "acronym": tk["acronym"], "snapshot": snapshot}
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
-        for name, text in app_template.META_INF.items():
+        for name, text in {**app_template.META_INF, "META-INF/metadata.xml": metadata_xml(tags)}.items():
             out.writestr(name, text)
         out.writestr("META-INF/package.xml", app_template.package_xml(base, app, ids, objects, toolkit=True, files=file_entries))
         for name, data in files.items():
             out.writestr(name, data)
-    return [w[0] for w in WIDGETS[toolkit].values()]
+    return [w["view"] for w in WIDGETS[toolkit].values()]
 
 
 def toolkit_dependency(toolkit_twx: Path, rank):
@@ -227,7 +257,7 @@ def use_widgets(app_twx: Path, toolkit_twx: Path, dest: Path, swaps, snapshot=No
                 if not m:
                     continue
                 close = m.end() + re.search(r"</\w+:layout>", text[m.end():]).start()
-                view_ref = dep["views"][WIDGETS[toolkit][kind][0]]
+                view_ref = dep["views"][WIDGETS[toolkit][kind]["view"]]
                 text = text[:m.end()] + swap_view(text[m.end():close], item_id, view_ref, options) + text[close:]
                 changed[name] = text
                 swapped.add((coach, item_id))

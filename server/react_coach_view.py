@@ -67,33 +67,35 @@ def uid():
     return str(uuid.uuid4())
 
 
-def managed_asset_xml(asset_id, version, name, asset_uuid, mime, length):
+def managed_asset_xml(asset_id, version, name, asset_uuid, mime, length, guid=None):
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <teamworks><managedAsset id="{asset_id}" name="{name}"><lastModified>0</lastModified><lastModifiedBy>react_coach_view</lastModifiedBy><tenantId isNull="true" />
 <managedAssetId>{asset_id}</managedAssetId><assetUuid>{asset_uuid}</assetUuid><mimeType>{mime}</mimeType><charEncoding isNull="true" />
 <assetTypeCode>W</assetTypeCode><length>{length}</length><localLastModification>0</localLastModification><description isNull="true" />
-<isDocumentationFile>false</isDocumentationFile><guid>{uid()}</guid><versionId>{version}</versionId></managedAsset></teamworks>
+<isDocumentationFile>false</isDocumentationFile><guid>{guid or uid()}</guid><versionId>{version}</versionId></managedAsset></teamworks>
 """
 
 
 def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=(), load="", change="", unload="",
-             description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True):
+             description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True, new_id=None):
     """Coach View object XML. options: (name, label, class ref) config options, all single values.
-    palette_icon, preview_html and preview_js are managed file IDs (61.*) for Coach Designer."""
+    palette_icon, preview_html and preview_js are managed file IDs (61.*) for Coach Designer.
+    new_id makes the IDs and guids inside the view (a toolkit keeps them across builds); versionIds are always new."""
+    new_id = new_id or uid
     def config_option(opt, label, class_ref, seq):
-        return (f'<configOption name="{opt}">{BOOKKEEPING}<coachViewConfigOptionId>66.{uid()}</coachViewConfigOptionId><coachViewId>{view_id}</coachViewId>'
+        return (f'<configOption name="{opt}">{BOOKKEEPING}<coachViewConfigOptionId>66.{new_id()}</coachViewConfigOptionId><coachViewId>{view_id}</coachViewId>'
                 f"<isList>false</isList><propertyType>OBJECT</propertyType><label>{escape(label)}</label><classId>{class_ref}</classId>"
                 f'<processId isNull="true" /><actionflowId isNull="true" /><isAdaptive>false</isAdaptive><seq>{seq}</seq><description isNull="true" />'
-                f'<groupName isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></configOption>')
+                f'<groupName isNull="true" /><guid>{new_id()}</guid><versionId>{uid()}</versionId></configOption>')
 
     def inline_script(script, kind, seq):
-        return (f'<inlineScript name="{script}">{BOOKKEEPING}<coachViewInlineScriptId>68.{uid()}</coachViewInlineScriptId><coachViewId>{view_id}</coachViewId>'
-                f'<scriptType>{kind}</scriptType><scriptBlock isNull="true" /><seq>{seq}</seq><description isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></inlineScript>')
+        return (f'<inlineScript name="{script}">{BOOKKEEPING}<coachViewInlineScriptId>68.{new_id()}</coachViewInlineScriptId><coachViewId>{view_id}</coachViewId>'
+                f'<scriptType>{kind}</scriptType><scriptBlock isNull="true" /><seq>{seq}</seq><description isNull="true" /><guid>{new_id()}</guid><versionId>{uid()}</versionId></inlineScript>')
 
     def resource(asset_id, seq):
-        return (f"<resource>{BOOKKEEPING}<coachViewResourceId>67.{uid()}</coachViewResourceId><coachViewId>{view_id}</coachViewId>"
+        return (f"<resource>{BOOKKEEPING}<coachViewResourceId>67.{new_id()}</coachViewResourceId><coachViewId>{view_id}</coachViewId>"
                 f'<filePath isNull="true" /><ieCondition isNull="true" /><mediaQuery isNull="true" /><scriptLoadStyle isNull="true" />'
-                f"<assetUuid>/{asset_id}</assetUuid><seq>{seq}</seq><guid>{uid()}</guid><versionId>{uid()}</versionId></resource>")
+                f"<assetUuid>/{asset_id}</assetUuid><seq>{seq}</seq><guid>{new_id()}</guid><versionId>{uid()}</versionId></resource>")
 
     def asset(tag, asset_id):
         return f"<{tag}>/{asset_id}</{tag}>" if asset_id else f'<{tag} isNull="true" />'
@@ -101,8 +103,8 @@ def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=
     def script(tag, js):
         return f"<{tag}>{escape(js)}</{tag}>" if js else f'<{tag} isNull="true" />'
 
-    binding = (f'<bindingType name="data">{BOOKKEEPING}<coachViewBindingTypeId>65.{uid()}</coachViewBindingTypeId><coachViewId>{view_id}</coachViewId><isList>false</isList>\n'
-               f'<classId>{binding_ref}</classId><seq>0</seq><description isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></bindingType>') if binding_ref else ""
+    binding = (f'<bindingType name="data">{BOOKKEEPING}<coachViewBindingTypeId>65.{new_id()}</coachViewBindingTypeId><coachViewId>{view_id}</coachViewId><isList>false</isList>\n'
+               f'<classId>{binding_ref}</classId><seq>0</seq><description isNull="true" /><guid>{new_id()}</guid><versionId>{uid()}</versionId></bindingType>') if binding_ref else ""
     empty_layout = escape('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ns2:layout xmlns:ns2="http://www.ibm.com/bpm/CoachDesignerNG" xmlns:ns3="http://www.ibm.com/bpm/coachview"/>')
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <teamworks><coachView id="{view_id}" name="{name}"><lastModified>0</lastModified><lastModifiedBy>react_coach_view</lastModifiedBy><tenantId isNull="true" />
@@ -113,7 +115,7 @@ def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=
 {script("changeJsFunction", change)}<collaborationJsFunction isNull="true" />
 <description>{escape(description)}</description>
 <validateJsFunction isNull="true" />{asset("previewAdvHtml", preview_html)}{asset("previewAdvJs", preview_js)}<useUrlBinding>false</useUrlBinding>
-<guid>{uid()}</guid><versionId>{version}</versionId><field1 isNull="true" /><field2 isNull="true" /><field3>0</field3><field4 isNull="true" /><field5>false</field5><clobField1 isNull="true" />
+<guid>{new_id()}</guid><versionId>{version}</versionId><field1 isNull="true" /><field2 isNull="true" /><field3>0</field3><field4 isNull="true" /><field5>false</field5><clobField1 isNull="true" />
 {binding}
 {"".join(config_option(o, label, ref, i) for i, (o, label, ref) in enumerate(options))}
 {"".join(resource(a, i) for i, a in enumerate(asset_ids))}
