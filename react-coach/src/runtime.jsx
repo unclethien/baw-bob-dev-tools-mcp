@@ -10,9 +10,15 @@ import { useSyncExternalStore } from 'react';
 import './styles.scss';
 
 const screens = {};
+const widgets = {};
 
 export function registerScreen(name, component) {
   screens[name] = component;
+}
+
+// A widget is one Coach View of the Modernizer Widgets toolkit, bound to a single value.
+export function registerWidget(kind, component) {
+  widgets[kind] = component;
 }
 
 function createStore(ctx) {
@@ -80,6 +86,39 @@ function Host({ screen: Screen, store, ctx }) {
       </div>
     </ClassPrefix>
   );
+}
+
+function WidgetHost({ widget: Widget, store, ctx }) {
+  useSyncExternalStore(store.subscribe, store.snapshot);
+  const props = ctx.read();
+  if (props.visibility === 'HIDDEN' || props.visibility === 'NONE') return null;
+  const binding = { value: ctx.binding.get(), set: (value) => { ctx.binding.set(value); store.notify(); } };
+  return (
+    <ClassPrefix prefix="pp">
+      <div className="pp-app pp-widget" style={themeStyle(props.theme)}>
+        <Widget {...props} binding={binding} trigger={ctx.trigger} />
+      </div>
+    </ClassPrefix>
+  );
+}
+
+// ctx: read() -> { label, helpText, visibility, options, preview, theme }, binding { get, set }, trigger().
+// The Coach View (or the Coach Designer preview) owns the context, so this stays free of BAW APIs.
+export function mountWidget(element, kind, ctx) {
+  const Widget = widgets[kind];
+  if (!Widget) throw new Error(`PPReact: no widget named "${kind}"`);
+  const container = document.createElement('div');
+  element.appendChild(container);
+  const store = createStore(ctx);
+  const root = createRoot(container);
+  root.render(<WidgetHost widget={Widget} store={store} ctx={ctx} />);
+  return {
+    update: () => store.notify(),
+    unmount() {
+      root.unmount();
+      container.remove();
+    },
+  };
 }
 
 export function mount(element, name, ctx) {

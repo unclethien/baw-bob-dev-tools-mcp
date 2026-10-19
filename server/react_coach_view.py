@@ -76,15 +76,18 @@ def managed_asset_xml(asset_id, version, name, asset_uuid, mime, length):
 """
 
 
-def coach_view_xml(view_id, version, bo_ref, string_type_ref, asset_ids, name=VIEW_NAME):
-    def config_option(name, label, seq):
-        return (f'<configOption name="{name}">{BOOKKEEPING}<coachViewConfigOptionId>66.{uid()}</coachViewConfigOptionId><coachViewId>{view_id}</coachViewId>'
-                f"<isList>false</isList><propertyType>OBJECT</propertyType><label>{label}</label><classId>{string_type_ref}</classId>"
+def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=(), load="", change="", unload="",
+             description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True):
+    """Coach View object XML. options: (name, label, class ref) config options, all single values.
+    palette_icon, preview_html and preview_js are managed file IDs (61.*) for Coach Designer."""
+    def config_option(opt, label, class_ref, seq):
+        return (f'<configOption name="{opt}">{BOOKKEEPING}<coachViewConfigOptionId>66.{uid()}</coachViewConfigOptionId><coachViewId>{view_id}</coachViewId>'
+                f"<isList>false</isList><propertyType>OBJECT</propertyType><label>{escape(label)}</label><classId>{class_ref}</classId>"
                 f'<processId isNull="true" /><actionflowId isNull="true" /><isAdaptive>false</isAdaptive><seq>{seq}</seq><description isNull="true" />'
                 f'<groupName isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></configOption>')
 
-    def inline_script(name, kind, seq):
-        return (f'<inlineScript name="{name}">{BOOKKEEPING}<coachViewInlineScriptId>68.{uid()}</coachViewInlineScriptId><coachViewId>{view_id}</coachViewId>'
+    def inline_script(script, kind, seq):
+        return (f'<inlineScript name="{script}">{BOOKKEEPING}<coachViewInlineScriptId>68.{uid()}</coachViewInlineScriptId><coachViewId>{view_id}</coachViewId>'
                 f'<scriptType>{kind}</scriptType><scriptBlock isNull="true" /><seq>{seq}</seq><description isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></inlineScript>')
 
     def resource(asset_id, seq):
@@ -92,24 +95,38 @@ def coach_view_xml(view_id, version, bo_ref, string_type_ref, asset_ids, name=VI
                 f'<filePath isNull="true" /><ieCondition isNull="true" /><mediaQuery isNull="true" /><scriptLoadStyle isNull="true" />'
                 f"<assetUuid>/{asset_id}</assetUuid><seq>{seq}</seq><guid>{uid()}</guid><versionId>{uid()}</versionId></resource>")
 
+    def asset(tag, asset_id):
+        return f"<{tag}>/{asset_id}</{tag}>" if asset_id else f'<{tag} isNull="true" />'
+
+    def script(tag, js):
+        return f"<{tag}>{escape(js)}</{tag}>" if js else f'<{tag} isNull="true" />'
+
+    binding = (f'<bindingType name="data">{BOOKKEEPING}<coachViewBindingTypeId>65.{uid()}</coachViewBindingTypeId><coachViewId>{view_id}</coachViewId><isList>false</isList>\n'
+               f'<classId>{binding_ref}</classId><seq>0</seq><description isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></bindingType>') if binding_ref else ""
     empty_layout = escape('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ns2:layout xmlns:ns2="http://www.ibm.com/bpm/CoachDesignerNG" xmlns:ns3="http://www.ibm.com/bpm/coachview"/>')
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <teamworks><coachView id="{view_id}" name="{name}"><lastModified>0</lastModified><lastModifiedBy>react_coach_view</lastModifiedBy><tenantId isNull="true" />
-<coachViewId>{view_id}</coachViewId><isTemplate>false</isTemplate><layout>{empty_layout}</layout><paletteIcon isNull="true" /><previewImage isNull="true" />
-<hasLabel>false</hasLabel><labelPosition>0</labelPosition><nineSliceX1Coord>0</nineSliceX1Coord><nineSliceX2Coord>0</nineSliceX2Coord><nineSliceY1Coord>0</nineSliceY1Coord><nineSliceY2Coord>0</nineSliceY2Coord>
-<emitBoundary>true</emitBoundary><isPrototypeFunc>false</isPrototypeFunc><enableDevMode>false</enableDevMode><isMobileReady>true</isMobileReady>
-<loadJsFunction>{escape(LOAD_JS)}</loadJsFunction><unloadJsFunction>{escape(UNLOAD_JS)}</unloadJsFunction><viewJsFunction isNull="true" />
-<changeJsFunction>{escape(CHANGE_JS)}</changeJsFunction><collaborationJsFunction isNull="true" />
-<description>Renders a React screen from the pp-react.js managed file. Options: screen (registered screen name), theme (JSON: the app's theme file), fields (JSON list of sections and fields), spec (JSON screen spec for the form screen).</description>
-<validateJsFunction isNull="true" /><previewAdvHtml isNull="true" /><previewAdvJs isNull="true" /><useUrlBinding>false</useUrlBinding>
+<coachViewId>{view_id}</coachViewId><isTemplate>false</isTemplate><layout>{empty_layout}</layout>{asset("paletteIcon", palette_icon)}<previewImage isNull="true" />
+<hasLabel>{str(has_label).lower()}</hasLabel><labelPosition>0</labelPosition><nineSliceX1Coord>0</nineSliceX1Coord><nineSliceX2Coord>0</nineSliceX2Coord><nineSliceY1Coord>0</nineSliceY1Coord><nineSliceY2Coord>0</nineSliceY2Coord>
+<emitBoundary>{str(emit_boundary).lower()}</emitBoundary><isPrototypeFunc>false</isPrototypeFunc><enableDevMode>false</enableDevMode><isMobileReady>true</isMobileReady>
+{script("loadJsFunction", load)}{script("unloadJsFunction", unload)}<viewJsFunction isNull="true" />
+{script("changeJsFunction", change)}<collaborationJsFunction isNull="true" />
+<description>{escape(description)}</description>
+<validateJsFunction isNull="true" />{asset("previewAdvHtml", preview_html)}{asset("previewAdvJs", preview_js)}<useUrlBinding>false</useUrlBinding>
 <guid>{uid()}</guid><versionId>{version}</versionId><field1 isNull="true" /><field2 isNull="true" /><field3>0</field3><field4 isNull="true" /><field5>false</field5><clobField1 isNull="true" />
-<bindingType name="data">{BOOKKEEPING}<coachViewBindingTypeId>65.{uid()}</coachViewBindingTypeId><coachViewId>{view_id}</coachViewId><isList>false</isList>
-<classId>{bo_ref}</classId><seq>0</seq><description isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></bindingType>
-{config_option("screen", "Screen", 0)}{config_option("theme", "Theme", 1)}{config_option("fields", "Fields (JSON)", 2)}{config_option("spec", "Screen spec (JSON)", 3)}
+{binding}
+{"".join(config_option(o, label, ref, i) for i, (o, label, ref) in enumerate(options))}
 {"".join(resource(a, i) for i, a in enumerate(asset_ids))}
 {inline_script("Inline CSS", "CSS", 0)}{inline_script("Inline Javascript", "JS", 1)}{inline_script("Header HTML", "HTML", 2)}
 </coachView></teamworks>
 """
+
+
+def coach_view_xml(view_id, version, bo_ref, string_type_ref, asset_ids, name=VIEW_NAME):
+    return view_xml(view_id, version, name, binding_ref=bo_ref, asset_ids=asset_ids, load=LOAD_JS, change=CHANGE_JS, unload=UNLOAD_JS,
+                    options=[("screen", "Screen", string_type_ref), ("theme", "Theme", string_type_ref),
+                             ("fields", "Fields (JSON)", string_type_ref), ("spec", "Screen spec (JSON)", string_type_ref)],
+                    description="Renders a React screen from the pp-react.js managed file. Options: screen (registered screen name), theme (JSON: the app's theme file), fields (JSON list of sections and fields), spec (JSON screen spec for the form screen).")
 
 
 def react_assets(bundle_dir: Path, existing=None):

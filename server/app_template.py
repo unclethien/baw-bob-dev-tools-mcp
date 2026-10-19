@@ -207,9 +207,22 @@ def builtin() -> dict:
     return {"header": HEADER, "toolkits": SYSTEM_TOOLKITS, "environment": TARGET_ENVIRONMENT}
 
 
-def package_xml(base: dict, app: dict, ids: dict, objects: list) -> str:
-    """META-INF/package.xml of a generated app. app: name, acronym, snapshot.
-    ids: projectId, branchId, branchName, snapshotId. objects: (id, versionId, name, type)."""
+def dependency_xml(d: dict) -> str:
+    """A dependency on one of our own toolkits. d: id (2069.*), rank, projectId, name, acronym, branchId,
+    snapshotId, snapshot, created."""
+    q = {'"': "&quot;"}
+    return (f'\n        <dependency rank="{d["rank"]}" isManaged="false" id="{d["id"]}">'
+            f'\n            <project id="{d["projectId"]}" name="{escape(d["name"], q)}" shortName="{d["acronym"]}" isToolkit="true" isHidden="false" isSystem="false"/>'
+            f'\n            <branch id="{d["branchId"]}" name="Main"/>'
+            f'\n            <snapshot id="{d["snapshotId"]}" name="{escape(d["snapshot"], q)}" originalCreationDate="{d["created"]}"/>'
+            "\n        </dependency>")
+
+
+def package_xml(base: dict, app: dict, ids: dict, objects: list, toolkit=False, dependencies=(), files=()) -> str:
+    """META-INF/package.xml of a generated app, or of a toolkit when toolkit is true. app: name, acronym, snapshot.
+    ids: projectId, branchId, branchName, snapshotId. objects: (id, versionId, name, type).
+    dependencies: toolkits of our own, beyond the system ones (see dependency_xml).
+    files: (asset uuid, managed file id) of the managed files' content."""
     name, acronym, snapshot = (escape(app[k], {'"': "&quot;"}) for k in ("name", "acronym", "snapshot"))
     created = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     deps = "".join(
@@ -219,12 +232,14 @@ def package_xml(base: dict, app: dict, ids: dict, objects: list) -> str:
         f'\n            <snapshot id="{snap_id}" name="{snap_name}" originalCreationDate="{snap_created}"/>'
         f"\n        </dependency>"
         for short, (dep_id, rank, project_id, project, branch_id, snap_id, snap_name, snap_created) in base["toolkits"].items())
+    deps += "".join(dependency_xml(d) for d in dependencies)
     entries = "".join(f'\n        <object id="{oid}" versionId="{version}" name="{escape(oname, {chr(34): "&quot;"})}" type="{otype}"/>'
                       for oid, version, oname, otype in objects)
+    file_entries = "".join(f'\n        <file path="{path}" id="{fid}"/>' for path, fid in files)
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 {base["header"]}
     <target>
-        <project id="{ids["projectId"]}" name="{name}" description="{name}" shortName="{acronym}" isToolkit="false" isHidden="false" isSystem="false" solutionID="" solutionServerName="" solutionPrefix="" type="" isTemplate="false" isIconSet="false" caseDisplayName=""/>
+        <project id="{ids["projectId"]}" name="{name}" description="{name}" shortName="{acronym}" isToolkit="{str(toolkit).lower()}" isHidden="false" isSystem="false" solutionID="" solutionServerName="" solutionPrefix="" type="" isTemplate="false" isIconSet="false" caseDisplayName=""/>
         <branch id="{ids["branchId"]}" name="{escape(ids.get("branchName", "Main"))}" acronym="Main" description=""/>
         <snapshot id="{ids["snapshotId"]}" name="{snapshot}" acronym="{snapshot}" originalCreationDate="{created}" description=""/>
     </target>
@@ -232,7 +247,7 @@ def package_xml(base: dict, app: dict, ids: dict, objects: list) -> str:
     </dependencies>
     <objects>{entries}
     </objects>
-    <files/>
+    {f"<files>{file_entries}{chr(10)}    </files>" if file_entries else "<files/>"}
     <migrationPolicies/>
 </p:package>
 """

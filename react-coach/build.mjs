@@ -13,7 +13,10 @@ mkdirSync('bundle', { recursive: true });
 // Screens written for specific coaches live in src/screens/*.jsx and register themselves
 // with registerScreen(name, Component); every one of them goes into the bundle.
 const screens = existsSync('src/screens') ? readdirSync('src/screens').filter((f) => f.endsWith('.jsx')).sort() : [];
-const entry = ["export { mount } from './runtime.jsx';", "import './form-screen.jsx';", ...screens.map((f) => `import './screens/${f}';`)].join('\n');
+// Widgets of the Modernizer Widgets toolkit live in src/widgets/*.jsx and register with registerWidget(kind, Component).
+const widgetFiles = existsSync('src/widgets') ? readdirSync('src/widgets').filter((f) => f.endsWith('.jsx')).sort() : [];
+const entry = ["export { mount, mountWidget } from './runtime.jsx';", "import './form-screen.jsx';",
+  ...widgetFiles.map((f) => `import './widgets/${f}';`), ...screens.map((f) => `import './screens/${f}';`)].join('\n');
 
 // Carbon sizes everything in rem for a 16px root, but BAW's bpmUI.css sets the coach page's
 // root to 62.5% (10px), which shrinks the screen to 62.5%. Fixed pixels keep Carbon's sizes.
