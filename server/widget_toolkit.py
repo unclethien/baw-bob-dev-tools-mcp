@@ -42,10 +42,16 @@ TOOLKITS = {
 @functools.cache
 def widgets(toolkit):
     """The toolkit's widget contract (coach-ui/widgets/<toolkit>-widgets.json), by kind. Each widget: view, binding,
-    options [(name, label)], boundary, sample (the preview's value) and tags (palette categories)."""
+    label (has a Label property), options [(name, label, type, is list)], boundary, sample (the preview's value)
+    and tags (palette categories)."""
     contract = json.loads((COACH_UI / "widgets" / f"{toolkit}-widgets.json").read_text())
-    return {w["kind"]: {"view": w["view"], "binding": w["binding"], "options": [(o["name"], o["label"]) for o in w["options"]],
+    return {w["kind"]: {"view": w["view"], "binding": w["binding"], "label": w["label"],
+                        "options": [(o["name"], o["label"], o.get("type", "String"), o.get("list", False)) for o in w["options"]],
                         "boundary": w["boundary"], "sample": w["preview"]["value"], "tags": w["tags"]} for w in contract["widgets"]}
+
+
+# System Data types that widget bindings and options use, beyond the ones generated apps use.
+TYPES = {**SYSTEM_TYPES, "NameValuePair": "12.d2e5a15a-ea53-4793-9e93-29af5bd80b13"}
 
 
 BUNDLE_FILES = [("mdw.js", "application/javascript"), ("mdw.css", "text/css")]
@@ -72,7 +78,7 @@ def metadata_xml(tags):
 
 def load_js(kind, options):
     """The Coach View's load handler: the toolkit bundle's widget host builds the widget's context from the view."""
-    return f"this._ppWidget = window.ModernizerWidgets.attach(this, {json.dumps(kind)}, {json.dumps([o for o, _ in options])});"
+    return f"this._ppWidget = window.ModernizerWidgets.attach(this, {json.dumps(kind)}, {json.dumps([o[0] for o in options])});"
 
 
 CHANGE_JS = "if (this._ppWidget) this._ppWidget.update();"
@@ -92,13 +98,19 @@ def preview_js(kind, acronym, sample, options):
         return o && o.get ? o.get("value") : undefined;
       }} catch (e) {{ return undefined; }}
     }}
-    this._ppState = {{ label: labelText, options: {{}} }};
-    {json.dumps([o for o, _ in options])}.forEach(function (name) {{ self._ppState.options[name] = initial(name); }});
+    this._ppState = {{ label: labelText, help: "", options: {{}} }};
+    {json.dumps([o[0] for o in options])}.forEach(function (name) {{ self._ppState.options[name] = initial(name); }});
+    function options() {{
+      var out = {{}};
+      var plain = win.ModernizerWidgets.plain || function (value) {{ return value; }};
+      for (var name in self._ppState.options) out[name] = plain(self._ppState.options[name]);
+      return out;
+    }}
     function url(name) {{ return self.context.getManagedAssetUrl(name, self.context.assetType_WEB, {json.dumps(acronym)}); }}
     function mount() {{
       try {{
         self._ppWidget = win.ModernizerWidgets.mountWidget(containingDiv, {json.dumps(kind)}, {{
-          read: function () {{ return {{ label: self._ppState.label, helpText: "", visibility: "EDITABLE", options: self._ppState.options, preview: true }}; }},
+          read: function () {{ return {{ label: self._ppState.label, helpText: self._ppState.help, visibility: "EDITABLE", options: options(), preview: true }}; }},
           binding: {{ get: function () {{ return self._ppState.options.example ? "" : {json.dumps(sample)}; }}, set: function () {{}} }},
           trigger: function () {{}}
         }});
@@ -126,6 +138,7 @@ def preview_js(kind, acronym, sample, options):
   propertyChanged: function (name, value) {{
     if (!this._ppState) return;
     if (name === "@label") this._ppState.label = value;
+    else if (name === "@helpText") this._ppState.help = value;
     else this._ppState.options[name] = value;
     if (this._ppWidget) this._ppWidget.update();
   }},
@@ -153,7 +166,6 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
     asset = lambda name, mime, data: managed_file(name, mime, data, files, objects, file_entries, stable_ids(toolkit, f"file/{name}"))  # noqa: E731
     assets = [asset(name, mime, (bundle / name).read_bytes()) for name, mime in BUNDLE_FILES]
     preview_html = asset("mdw-preview.html", "text/html", PREVIEW_HTML.encode())
-    string_ref = f"{TWSYS}/{SYSTEM_TYPES['String']}"
     for kind, w in widgets(toolkit).items():
         icon_path = ICONS / f"{kind}.svg"
         icon = asset(f"{kind}.svg", "image/svg+xml", icon_path.read_bytes()) if icon_path.exists() else None
@@ -161,10 +173,10 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
         new_id = stable_ids(toolkit, f"view/{kind}")
         view_id, version = "64." + new_id(), uid()
         files[f"objects/{view_id}.xml"] = view_xml(
-            view_id, version, escape(w["view"]), binding_ref=f"{TWSYS}/{SYSTEM_TYPES[w['binding']]}" if w["binding"] else None,
-            options=[(o, label, string_ref) for o, label in w["options"]], asset_ids=assets,
+            view_id, version, escape(w["view"]), binding_ref=f"{TWSYS}/{TYPES[w['binding']]}" if w["binding"] else None,
+            options=[(o, label, f"{TWSYS}/{TYPES[t]}", is_list) for o, label, t, is_list in w["options"]], asset_ids=assets,
             load=load_js(kind, w["options"]), change=CHANGE_JS, unload=UNLOAD_JS, description=f"{tk['name']}: {w['view']}",
-            palette_icon=icon, preview_html=preview_html, preview_js=preview, has_label=True, emit_boundary=w["boundary"], new_id=new_id)
+            palette_icon=icon, preview_html=preview_html, preview_js=preview, has_label=w["label"], emit_boundary=w["boundary"], new_id=new_id)
         objects.append((view_id, version, w["view"], "coachView"))
         tags[view_id] = w["tags"] + [tk["name"]]
     settings_id = stable_ids(toolkit, "settings")
@@ -283,6 +295,9 @@ def main():
     b.add_argument("toolkit", choices=sorted(TOOLKITS))
     b.add_argument("snapshot")
     b.add_argument("dest", type=Path)
+    v = sub.add_parser("preview", help="Print a widget's Coach Designer preview script (for offline checks)")
+    v.add_argument("toolkit", choices=sorted(TOOLKITS))
+    v.add_argument("kind")
     u = sub.add_parser("use", help="Make an app use a toolkit's widgets in place of some layout items")
     u.add_argument("app", type=Path)
     u.add_argument("toolkit", type=Path)
@@ -290,7 +305,10 @@ def main():
     u.add_argument("--swap", action="append", default=[], help='"Coach:LayoutItemId=kind" or "Coach:LayoutItemId=kind:{json options}"')
     u.add_argument("--snapshot")
     args = parser.parse_args()
-    if args.command == "build":
+    if args.command == "preview":
+        w = widgets(args.toolkit)[args.kind]
+        print(preview_js(args.kind, TOOLKITS[args.toolkit]["acronym"], w["sample"], w["options"]))
+    elif args.command == "build":
         names = build(args.toolkit, args.snapshot, args.dest)
         print(f"Wrote {args.dest}: {TOOLKITS[args.toolkit]['name']} ({TOOLKITS[args.toolkit]['acronym']}) {args.snapshot}, widgets: {', '.join(names)}")
     else:

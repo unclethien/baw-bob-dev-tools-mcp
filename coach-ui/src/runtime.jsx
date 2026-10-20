@@ -7,6 +7,7 @@
 import { createRoot } from 'react-dom/client';
 import { ClassPrefix } from '@carbon/react';
 import { useSyncExternalStore } from 'react';
+import { page } from './page-registry.js';
 import './styles.scss';
 
 const screens = {};
@@ -88,22 +89,24 @@ function Host({ screen: Screen, store, ctx }) {
   );
 }
 
+// A widget takes the page's theme (published by the Theme widget) but not its width: it fills its cell.
 function WidgetHost({ widget: Widget, store, ctx }) {
   useSyncExternalStore(store.subscribe, store.snapshot);
+  const theme = useSyncExternalStore(page.subscribe, () => page.theme);
   const props = ctx.read();
   if (props.visibility === 'HIDDEN' || props.visibility === 'NONE') return null;
   const binding = { value: ctx.binding.get(), set: (value) => { ctx.binding.set(value); store.notify(); } };
   return (
     <ClassPrefix prefix="pp">
-      <div className="pp-app pp-widget" style={themeStyle(props.theme)}>
+      <div className="pp-app pp-widget" style={themeStyle({ ...theme, width: undefined })}>
         <Widget {...props} binding={binding} trigger={ctx.trigger} />
       </div>
     </ClassPrefix>
   );
 }
 
-// ctx: read() -> { label, helpText, visibility, options, preview, theme }, binding { get, set }, trigger().
-// The Coach View (or the Coach Designer preview) owns the context, so this stays free of BAW APIs.
+// ctx: read() -> { id, label, helpText, visibility, options, preview }, binding { get, set }, trigger(done).
+// The Coach View (src/widget-host.js) or the Coach Designer preview owns the context, so this stays free of BAW APIs.
 export function mountWidget(element, kind, ctx) {
   const Widget = widgets[kind];
   if (!Widget) throw new Error(`Modernizer Widgets: no widget named "${kind}"`);

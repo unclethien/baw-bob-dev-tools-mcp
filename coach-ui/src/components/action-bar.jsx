@@ -1,6 +1,6 @@
 import { Button } from '@carbon/react';
 
-const buttonLabel = (label) => label.replace(/^[\s<>«»]+|[\s<>«»]+$/g, '') || label;
+export const buttonLabel = (label) => label.replace(/^[\s<>«»]+|[\s<>«»]+$/g, '') || label;
 
 // The coach's buttons in spec order, primary or secondary; onPress gets the spec button.
 export function ActionBar({ buttons, busy, onPress }) {

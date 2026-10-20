@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- Offline harness for the Modernizer Widgets bundle: run npm run build, then open this file, or run
+     node scripts/check-widgets.mjs. harness.view() builds a fake BAW Coach View with the parts of the coach view API
+     the widgets use, so the widgets and src/widget-host.js run as they do in a coach. -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Modernizer Widgets harness</title>
+  <link rel="stylesheet" href="../bundle/mdw.css">
+  <style>body { margin: 2rem; font-family: sans-serif; } .cell { margin: 1rem 0; } h2 { font-size: 1rem; }</style>
+  <script src="../bundle/mdw.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    // A BAW-like value holder: get("value") / set("value", v), and list options as { items: [...] }.
+    function holder(value) { return { get: function () { return value; }, set: function (key, next) { value = next; } }; }
+    window.harness = {
+      triggered: [],
+      // spec: { kind, label, help, visibility, inherited, options: {name: value}, value, id (viewid), path (controlidpath), parent }
+      view: function (spec) {
+        var element = document.createElement('div');
+        element.className = 'cell';
+        element.setAttribute('data-kind', spec.kind);
+        (spec.parent || document.getElementById('root')).appendChild(element);
+        var options = { _metadata: { label: holder(spec.label), helpText: holder(spec.help), visibility: holder(spec.visibility) } };
+        Object.keys(spec.options || {}).forEach(function (name) { options[name] = holder(spec.options[name]); });
+        var bound = holder(spec.value);
+        var view = { context: {
+          element: element, viewid: spec.id, controlidpath: spec.path, options: options, binding: spec.kind === 'button' ? undefined : bound,
+          getInheritedVisibility: function () { return spec.inherited || 'EDITABLE'; },
+          trigger: function (callback, opts) { harness.triggered.push({ id: spec.id, callBackForAll: !!(opts && opts.callBackForAll) }); if (callback) setTimeout(callback, 10); },
+        } };
+        var names = Object.keys(spec.options || {});
+        var handle = ModernizerWidgets.attach(view, spec.kind, names);
+        return { element: element, handle: handle, value: function () { return bound.get('value'); },
+                 setOption: function (name, value) { options[name] = holder(value); handle.update(); } };
+      },
+      preview: function (kind, state) {
+        var element = document.createElement('div');
+        element.className = 'cell';
+        element.setAttribute('data-preview', kind);
+        document.getElementById('root').appendChild(element);
+        var handle = ModernizerWidgets.mountWidget(element, kind, {
+          read: function () { var o = {}; for (var k in state.options) o[k] = ModernizerWidgets.plain(state.options[k]); return { label: state.label, helpText: '', visibility: 'EDITABLE', options: o, preview: true }; },
+          binding: { get: function () { return state.value; }, set: function () {} },
+          trigger: function () { harness.triggered.push({ preview: kind }); },
+        });
+        return { element: element, handle: handle };
+      },
+    };
+  </script>
+</body>
+</html>

@@ -10,4 +10,4 @@ export { EditSection } from './components/edit-section.jsx';
 export { ReviewSection } from './components/review-section.jsx';
 export { SectionTabs } from './components/section-tabs.jsx';
 export { SectionStack } from './components/section-stack.jsx';
-export { ActionBar } from './components/action-bar.jsx';
+export { ActionBar, buttonLabel } from './components/action-bar.jsx';

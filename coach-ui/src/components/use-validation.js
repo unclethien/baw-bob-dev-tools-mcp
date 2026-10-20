@@ -2,11 +2,23 @@
 import { useState } from 'react';
 import { isEmpty } from './values.js';
 
+// A field's pattern as a RegExp, or null when there is none or it is not a valid regular expression.
+function patternOf(field) {
+  if (!field.pattern) return null;
+  try {
+    return new RegExp(field.pattern);
+  } catch {
+    console.warn(`Ignoring the pattern of ${field.label}: not a valid regular expression`, field.pattern);
+    return null;
+  }
+}
+
 // The message for one field's value, or null when it passes. Read-only fields always pass.
 export function fieldError(field, value) {
   if (field.readonly) return null;
   if (field.required && isEmpty(field, value)) return field.message || `${field.label} is required`;
-  if (field.pattern && !isEmpty(field, value) && !new RegExp(field.pattern).test(String(value))) return field.message || `${field.label} is not valid`;
+  const pattern = patternOf(field);
+  if (pattern && !isEmpty(field, value) && !pattern.test(String(value))) return field.message || `${field.label} is not valid`;
   return null;
 }
 
