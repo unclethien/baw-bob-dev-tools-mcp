@@ -251,11 +251,11 @@ def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, s
         package = twx.read("META-INF/package.xml").decode("utf-8")
         names = view_names(twx)
         actions_view_id = next(i for i, n in names.items() if n == "Horizontal Layout")
-        objects, files, file_entries, views, widget_views, dep = [], {}, [], {}, {}, None
+        objects, files, file_entries, views, widget_views, toolkit_files, stale = [], {}, [], {}, {}, {}, set()
 
         if built:
-            package, dep = widget_toolkit.add_dependency(package, toolkit)
-            widget_views = {kind: dep["views"][w["view"]] for kind, w in widget_toolkit.widgets(TOOLKIT).items()}
+            package, _, toolkit_files, stale = widget_toolkit.embed(package, toolkit)
+            widget_views = widget_toolkit.view_ids(TOOLKIT, toolkit)
 
         if screens:
             # Managed files: reuse the app's coach-screens.* files (new content, new version) so names stay unique.
@@ -301,10 +301,7 @@ def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, s
                             f'<snapshot id="2064.{uid()}" name="{escape(snapshot)}" acronym="{escape(snapshot)}"', target)
             package = target + "</target>" + rest
 
-        if dep:
-            # BAW's own exports carry every non-system toolkit an app depends on (see widget_toolkit.use_widgets).
-            files[f"toolkits/{dep['snapshotId']}.zip"] = toolkit.read_bytes()
-        stale = {f"toolkits/{dep['previous']}.zip"} if dep and dep.get("previous") else set()
+        files.update(toolkit_files)
 
         with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
             for info in twx.infolist():

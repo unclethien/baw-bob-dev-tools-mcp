@@ -1,0 +1,65 @@
+{
+  "toolkit": "App Builder Widgets",
+  "about": "One entry per widget, in the same form as modernizer-widgets.json. These widgets use no JavaScript framework: each is BAW markup from builder/<source>.html (<!-- content --> marks the content box that holds child views) and a draw(root, o, preview) function from builder/<source>.js, which fills the markup from the view's label and options. source defaults to kind.",
+  "widgets": [
+    {
+      "kind": "theme",
+      "view": "Theme",
+      "binding": null,
+      "label": false,
+      "options": [
+        {"name": "css", "label": "Theme CSS (from the app's theme file)", "type": "String"}
+      ],
+      "boundary": false,
+      "preview": {"value": null},
+      "tags": ["Advanced", "Informational"]
+    },
+    {
+      "kind": "header",
+      "view": "App Header",
+      "binding": null,
+      "label": false,
+      "options": [
+        {"name": "title", "label": "Title", "type": "String"},
+        {"name": "intro", "label": "Intro text", "type": "String"},
+        {"name": "banner", "label": "Banner (JSON: product, logoData, title, text)", "type": "String"}
+      ],
+      "boundary": false,
+      "preview": {"value": null},
+      "tags": ["Basic", "Informational"]
+    },
+    {
+      "kind": "section",
+      "view": "Section",
+      "binding": null,
+      "label": true,
+      "options": [
+        {"name": "intro", "label": "Intro text", "type": "String"}
+      ],
+      "boundary": false,
+      "preview": {"value": null},
+      "tags": ["Basic", "Layout"]
+    },
+    {
+      "kind": "review",
+      "view": "Review List",
+      "source": "section",
+      "binding": null,
+      "label": true,
+      "options": [],
+      "boundary": false,
+      "preview": {"value": null},
+      "tags": ["Basic", "Layout"]
+    },
+    {
+      "kind": "buttons",
+      "view": "Button Bar",
+      "binding": null,
+      "label": false,
+      "options": [],
+      "boundary": false,
+      "preview": {"value": null},
+      "tags": ["Basic", "Layout"]
+    }
+  ]
+}

@@ -27,8 +27,11 @@ list of "options". "cancelLabel" on a step or on "form" adds a button that ends 
 "theme" names the app's theme file (colours, font, shapes, field icons, banner product and logo), and
 "banner" adds the app's own banner title and text; see coach_theme.py.
 
-Every coach is built from standard UI Toolkit views bound to one business object, so the
-result runs as soon as it is installed and can be inventoried and modernized like any app.
+Every coach is built from standard UI Toolkit views bound to one business object, placed in App Builder
+Widgets (--toolkit, an ABW snapshot from widget_toolkit.py build builder, installed on the server): a Theme
+with the coach's CSS, an App Header with the banner or title and the intro, a Section per section, a Review
+List per read-only section and a Button Bar. The result runs as soon as it is installed, stays editable by
+drag and drop in Coach Designer, and can be inventoried and modernized like any app.
 
 The .twx is built from the template in app_template.py, so no server is needed: install it with
 baw_ops.py, or import it in Workflow Center. --base takes an app exported from the target server
@@ -36,18 +39,21 @@ baw_ops.py, or import it in Workflow Center. --base takes an app exported from t
 the base is the app itself (same acronym), the build becomes a new snapshot of it.
 
 Example:
-    python3 server/generate_app.py app-specs/example-equipment-request.json work/ZZEQ.twx
+    python3 server/widget_toolkit.py build builder 1.0.0 work/ABW-1.0.0.twx      # install it once
+    python3 server/generate_app.py app-specs/example-equipment-request.json work/ZZEQ.twx --toolkit work/ABW-1.0.0.twx
     python3 server/baw_ops.py install work/ZZEQ.twx
-    python3 server/generate_app.py my-app.json work/ZZEQ-1.1.0.twx --base work/ZZEQ-1.0.0.twx   # new snapshot of ZZEQ
+    python3 server/generate_app.py my-app.json work/ZZEQ-1.1.0.twx --base work/ZZEQ-1.0.0.twx --toolkit work/ABW-1.0.0.twx   # new snapshot of ZZEQ
 """
 
 import argparse
 import json
 import re
+import zipfile
 from pathlib import Path
 
 import app_template
 import coach_theme
+import widget_toolkit
 from coach_builder import SYSTEM_TYPES, Layout, coachflow, uid, write_twx
 from process_builder import process_xml
 
@@ -68,6 +74,8 @@ IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 REFERENCE = "referenceNumber"
 DECISION, COMMENTS = "decision", "reviewComments"  # set by the approval task
 APPROVED, SENT_BACK = "Approved", "Sent back"
+TOOLKIT = "builder"
+WIDGETS = {}  # App Builder Widgets view ID by kind, from the toolkit generate() builds against
 
 
 def visibility(value):
@@ -82,6 +90,9 @@ div.body { max-width: 960px; margin: 0 auto !important; padding: 16px 24px !impo
 .panel { margin-bottom: 16px !important; }
 .Button.CoachView { flex: 0 0 auto !important; width: auto !important; margin-right: 8px; }
 .btn { width: auto !important; }
+.Theme.CoachView, .App_Header.CoachView { margin-top: 0 !important; margin-bottom: 0 !important; }
+.panel-group.abw-group { margin-bottom: 0; }
+.topLevel > .panel-group.abw-group { margin-bottom: 12px; }
 @media (max-width: 900px) {
   .layoutSec.hChild { flex-wrap: wrap; }
   .layoutSec.hChild > .Vertical_Layout { width: 100% !important; }
@@ -177,8 +188,13 @@ def fields(spec):
 # ---------------------------------------------------------------- coaches
 
 
+def widget(lay, kind, label="", **kw):
+    """An App Builder Widgets view in the layout."""
+    return lay.view(widget_toolkit.widgets(TOOLKIT)[kind]["view"], label, view_uuid=WIDGETS[kind], **kw)
+
+
 def header(spec, lay, title, intro, editable=True):
-    """The coach's Custom HTML header: styles, then the banner or a plain title, then the intro.
+    """The coach's Theme (its CSS) and App Header (the banner or a plain title, then the intro) widgets.
     Built after the rest of the coach, so the theme can style every input on it; read-only coaches
     (editable=False) get no field icons."""
     style = CSS
@@ -189,14 +205,15 @@ def header(spec, lay, title, intro, editable=True):
                   for vid, b in (lay.bound if editable else []) if b.startswith(prefix) and b[len(prefix):] in by_name and not vid.startswith("Output_Text")]
         widest = max((s.get("columns", 1) for step in spec["steps"] for s in step["sections"]), default=1)
         style += coach_theme.css(spec["theme"], inputs, 1400 if widest > 3 else 960)
-    title_html = coach_theme.banner_html(spec["banner"], title) if spec.get("banner") else f'<div class="app-title">{title}</div>'
-    return lay.html(f"<style>{style}</style>{title_html}" + (f'<div class="app-intro">{intro}</div>' if intro else ""))
+    banner = json.dumps(spec["banner"]) if spec.get("banner") else ""
+    return [widget(lay, "theme", options=[("css", style)], show_label=False),
+            widget(lay, "header", options=[("title", title), ("intro", intro), ("banner", banner)], show_label=False)]
 
 
 def actions(lay, buttons):
     """buttons: (event, label, colour style P, D or W). Returns the layout item and {event: button item id}."""
     made = [(event, *lay.button(label, style)) for event, label, style in buttons]
-    return lay.view("Horizontal Layout", "Actions", children=[xml for _, _, xml in made], show_label=False, item_id="Action_Bar"), {e: i for e, i, _ in made}
+    return widget(lay, "buttons", "Actions", children=[xml for _, _, xml in made], show_label=False, item_id="Action_Bar"), {e: i for e, i, _ in made}
 
 
 def choices(f):
@@ -250,8 +267,8 @@ def columns(lay, var, fields, count, weights=None, make=input_view):
 
 
 def section(lay, var, s):
-    intro = [lay.html(f'<div class="app-intro">{s["intro"]}</div>')] if s.get("intro") else []
-    return lay.view("Panel", s["title"], children=intro + columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths")))
+    return widget(lay, "section", s["title"], children=columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths")),
+                  options=[("intro", s.get("intro", ""))])
 
 
 def sections(lay, var, step):
@@ -275,7 +292,7 @@ def step_coach(spec, i):
     body = sections(lay, var, step)
     bar, events = actions(lay, buttons)
     count = f"Step {i + 1} of {len(spec['steps'])}: " if len(spec["steps"]) > 1 else ""
-    return Layout.wrap([header(spec, lay, count + step["title"], step.get("intro", "")), *body, bar]), events
+    return Layout.wrap([*header(spec, lay, count + step["title"], step.get("intro", "")), *body, bar]), events
 
 
 def form_coach(spec):
@@ -287,7 +304,7 @@ def form_coach(spec):
     buttons = [("next0", form.get("nextLabel") or ("Next" if spec.get("review", True) else "Submit"), "P")]
     buttons += [("cancel0", form["cancelLabel"], "W")] if form.get("cancelLabel") else []
     bar, events = actions(lay, buttons)
-    return Layout.wrap([header(spec, lay, form.get("title", spec["service"]["name"]), form.get("intro", "")), body, bar]), events
+    return Layout.wrap([*header(spec, lay, form.get("title", spec["service"]["name"]), form.get("intro", "")), body, bar]), events
 
 
 def output(lay, var, f):
@@ -302,10 +319,10 @@ def review_coach(spec):
     var, review = spec["businessObject"]["variable"], spec.get("review")
     review = review if isinstance(review, dict) else {}
     lay = Layout()
-    panels = [lay.view("Panel", s["title"], children=[output(lay, var, f) for f in s["fields"]]) for s in spec["steps"]]
+    panels = [widget(lay, "review", s["title"], children=[output(lay, var, f) for f in s["fields"]]) for s in spec["steps"]]
     bar, events = actions(lay, [("backReview", "Back", "D"), ("submit", review.get("submitLabel") or "Submit", "P")])
     intro = review.get("intro", "Check your answers. Press Back to change them or Submit to send them.")
-    return Layout.wrap([header(spec, lay, review.get("title", "Review and Submit"), intro, editable=False), *panels, bar]), events
+    return Layout.wrap([*header(spec, lay, review.get("title", "Review and Submit"), intro, editable=False), *panels, bar]), events
 
 
 def confirmation_coach(spec):
@@ -314,9 +331,9 @@ def confirmation_coach(spec):
     lay = Layout()
     outputs = [lay.view("Output Text", "Reference Number", binding=f"tw.local.{var}.{REFERENCE}")]
     outputs += [output(lay, var, by_name[n]) for n in conf.get("showFields", [])]
-    summary = lay.view("Panel", "Summary", children=outputs)
+    summary = widget(lay, "review", "Summary", children=outputs)
     bar, events = actions(lay, [("done", "Done", "P")])
-    return Layout.wrap([header(spec, lay, conf.get("title", "Submitted"), conf.get("message", ""), editable=False), summary, bar]), events
+    return Layout.wrap([*header(spec, lay, conf.get("title", "Submitted"), conf.get("message", ""), editable=False), summary, bar]), events
 
 
 # ---------------------------------------------------------------- flow
@@ -373,12 +390,12 @@ def approval_coach(spec):
     """Every field read-only, section by section, then a comments box and Approve / Send back."""
     var, appr = spec["businessObject"]["variable"], spec["process"]["approval"]
     lay = Layout()
-    panels = [lay.view("Panel", s["title"], children=columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"), make=output))
+    panels = [widget(lay, "review", s["title"], children=columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"), make=output))
               for step in spec["steps"] for s in step["sections"]]
-    comments = lay.view("Panel", "Decision", children=[lay.view("Text Area", appr.get("commentsLabel") or "Comments", binding=f"tw.local.{var}.{COMMENTS}")])
+    comments = widget(lay, "section", "Decision", children=[lay.view("Text Area", appr.get("commentsLabel") or "Comments", binding=f"tw.local.{var}.{COMMENTS}")])
     bar, events = actions(lay, [("approve", appr.get("approveLabel") or "Approve", "P"), ("sendBack", appr.get("returnLabel") or "Send Back", "W")])
     title = appr.get("name") or "Review"
-    return Layout.wrap([header(spec, lay, title, appr.get("intro", ""), editable=False), *panels, comments, bar]), events
+    return Layout.wrap([*header(spec, lay, title, appr.get("intro", ""), editable=False), *panels, comments, bar]), events
 
 
 def approval_flow(spec):
@@ -425,7 +442,10 @@ def process_definition(spec, form, approval, bo_id):
 # ---------------------------------------------------------------- package
 
 
-def generate(spec: dict, dest: Path, base: Path | None = None):
+def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None):
+    """toolkit: the App Builder Widgets .twx (widget_toolkit.py build builder) the app is to depend on."""
+    WIDGETS.clear()
+    WIDGETS.update(widget_toolkit.view_ids(TOOLKIT, toolkit))
     bo, svc, app = spec["businessObject"], spec["service"], spec["app"]
     props = [(f["name"], FIELD_TYPES[f.get("type", "String")][0]) for f in fields(spec)]
     if spec.get("confirmation"):
@@ -454,6 +474,13 @@ def generate(spec: dict, dest: Path, base: Path | None = None):
     write_twx(dest, {"name": app["name"], "acronym": app["acronym"], "snapshot": app.get("snapshot", "1.0.0")},
               {"id": bo_id, "version": uid(), "name": bo["name"], "props": props}, bo["variable"], services, "generate_app",
               app_template.read_base(base) if base else None, extra)
+    with zipfile.ZipFile(dest) as twx:
+        entries = {i.filename: twx.read(i) for i in twx.infolist()}
+    package, _, add, drop = widget_toolkit.embed(entries["META-INF/package.xml"].decode("utf-8"), toolkit)
+    entries["META-INF/package.xml"] = package.encode("utf-8")
+    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
+        for name, data in {**{n: d for n, d in entries.items() if n not in drop}, **add}.items():
+            out.writestr(name, data)
 
 
 def main():
@@ -461,9 +488,10 @@ def main():
     parser.add_argument("spec", type=Path, help="App spec JSON (see app-specs/example-equipment-request.json)")
     parser.add_argument("dest", type=Path, help="Output .twx")
     parser.add_argument("--base", type=Path, help="An app exported from the target server, to match its BAW build; the app itself to add a snapshot to it")
+    parser.add_argument("--toolkit", type=Path, required=True, help="App Builder Widgets .twx (widget_toolkit.py build builder), installed on the server")
     args = parser.parse_args()
     spec = load_spec(args.spec)
-    generate(spec, args.dest, args.base)
+    generate(spec, args.dest, args.toolkit, args.base)
     app = spec["app"]
     print(f"Wrote {args.dest}: app {app['name']} ({app['acronym']}), snapshot {app.get('snapshot', '1.0.0')}")
     print(f"Service: {spec['service']['name']}, {len(spec['steps'])} step(s) as {'tabs' if spec.get('layout') == 'tabs' else 'screens'}, {len(fields(spec))} field(s)"

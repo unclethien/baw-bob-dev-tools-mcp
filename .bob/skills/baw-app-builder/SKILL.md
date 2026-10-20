@@ -48,7 +48,7 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 
    Change the spec or the theme file as asked and show the changes again, until the user approves.
 
-4. **Build:** `create_app` with the spec path, and the chosen app's acronym as `base` (no `base` for the built-in template). It validates the spec and its theme file first and lists every problem; fix them and call it again. If the app already exists on the server, the build becomes a new snapshot of it, so bump `app.snapshot` for every change.
+4. **Build:** the coaches are built from App Builder Widgets, so the server needs a snapshot of the ABW toolkit: if `list_snapshots("ABW")` shows none built from the current widgets, call `build_widget_toolkit("builder", <new snapshot>)` and `install_app` it. Then `create_app` with the spec path, `toolkit_snapshot`, and the chosen app's acronym as `base` (no `base` for the built-in template). It validates the spec and its theme file first and lists every problem; fix them and call it again. If the app already exists on the server, the build becomes a new snapshot of it, so bump `app.snapshot` for every change.
 
 5. **Check the flow:** `inspect_coaches` on the returned `.twx`. Every step must show its fields and a button leading to the next coach. With `"tabs"` the first coach shows one section per tab and `sectionStyle: "tabs"`.
 

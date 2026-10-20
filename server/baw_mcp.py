@@ -130,6 +130,20 @@ def require_new_snapshot(acronym: str, snapshot: str):
         raise ToolError(f"Snapshot {snapshot} already exists in {acronym}; BAW would keep the old content. Use a new snapshot name")
 
 
+def installed_toolkit(toolkit: str, snapshot: str | None, why: str) -> Path:
+    """The .twx that build_widget_toolkit wrote for a toolkit snapshot, checked to be installed on the server."""
+    acronym = widget_toolkit.TOOLKITS[toolkit]["acronym"]
+    if not snapshot:
+        raise ToolError(f"{why}: pass toolkit_snapshot, a snapshot of {acronym} built with build_widget_toolkit({toolkit!r}, ...) "
+                        "and installed with install_app")
+    twx = WORK / f"{acronym}-{re.sub(r'[^A-Za-z0-9.]+', '_', snapshot)}.twx"
+    if not twx.exists():
+        raise ToolError(f"No {rel(twx)}: build it with build_widget_toolkit({toolkit!r}, {snapshot!r}), then install it")
+    if configured() and not any(v["version_name"] == snapshot for v in snapshots(acronym)):
+        raise ToolError(f"{acronym} {snapshot} is not installed on the server: install {rel(twx)} with install_app first")
+    return twx
+
+
 # ---------------------------------------------------------------- server: read
 
 
@@ -239,15 +253,19 @@ def inspect_coaches(twx: str) -> dict:
 
 
 @mcp.tool()
-def create_app(app_spec: str, base: str | None = None) -> dict:
+def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | None = None) -> dict:
     """Build an installable .twx from an app spec (see app-specs/example-equipment-request.json, and
     app-specs/example-themed-quote.json for tabs, a banner, placed columns and field icons). The spec's
     "theme" names a theme file (e.g. app-specs/example-quote-desk.theme.json) that sets the look.
+    The coaches are UI Toolkit views placed in App Builder Widgets (Theme, App Header, Section, Review List,
+    Button Bar), so the app depends on the toolkit snapshot toolkit_snapshot, built with
+    build_widget_toolkit("builder", ...) and installed first.
     The package comes from a built-in template, so no server is needed. base (optional) is an app on
     the server (its acronym) or an exported .twx in the project, to match that server's BAW build and
     toolkit versions; ask the user which app to use. When the app already exists on the server, the
     build becomes a new snapshot of it, and base is not needed."""
     spec_path = local(app_spec)
+    toolkit = installed_toolkit("builder", toolkit_snapshot, "create_app builds coaches from App Builder Widgets")
     app = json.loads(spec_path.read_text())["app"]
     acronym, snapshot = app.get("acronym", ""), app.get("snapshot", "1.0.0")
     WORK.mkdir(exist_ok=True)
@@ -273,10 +291,11 @@ def create_app(app_spec: str, base: str | None = None) -> dict:
             base_twx = Path(tmp) / "base.twx"
             ops().export(base, newest(found)["version"], base_twx, toolkits=False)
             note = f"Packaged to match {base} on the server"
-        summary = python("generate_app.py", spec_path, dest, *(["--base", base_twx] if base_twx else []))
+        summary = python("generate_app.py", spec_path, dest, "--toolkit", toolkit, *(["--base", base_twx] if base_twx else []))
     result = {"twx": rel(dest), "newApp": not existing, "summary": summary + (f"\n{note}" if note else "")}
     if not online:
-        result["install"] = IMPORT_STEPS.format(twx=rel(dest))
+        result["install"] = (f"Import the toolkit {rel(toolkit)} first, unless the server already has that snapshot.\n"
+                             + IMPORT_STEPS.format(twx=rel(dest)))
     return result
 
 
@@ -300,16 +319,7 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: st
     args = []
     services = [s for s in json.loads(spec.read_text())["services"] if s.get("modernize")]
     if any(not c.get("screen") for s in services for c in s["coaches"]):
-        acronym = widget_toolkit.TOOLKITS["modernizer"]["acronym"]
-        if not toolkit_snapshot:
-            raise ToolError(f"Coaches without a hand-written screen are built from Modernizer Widgets: pass toolkit_snapshot, "
-                            f"a snapshot of {acronym} built with build_widget_toolkit and installed with install_app")
-        toolkit = WORK / f"{acronym}-{re.sub(r'[^A-Za-z0-9.]+', '_', toolkit_snapshot)}.twx"
-        if not toolkit.exists():
-            raise ToolError(f"No {rel(toolkit)}: build it with build_widget_toolkit(\"modernizer\", {toolkit_snapshot!r}), then install it")
-        if configured() and not any(v["version_name"] == toolkit_snapshot for v in snapshots(acronym)):
-            raise ToolError(f"{acronym} {toolkit_snapshot} is not installed on the server: install {rel(toolkit)} with install_app first")
-        args = ["--toolkit", toolkit]
+        args = ["--toolkit", installed_toolkit("modernizer", toolkit_snapshot, "Coaches without a hand-written screen are built from Modernizer Widgets")]
     build = build_screens()
     dest = WORK / f"{target_of(source)['acronym']}-{snapshot}.twx"
     summary = python("modernize_coaches.py", source, spec, dest, "--snapshot", snapshot, *args)
@@ -323,7 +333,8 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: st
 def build_widget_toolkit(toolkit: str, snapshot: str) -> dict:
     """Build a toolkit of coach widgets for Coach Designer's palette as work/<ACRONYM>-<snapshot>.twx, then install it
     with install_app. toolkit: "modernizer" is Modernizer Widgets (MDW), the React + Carbon widgets of modernized
-    coaches. Builds the widgets first. Each build is a new snapshot of the same toolkit. An app keeps the snapshot it
+    coaches (modernize_app); "builder" is App Builder Widgets (ABW), the classic widgets of the coaches create_app
+    builds. Builds the widgets first. Each build is a new snapshot of the same toolkit. An app keeps the snapshot it
     depends on, also when create_app rebuilds it; it moves to a newer one only when its widgets are placed again."""
     if toolkit not in widget_toolkit.TOOLKITS:
         raise ToolError(f"No toolkit {toolkit!r}; choose one of: {', '.join(sorted(widget_toolkit.TOOLKITS))}")

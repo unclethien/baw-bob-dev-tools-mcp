@@ -77,9 +77,10 @@ def managed_asset_xml(asset_id, version, name, asset_uuid, mime, length, guid=No
 
 
 def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=(), load="", change="", unload="",
-             description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True, new_id=None):
+             description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True, new_id=None, layout=""):
     """Coach View object XML. options: (name, label, class ref) or (name, label, class ref, is list) config options.
     palette_icon, preview_html and preview_js are managed file IDs (61.*) for Coach Designer.
+    layout: the view's own layout items (CoachDesignerNG XML with the ns2 prefix), e.g. Custom HTML around a content box.
     new_id makes the IDs and guids inside the view (a toolkit keeps them across builds); versionIds are always new."""
     new_id = new_id or uid
     def config_option(opt, label, class_ref, seq, is_list=False):
@@ -105,10 +106,11 @@ def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=
 
     binding = (f'<bindingType name="data">{BOOKKEEPING}<coachViewBindingTypeId>65.{new_id()}</coachViewBindingTypeId><coachViewId>{view_id}</coachViewId><isList>false</isList>\n'
                f'<classId>{binding_ref}</classId><seq>0</seq><description isNull="true" /><guid>{new_id()}</guid><versionId>{uid()}</versionId></bindingType>') if binding_ref else ""
-    empty_layout = escape('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ns2:layout xmlns:ns2="http://www.ibm.com/bpm/CoachDesignerNG" xmlns:ns3="http://www.ibm.com/bpm/coachview"/>')
+    head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ns2:layout xmlns:ns2="http://www.ibm.com/bpm/CoachDesignerNG" xmlns:ns3="http://www.ibm.com/bpm/coachview"'
+    view_layout = escape(f"{head}>{layout}</ns2:layout>" if layout else f"{head}/>")
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <teamworks><coachView id="{view_id}" name="{name}"><lastModified>0</lastModified><lastModifiedBy>coach_views</lastModifiedBy><tenantId isNull="true" />
-<coachViewId>{view_id}</coachViewId><isTemplate>false</isTemplate><layout>{empty_layout}</layout>{asset("paletteIcon", palette_icon)}<previewImage isNull="true" />
+<coachViewId>{view_id}</coachViewId><isTemplate>false</isTemplate><layout>{view_layout}</layout>{asset("paletteIcon", palette_icon)}<previewImage isNull="true" />
 <hasLabel>{str(has_label).lower()}</hasLabel><labelPosition>0</labelPosition><nineSliceX1Coord>0</nineSliceX1Coord><nineSliceX2Coord>0</nineSliceX2Coord><nineSliceY1Coord>0</nineSliceY1Coord><nineSliceY2Coord>0</nineSliceY2Coord>
 <emitBoundary>{str(emit_boundary).lower()}</emitBoundary><isPrototypeFunc>false</isPrototypeFunc><enableDevMode>false</enableDevMode><isMobileReady>true</isMobileReady>
 {script("loadJsFunction", load)}{script("unloadJsFunction", unload)}<viewJsFunction isNull="true" />
