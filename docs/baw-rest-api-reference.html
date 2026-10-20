@@ -290,7 +290,7 @@ footer p{max-width:76ch;margin-bottom:6px}
         <tr><td>1</td><td class="mono">POST /icp4d-api/v1/authorize</td><td>Cloud Pak Platform API</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:75<br>verify-service.mjs:51</td></tr>
         <tr><td>2</td><td class="mono">POST /bas/bpm/system/login</td><td>BPM REST · System</td><td>All tools that touch the server</td><td class="mono">baw_ops.py:80</td></tr>
         <tr><td>3</td><td class="mono">GET /bas/ops/std/bpm/containers</td><td>Ops REST · Container</td><td><code>list_apps</code></td><td class="mono">baw_ops.py:94</td></tr>
-        <tr><td>4</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions</td><td>Ops REST · Version</td><td><code>list_snapshots</code>, <code>export_app</code>, <code>create_app</code>, <code>modernize_app</code>, <code>install_app</code></td><td class="mono">baw_ops.py:97</td></tr>
+        <tr><td>4</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions</td><td>Ops REST · Version</td><td><code>list_snapshots</code>, <code>export_app</code>, <code>build_widget_toolkit</code>, <code>create_app</code>, <code>modernize_app</code>, <code>install_app</code></td><td class="mono">baw_ops.py:97</td></tr>
         <tr><td>5</td><td class="mono">GET /bas/ops/std/bpm/containers/{container}/versions/{version}/export</td><td>Ops REST · Version</td><td><code>export_app</code>, <code>create_app</code></td><td class="mono">baw_ops.py:100</td></tr>
         <tr><td>6</td><td class="mono">POST /bas/ops/std/bpm/containers/install</td><td>Ops REST · Container</td><td><code>install_app</code></td><td class="mono">baw_ops.py:133</td></tr>
         <tr><td>7</td><td class="mono">GET /bas/ops/system/queue/{id}</td><td>Ops REST · System</td><td><code>install_app</code> (status polling)</td><td class="mono">baw_ops.py:149</td></tr>
@@ -408,6 +408,11 @@ footer p{max-width:76ch;margin-bottom:6px}
   System Data and UI Toolkit versions, and <code>properties.json</code> says <code>{"twxWithoutToolkits":"true"}</code>.
   <code>twx_clone.py</code> and <code>modernize_coaches.py</code> keep the IDs of toolkit objects that the app
   refers to but does not hold, with or without <code>toolkits/*.zip</code>.</p>
+  <p>The widget toolkits are the exception. <code>build_widget_toolkit</code> writes App Builder Widgets
+  (<code>ABW</code>) or Modernizer Widgets (<code>MDW</code>) as a toolkit <code>.twx</code>, installed through the
+  same install route as an app. An app built from them names the toolkit snapshot in <code>package.xml</code> and
+  carries it as <code>toolkits/&lt;snapshot id&gt;.zip</code>, as BAW's own exports do. <code>create_app</code> and
+  <code>modernize_app</code> check with <code>versions</code> that the snapshot is installed before they build.</p>
 
   <h3>6 · Install is asynchronous</h3>
   <p><code>POST /std/bpm/containers/install</code> takes the file as the multipart form field
@@ -416,6 +421,11 @@ footer p{max-width:76ch;margin-bottom:6px}
   that URL onto the <code>/bas/ops</code> gateway path and polls it every 5 seconds for up to 15 minutes
   until <code>state</code> leaves pending/running. The spec lists the final states as
   <code>success</code> and <code>failure</code>.</p>
+  <p>A <code>success</code> does not always mean the content changed. BAW keeps the old content of a snapshot name
+  that already exists, and it skips a package whose project is new but whose acronym an installed app or toolkit
+  already uses. Both still report <code>success</code>. So the tools refuse a used snapshot name before they build,
+  and each widget toolkit keeps fixed project and branch IDs in <code>server/widget_toolkit.py</code>, so every build
+  installs as a new snapshot of the same toolkit.</p>
 
   <h3>7 · Run URLs: why the older BPM REST API</h3>
   <div class="opt dead">

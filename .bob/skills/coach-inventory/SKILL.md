@@ -14,7 +14,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 2. **Read the spec.** Each service has a `variable` (the business object behind its fields) and its `coaches` in flow order. Each coach has:
    - `sections`, each holding `fields` (`path`, `label`, `type`, `readonly`, `required`);
    - `buttons` (`label`, `viewId`, `primary`, `to`);
-   - `native`, the items that stay as BAW views under the React form;
+   - `native`, the items that stay as BAW views, below the widgets;
    - `dropped`, the items that will not appear at all.
 
 3. **Improve the spec.** Edit only these keys:
@@ -26,6 +26,8 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
    | `required: true` | Set for fields the business must have |
    | `pattern` + `message` | Use a JavaScript regular expression and a plain sentence, e.g. `"^\\d{10}$"` with "Account number must be 10 digits" |
    | `example` | Add a sample value, shown as the placeholder. Never use real data |
+   | `help` | Add a short hint shown with the field (its BAW help text) |
+   | `min` / `max` | Set the allowed range of a number field |
    | `readonly: true` | Set on every field of a review or summary coach, which then renders as a read-only summary |
    | `intro` | Add one sentence of lead text for a coach |
    | `sectionStyle` | Use `"tabs"` for long single-coach forms, `"stack"` otherwise |
@@ -39,7 +41,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 4. **Check what will not be modernized.** Read `native` and `dropped` for every coach. Tell the user about anything important that is dropped, such as a Custom HTML block with instructions, and add its text to the coach's `intro` when it matters.
 
 5. **STOP.** Show the inventory summary, the theme file, a short list of your changes, and the native or dropped items. Then ask:
-   > Approve this spec, or tell me what to change. When approved, I will write a React screen for each coach.
+   > Approve this spec, or tell me what to change. When approved, I will build each coach from Modernizer Widgets, which you can rearrange in Coach Designer. Tell me if a coach should get a hand-written screen instead.
 
    Skip the stop only when the user said to continue without review.
 

@@ -1,6 +1,6 @@
 ---
 name: app-theme
-description: Write the theme file (work/<name>.theme.json) that gives a BAW app its look - colours, font, corner shape, field icon boxes, width, button placement, and the header's product name and logo - from the user's description of the look or from a screenshot, using the baw-dev-tools image tools. The same file styles the UI Toolkit coaches create_app builds and the React screens modernize_app adds. Use before writing an app spec or modernizing coaches, and whenever the user describes, names or changes a look, brand or colours.
+description: Write the theme file (work/<name>.theme.json) that gives a BAW app its look - colours, font, corner shape, field icon boxes, width, button placement, and the header's product name and logo - from the user's description of the look or from a screenshot, using the baw-dev-tools image tools. The same file styles the App Builder Widgets coaches create_app builds and the React + Carbon coaches (Modernizer Widgets or hand-written screens) modernize_app adds. Use before writing an app spec or modernizing coaches, and whenever the user describes, names or changes a look, brand or colours.
 ---
 
 # App theme
@@ -85,7 +85,7 @@ Keep screenshots and logos in `work/` (not committed), never in `app-specs/`.
 ## 4. Use it
 
 - **App spec:** `"theme": "work/<name>.theme.json"`.
-- **Coach spec** (before `modernize_app`): `"theme": "work/<name>.theme.json"`. Use the same file as the app spec, so the React screens match the classic ones, unless the user wants the React screens to look different.
+- **Coach spec** (before `modernize_app`): `"theme": "work/<name>.theme.json"`. Use the same file as the app spec, so the modernized coaches match the classic ones, unless the user wants them to look different.
 - `create_app` and `modernize_app` check the file and list every problem; fix it and call them again.
 - **To change the look later:** edit the theme file, then rebuild with a new snapshot. Every app and screen using the file follows it.
 

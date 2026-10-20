@@ -1,11 +1,14 @@
 <workflow_instructions>
   <mode_overview>
     This mode gives an existing BAW process app a React + Carbon UI without touching its
-    logic. You analyze each legacy coach, design a better screen, and write it as a React
-    component. For every client-side human service, the baw-dev-tools MCP server adds a copy
-    named "(Modernized)" whose coaches show your screens, styled by the app's theme file. The
-    original buttons stay in each coach, hidden, and your screen presses them, so the coach
-    flow and its scripts run unchanged. The legacy services stay next to the copies.
+    logic. You analyze each legacy coach and design a better screen as a coach spec. For every
+    client-side human service, the baw-dev-tools MCP server adds a copy named "(Modernized)"
+    whose coaches are layouts of Modernizer Widgets (the MDW toolkit: Header, fields, Error
+    Summary, Button) inside UI Toolkit panels and tabs, styled by the app's theme file. Authors
+    can open these coaches in Coach Designer and drag, drop and rearrange the widgets. A coach
+    whose spec names a "screen" shows a React screen you wrote for it instead, as one block.
+    The original buttons stay in each coach, hidden, and the widgets or your screen press them,
+    so the coach flow and its scripts run unchanged. The legacy services stay next to the copies.
   </mode_overview>
 
   <initialization_steps>
@@ -40,10 +43,10 @@
     </phase>
 
     <phase name="build">
-      <description>The react-coach-screen and coach-modernize skills</description>
+      <description>The coach-modernize skill, and the react-coach-screen skill for hand-written screens</description>
       <steps>
-        <step>Write one screen per coach in coach-ui/src/screens/: when the carbon-mcp tools are available, code_search the Carbon components and docs_search the patterns first, and code_audit each screen after (react-coach-screen skill). Set "screen" on each coach, build_screens</step>
-        <step>build_widget_toolkit and install_app once, if no MDW snapshot has the current widgets</step>
+        <step>Pick the toolkit: the newest snapshot list_snapshots("MDW") shows that has its work/MDW-SNAPSHOT.twx. When there is none, or the widgets changed since, build_widget_toolkit("modernizer") with a new snapshot and install_app it</step>
+        <step>Coaches are built from Modernizer Widgets by default. Only when the user asks for a screen designed for a coach, or the design needs more than the widgets give (a layout, component or behaviour the spec cannot express), write a screen in coach-ui/src/screens/: when the carbon-mcp tools are available, code_search the Carbon components and docs_search the patterns first, and code_audit the screen after (react-coach-screen skill). Set "screen" on that coach, build_screens</step>
         <step>modernize_app with a new snapshot and toolkit_snapshot, install_app</step>
         <step>test_service for every modernized service with fill; look at the screenshots, fix and repeat until right</step>
         <step>Report each service with its result, the screens written, and before / after screenshots</step>
@@ -55,6 +58,7 @@
         <step>A new app from a requirement or screenshots, or new or removed fields, steps, a workflow or an approval, changes the app spec, not the screens. Call switch_mode with mode_slug "baw-app-builder" without asking: the user's request is the go-ahead. Never in your first reply of a task (see .bob/rules/baw-mode-routing.md): when the request is the task's first message, call list_files on work/ first</step>
         <step>In the reason, give the app name, acronym, installed snapshots, the app spec and theme file when you know them, and repeat what the user asked for</step>
         <step>Labels, help text, grouping, validation, the look and screen behaviour stay here: they live in the coach spec, the theme file and the React screens</step>
+        <step>A change to what a Modernizer Widget shows or does, for every app that uses it, is a code change in coach-ui/: switch to agent mode with the widget and the change in the reason</step>
       </steps>
     </phase>
   </main_workflow>
@@ -62,6 +66,6 @@
   <completion_criteria>
     <criterion>Every service marked "modernize": true has its "(Modernized)" copy installed, styled by the theme file</criterion>
     <criterion>test_service reports "ok": true for every copy, and you have looked at the screenshots</criterion>
-    <criterion>The report lists the services, the snapshot, the screens written, screenshot folders, and what the spec kept native or dropped</criterion>
+    <criterion>The report lists the services, the snapshot, the MDW toolkit snapshot, the screens written (if any), screenshot folders, and what the spec kept native or dropped</criterion>
   </completion_criteria>
 </workflow_instructions>

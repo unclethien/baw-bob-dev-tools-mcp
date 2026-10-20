@@ -325,7 +325,8 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: st
     summary = python("modernize_coaches.py", source, spec, dest, "--snapshot", snapshot, *args)
     result = {"twx": rel(dest), "summary": summary, "build": build[-500:]}
     if not configured():
-        result["install"] = IMPORT_STEPS.format(twx=rel(dest))
+        first = f"Import the toolkit {rel(args[1])} first, unless the server already has that snapshot.\n" if args else ""
+        result["install"] = first + IMPORT_STEPS.format(twx=rel(dest))
     return result
 
 
