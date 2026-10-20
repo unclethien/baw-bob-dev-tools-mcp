@@ -1,4 +1,4 @@
-// Error Summary widget: the messages of the last validation on the page, like the generic form's banner.
+// Error Summary widget: the messages of the last validation on the page, in the screen components' banner.
 import { useSyncExternalStore } from 'react';
 import { registerWidget } from '../runtime.jsx';
 import { ErrorSummary } from '../components.jsx';

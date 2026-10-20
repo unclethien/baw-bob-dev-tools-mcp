@@ -25,6 +25,7 @@ export const page = {
       if (fields.get(id) !== field) return;
       fields.delete(id);
       errors = errors.filter((error) => error.id !== id);
+      markTabs();
       notify();
     };
   },
@@ -35,6 +36,7 @@ export const page = {
       const error = field.validate();
       return error && { ...error, id, element: field.element };
     }).filter(Boolean).sort(byPosition);
+    markTabs();
     notify();
     return errors;
   },
@@ -45,9 +47,43 @@ function byPosition(a, b) {
   return a.element.compareDocumentPosition(b.element) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
 }
 
-// Shows a field that sits in a tab that is not selected: selects the tab whose panel holds it (ARIA tabs).
+// Shows a field that sits in a tab that is not selected, also inside nested tabs: selects each tab whose panel holds it,
+// outermost first.
 export function reveal(element) {
-  const panel = element && element.closest('[role="tabpanel"]');
-  const tab = panel && panel.id && element.ownerDocument.querySelector(`[role="tab"][aria-controls="${panel.id}"]`);
-  if (tab && tab.getAttribute('aria-selected') !== 'true') tab.click();
+  const panels = [];
+  for (let panel = element && element.closest('[role="tabpanel"]'); panel; panel = panel.parentElement?.closest('[role="tabpanel"]')) {
+    panels.unshift(panel);
+  }
+  panels.forEach(selectTab);
+}
+
+function selectTab(panel) {
+  // ARIA tabs (Carbon): the tab names its panel.
+  const tab = panel.id && panel.ownerDocument.querySelector(`[role="tab"][aria-controls="${CSS.escape(panel.id)}"]`);
+  if (tab) {
+    if (tab.getAttribute('aria-selected') !== 'true') tab.click();
+    return;
+  }
+  const link = tabSectionLink(panel);
+  if (link && !link.parentElement.classList.contains('active')) link.click();
+}
+
+// BAW's Tab Section: its panes and the links of its tab strip come in the same order.
+function tabSectionLink(panel) {
+  const content = panel.classList.contains('tab-pane') && panel.closest('.tab-content');
+  if (!content) return null;
+  const panes = [...content.querySelectorAll('.tab-pane')].filter((pane) => pane.closest('.tab-content') === content);
+  return content.parentElement.querySelectorAll(':scope > .nav-tabs-strip > li > a')[panes.indexOf(panel)] || null;
+}
+
+// BAW's Tab Section draws its own tabs, so each tab that holds an error gets the pp-tab-error class (styles.scss
+// adds a dot to it), also the outer tabs of nested Tab Sections.
+function markTabs() {
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll('.pp-tab-error').forEach((tab) => tab.classList.remove('pp-tab-error'));
+  for (const { element } of errors) {
+    for (let panel = element && element.closest('[role="tabpanel"]'); panel; panel = panel.parentElement?.closest('[role="tabpanel"]')) {
+      tabSectionLink(panel)?.parentElement.classList.add('pp-tab-error');
+    }
+  }
 }

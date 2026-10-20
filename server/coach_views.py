@@ -37,7 +37,7 @@ this._ppBind = function () {
   var bound = data();
   view._ppBound = bound && bound.bindAll ? bound.bindAll(function () { view._ppScreen.update(); }) : null;
 };
-this._ppScreen = window.CoachScreens.mount(this.context.element, option("screen", "form"), {
+this._ppScreen = window.CoachScreens.mount(this.context.element, option("screen", ""), {
   options: { theme: JSON.parse(option("theme", "{}")), fields: JSON.parse(option("fields", "[]")), spec: JSON.parse(option("spec", "null")) },
   read: function (path) { var p = parent(path); return step(p.obj, p.key); },
   write: function (path, value) {

@@ -7,6 +7,10 @@ each coach it records the sections, the fields bound under the coach's business
 object (label, path, type, read-only, required), the buttons and where they lead,
 and anything the React form cannot render (kept native) or will leave out (dropped).
 
+Coaches built from Modernizer Widgets (modernize_coaches.py) are read back the same way: field widgets
+as fields with their options, Panels and Tab Sections as sections, the Header's title and intro, and
+Button widgets as buttons. Such a service is not offered for modernizing again.
+
 Review the spec before running modernize_coaches.py. Fix labels, mark fields
 "required" or give them a "pattern" (a regular expression), a "message" and an
 "example" (shown as the placeholder, and typed by verify-service.mjs --fill), set
@@ -26,6 +30,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from app_template import SYSTEM_VIEWS
+from widget_toolkit import widget_kinds
 
 XSI_TYPE = "{http://www.w3.org/2001/XMLSchema-instance}type"
 FIELD_TYPES = {
@@ -34,6 +39,9 @@ FIELD_TYPES = {
     "Single Select": "select", "Radio Button Group": "radio",
 }
 CHOICE_VIEWS = {"Single Select", "Radio Button Group"}
+WIDGETS = widget_kinds("modernizer")  # view ID -> kind
+FIELD_WIDGETS = {"text", "textarea", "number", "date", "checkbox", "select", "radio"}
+WIDGET_KEYS = ("pattern", "message", "example", "min", "max")  # field widget options that are spec keys
 SCREEN_VIEWS = ("Coach Screen (", "PP React ")  # the screen view, and its name in apps modernized before the rename
 CONTAINERS = {"Panel", "Tab Section", "Vertical Layout", "Horizontal Layout", "Collapsible Panel", "Well"}
 BACKWARD = re.compile(r"\b(back|previous|prev|cancel|close)\b", re.I)
@@ -88,15 +96,18 @@ class CoachReader:
             value = next((v.text for v in children(c, "value")), None)
             config[next(o.text for o in children(c, "optionName"))] = value
         kind = (el.get(XSI_TYPE) or "").rsplit(":", 1)[-1]
-        view = "Custom HTML" if kind == "CustomHTML" else self.names.get(next((v.text for v in children(el, "viewUUID")), ""), "")
+        view_id = next((v.text for v in children(el, "viewUUID")), "")
+        view = "Custom HTML" if kind == "CustomHTML" else self.names.get(view_id, "")
         kids = [k for box in children(el, "contentBoxContrib") for k in children(box, "contributions")]
         return {
             "viewId": next((v.text for v in children(el, "layoutItemId")), ""),
             "view": view or "unknown view",
+            "widget": WIDGETS.get(view_id),
+            "config": config,
             "label": (config.get("@label") or "").strip(),
             "visibility": config.get("@visibility") or "",
             "colorStyle": config.get("colorStyle") or "",
-            "options": static_options(config),
+            "options": widget_options(config) if WIDGETS.get(view_id) in ("select", "radio") else static_options(config),
             "binding": next((b.text for b in children(el, "binding")), "") or "",
             "children": kids,
         }
@@ -104,7 +115,7 @@ class CoachReader:
     def read(self, layout):
         self.sections = [{"title": "", "fields": []}]
         self.buttons, self.native, self.dropped, self.leaves = [], [], [], []
-        self.tabs = False
+        self.tabs, self.header, self.widgets = False, {}, False
         for el in [c for c in layout if local(c.tag) == "layoutItem"]:
             self.walk(el, top=True)
         return self
@@ -131,7 +142,12 @@ class CoachReader:
     def walk(self, el, top=False, in_tabs=False):
         it = self.item(el)
         view = it["view"]
-        if view == "Button":
+        self.widgets = self.widgets or bool(it["widget"])
+        if it["widget"] in ("theme", "errors"):
+            return
+        if it["widget"] == "header":
+            self.header = it["config"]
+        elif view == "Button" or it["widget"] == "button":
             self.buttons.append(it)
         elif view == "Custom HTML":
             self.dropped.append(f'{it["viewId"]} (Custom HTML)')
@@ -171,17 +187,32 @@ def static_options(config):
         return None
 
 
+def widget_options(config):
+    """A Select or Radio Group widget's items, a JSON list of NameValuePair (name shown, value stored), as [{value, label}]."""
+    try:
+        items = json.loads(config.get("options") or "[]")
+        return [{"value": i["value"], "label": i.get("name") or i["value"]} for i in items] or None
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
 def renderable(it):
-    """The React form renders this view: a known input, and a select or radio group only with fixed items."""
+    """A widget renders this view: a field widget, a known input, and a select or radio group only with fixed items."""
+    if it["widget"]:
+        return it["widget"] in FIELD_WIDGETS
     return it["view"] in FIELD_TYPES and (it["view"] not in CHOICE_VIEWS or bool(it["options"]))
 
 
 def field_spec(it, variable):
     path = it["binding"][len(f"tw.local.{variable}."):]
-    kind = FIELD_TYPES[it["view"]]
+    kind = it["widget"] or FIELD_TYPES[it["view"]]
     spec = {"path": path, "label": it["label"] or humanize(path), "type": kind}
     if it["options"]:
         spec["options"] = it["options"]
+    if it["widget"]:
+        spec.update({k: it["config"][k] for k in WIDGET_KEYS if it["config"].get(k)})
+        if (it["config"].get("@helpText") or "").strip():
+            spec["help"] = it["config"]["@helpText"].strip()
     if kind == "output" or "READONLY" in it["visibility"]:
         spec["readonly"] = True
     if "REQUIRED" in it["visibility"]:
@@ -223,10 +254,12 @@ def inventory_service(root, names):
     react = [r for _, r in readers for leaf in r.leaves + r.native if leaf["view"].startswith(SCREEN_VIEWS)]
     react += [b for _, r in readers for b in r.dropped if any(name in b for name in SCREEN_VIEWS)]
     counts = Counter(leaf["binding"].split(".")[2] for _, r in readers for leaf in r.leaves
-                     if leaf["view"] in FIELD_TYPES and leaf["binding"].count(".") >= 3)
-    if react or not counts:
+                     if (leaf["view"] in FIELD_TYPES or leaf["widget"]) and leaf["binding"].count(".") >= 3)
+    built = any(r.widgets for _, r in readers)
+    if react or built or not counts:
         service["modernize"] = False
-        service["reason"] = "already uses React screens" if react else "no fields bound to a business object"
+        service["reason"] = ("already uses React screens" if react else "already built from Modernizer Widgets" if built
+                             else "no fields bound to a business object")
     variable = counts.most_common(1)[0][0] if counts else ""
     service["variable"], service["classRef"] = variable, variables.get(variable, "")
     if variable and not service["classRef"]:
@@ -247,12 +280,19 @@ def inventory_service(root, names):
             target = next((nodes[f.get("targetRef")].get("name") for f in flows
                            if f.get("sourceRef") == form.get("id") and first(f, "coachEventPath") is not None
                            and first(f, "coachEventPath").text == b["viewId"] and f.get("targetRef") in nodes), "")
-            primary = b["colorStyle"] == "P" or (b["colorStyle"] != "D" and not BACKWARD.search(b["label"]))
-            buttons.append({"label": b["label"] or b["viewId"], "viewId": b["viewId"], "primary": primary, "to": target or "(not wired)"})
-        if len(buttons) == 1:
+            if b["widget"]:
+                primary = (b["config"].get("kind") or "").lower() != "secondary"
+            else:
+                primary = b["colorStyle"] == "P" or (b["colorStyle"] != "D" and not BACKWARD.search(b["label"]))
+            button = {"label": b["label"] or b["viewId"], "viewId": b["viewId"], "primary": primary, "to": target or "(not wired)"}
+            if b["widget"] and b["config"].get("validate") in ("true", "false"):
+                button["validate"] = b["config"]["validate"] == "true"
+            buttons.append(button)
+        if len(buttons) == 1 and not b["widget"]:  # a Button widget says whether it is primary
             buttons[0]["primary"] = True
         service["coaches"].append({
-            "id": form.get("id"), "name": form.get("name"), "title": form.get("name"), "intro": "",
+            "id": form.get("id"), "name": form.get("name"), "title": reader.header.get("title") or form.get("name"),
+            "intro": reader.header.get("intro") or "",
             "sectionStyle": "tabs" if reader.tabs else "stack",
             "sections": [s for s in reader.sections if s["fields"]],
             "buttons": buttons, "native": native, "dropped": reader.dropped,

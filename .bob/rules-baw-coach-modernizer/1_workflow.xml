@@ -43,7 +43,8 @@
       <description>The react-coach-screen and coach-modernize skills</description>
       <steps>
         <step>Write one screen per coach in coach-ui/src/screens/: when the carbon-mcp tools are available, code_search the Carbon components and docs_search the patterns first, and code_audit each screen after (react-coach-screen skill). Set "screen" on each coach, build_screens</step>
-        <step>modernize_app with a new snapshot, install_app</step>
+        <step>build_widget_toolkit and install_app once, if no MDW snapshot has the current widgets</step>
+        <step>modernize_app with a new snapshot and toolkit_snapshot, install_app</step>
         <step>test_service for every modernized service with fill; look at the screenshots, fix and repeat until right</step>
         <step>Report each service with its result, the screens written, and before / after screenshots</step>
       </steps>
