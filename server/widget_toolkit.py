@@ -22,7 +22,7 @@ import sys
 import uuid
 import zipfile
 from pathlib import Path
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, unescape
 
 import app_template
 from coach_builder import SYSTEM_TYPES, TWSYS
@@ -197,16 +197,38 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
 
 
 def toolkit_dependency(toolkit_twx: Path, rank):
-    """The dependency entry an app needs for a built toolkit, with a dependency ID of the app's own."""
+    """The dependency entry an app needs for a built toolkit, with a dependency ID of the app's own, and the
+    toolkit's view IDs by name."""
     with zipfile.ZipFile(toolkit_twx) as z:
         package = z.read("META-INF/package.xml").decode("utf-8")
-        target = package.split("</target>", 1)[0]
-        attr = lambda tag, key: re.search(rf'<{tag} [^>]*\b{key}="([^"]*)"', target).group(1)  # noqa: E731
-        views = dict(re.findall(r'<object id="(64\.[^"]+)" versionId="[^"]+" name="([^"]+)" type="coachView"/>', package))
-    return {"id": "2069." + uid(), "rank": rank, "projectId": attr("project", "id"), "name": attr("project", "name"),
-            "acronym": attr("project", "shortName"), "branchId": attr("branch", "id"), "snapshotId": attr("snapshot", "id"),
-            "snapshot": attr("snapshot", "name"), "created": attr("snapshot", "originalCreationDate"),
+    views = dict(re.findall(r'<object id="(64\.[^"]+)" versionId="[^"]+" name="([^"]+)" type="coachView"/>', package))
+    t = app_template.target(package)
+    return {"id": "2069." + uid(), "rank": rank, **{k: t[k] for k in ("projectId", "name", "acronym", "branchId", "branchName", "snapshotId", "snapshot", "created")},
             "views": {name: vid for vid, name in views.items()}}
+
+
+def add_dependency(package: str, toolkit_twx: Path):
+    """Make an app's META-INF/package.xml depend on the toolkit built in toolkit_twx. An existing dependency on the
+    same toolkit moves to this snapshot and keeps its ID, which the app's type references use. Returns (package, dep)."""
+    dep = toolkit_dependency(toolkit_twx, 0)
+    existing = next((d for d in app_template.toolkit_dependencies(package) if d["projectId"] == dep["projectId"]), None)
+    if existing:
+        dep.update(id=existing["id"], rank=existing["rank"], previous=existing["snapshotId"])
+        block = re.search(rf'<dependency [^>]*\bid="{re.escape(existing["id"])}">.*?</dependency>', package, re.S).group(0)
+        return package.replace(block, app_template.dependency_xml(dep).strip(), 1), dep
+    if dep["projectId"] in package.split("</dependencies>", 1)[0].split("<dependencies>", 1)[-1]:
+        raise SystemExit(f"META-INF/package.xml lists {dep['acronym']} as a dependency in a form this script cannot read")
+    dep["rank"] = max((int(r) for r in re.findall(r'<dependency rank="(\d+)"', package)), default=-1) + 1
+    if "\n    </dependencies>" not in package:
+        raise SystemExit("META-INF/package.xml has no </dependencies>")
+    return package.replace("\n    </dependencies>", app_template.dependency_xml(dep) + "\n    </dependencies>", 1), dep
+
+
+def option_text(value):
+    """A layout option's value as text: lists and objects as JSON, booleans as true/false."""
+    if isinstance(value, bool):
+        return str(value).lower()
+    return value if isinstance(value, str) else json.dumps(value)
 
 
 def swap_view(layout, item_id, view_ref, options):
@@ -222,26 +244,23 @@ def swap_view(layout, item_id, view_ref, options):
         raise SystemExit(f"Layout item {item_id} is not a view")
     end = layout.index(f"</{p}:viewUUID>", view_at) + len(f"</{p}:viewUUID>")
     item = layout[start:end]
-    item = re.sub(rf"<{p}:configData><{p}:id>[^<]*</{p}:id><{p}:optionName>(?!@)[^<]*</{p}:optionName>(?:<{p}:value />|<{p}:value>[^<]*</{p}:value>)</{p}:configData>", "", item)
-    extra = "".join(f"<{p}:configData><{p}:id>{uid()}</{p}:id><{p}:optionName>{k}</{p}:optionName><{p}:value>{escape(v)}</{p}:value></{p}:configData>"
+    # Drop the old view's own options (BAW exports are indented, so allow whitespace between the tags); keep @ options.
+    item = re.sub(rf"<{p}:configData>\s*<{p}:id>[^<]*</{p}:id>\s*<{p}:optionName>(?!@)[^<]*</{p}:optionName>\s*"
+                  rf"(?:<{p}:value\s*/>|<{p}:value>[^<]*</{p}:value>)\s*</{p}:configData>\s*", "", item)
+    extra = "".join(f"<{p}:configData><{p}:id>{uid()}</{p}:id><{p}:optionName>{k}</{p}:optionName><{p}:value>{escape(option_text(v))}</{p}:value></{p}:configData>"
                     for k, v in options.items())
     item = re.sub(rf"<{p}:viewUUID>[^<]*</{p}:viewUUID>$", f"{extra}<{p}:viewUUID>{view_ref}</{p}:viewUUID>", item)
     return layout[:start] + item + layout[end:]
 
 
 def use_widgets(app_twx: Path, toolkit_twx: Path, dest: Path, swaps, snapshot=None):
-    """Add a dependency on the toolkit and point layout items at its widgets.
+    """Make an app depend on the toolkit (or move it to this toolkit snapshot) and point layout items at its widgets.
 
-    swaps: (coach name, layout item id, widget kind, {option: value}).
+    swaps: (service name or None for every service, coach name, layout item id, widget kind, {option: value}).
     """
     with zipfile.ZipFile(app_twx) as twx:
-        package = twx.read("META-INF/package.xml").decode("utf-8")
-        ranks = [int(r) for r in re.findall(r'<dependency rank="(\d+)"', package)]
-        dep = toolkit_dependency(toolkit_twx, rank=max(ranks, default=-1) + 1)
+        package, dep = add_dependency(twx.read("META-INF/package.xml").decode("utf-8"), toolkit_twx)
         toolkit = next(k for k, t in TOOLKITS.items() if t["acronym"] == dep["acronym"])
-        if f'shortName="{dep["acronym"]}"' in package:
-            raise SystemExit(f"{app_twx} already depends on {dep['acronym']}")
-        package = package.replace("\n    </dependencies>", app_template.dependency_xml(dep) + "\n    </dependencies>", 1)
         if snapshot:
             target, rest = package.split("</target>", 1)
             target = re.sub(r'<snapshot id="2064\.[^"]+" name="[^"]*" acronym="[^"]*"',
@@ -252,16 +271,17 @@ def use_widgets(app_twx: Path, toolkit_twx: Path, dest: Path, swaps, snapshot=No
             if not re.match(r"objects/1\.", name):
                 continue
             text = twx.read(name).decode("utf-8")
-            for coach, item_id, kind, options in swaps:
-                m = re.search(rf'<\w+:formTask name="{re.escape(coach)}"', text)
-                if not m:
+            service_name = unescape(re.search(r'<process id="[^"]+" name="([^"]*)"', text).group(1))
+            for service, coach, item_id, kind, options in swaps:
+                m = re.search(rf'<\w+:formTask name="{re.escape(escape(coach))}"', text)
+                if not m or (service and service != service_name):
                     continue
                 close = m.end() + re.search(r"</\w+:layout>", text[m.end():]).start()
                 view_ref = dep["views"][widgets(toolkit)[kind]["view"]]
                 text = text[:m.end()] + swap_view(text[m.end():close], item_id, view_ref, options) + text[close:]
                 changed[name] = text
-                swapped.add((coach, item_id))
-        missing = [f"{c}:{i}" for c, i, _, _ in swaps if (c, i) not in swapped]
+                swapped.add((service, coach, item_id))
+        missing = [f"{s + '/' if s else ''}{c}:{i}" for s, c, i, _, _ in swaps if (s, c, i) not in swapped]
         if missing:
             raise SystemExit(f"No coach for: {', '.join(missing)}")
         # BAW keeps an object's installed content when its versionId is unchanged, so changed objects get new ones.
@@ -276,12 +296,13 @@ def use_widgets(app_twx: Path, toolkit_twx: Path, dest: Path, swaps, snapshot=No
             package = package.replace(entry, f'<object id="{oid}" versionId="{new_version}"', 1)
         with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
             toolkit_zip = f"toolkits/{dep['snapshotId']}.zip"
+            stale = {toolkit_zip} | ({f"toolkits/{dep['previous']}.zip"} if dep.get("previous") else set())
             for info in twx.infolist():
                 if info.filename == "META-INF/package.xml":
                     out.writestr(info.filename, package)
                 elif info.filename in changed:
                     out.writestr(info.filename, changed[info.filename])
-                elif info.filename != toolkit_zip:
+                elif info.filename not in stale:
                     out.writestr(info, twx.read(info.filename))
             # BAW's own exports carry every non-system toolkit an app depends on, even without toolkits.
             out.writestr(toolkit_zip, toolkit_twx.read_bytes())
@@ -302,7 +323,8 @@ def main():
     u.add_argument("app", type=Path)
     u.add_argument("toolkit", type=Path)
     u.add_argument("dest", type=Path)
-    u.add_argument("--swap", action="append", default=[], help='"Coach:LayoutItemId=kind" or "Coach:LayoutItemId=kind:{json options}"')
+    u.add_argument("--swap", action="append", default=[],
+                   help='"[Service/]Coach:LayoutItemId=kind" or "...=kind:{json options}"; without Service, every service with that coach')
     u.add_argument("--snapshot")
     args = parser.parse_args()
     if args.command == "preview":
@@ -316,8 +338,9 @@ def main():
         for s in args.swap:
             where, what = s.split("=", 1)
             coach, item = where.rsplit(":", 1)
+            service, _, coach = coach.rpartition("/")
             kind, _, opts = what.partition(":")
-            swaps.append((coach, item, kind, json.loads(opts) if opts else {}))
+            swaps.append((service or None, coach, item, kind, json.loads(opts) if opts else {}))
         dep = use_widgets(args.app, args.toolkit, args.dest, swaps, args.snapshot)
         print(f"Wrote {args.dest}: depends on {dep['name']} ({dep['acronym']}) {dep['snapshot']}, {len(swaps)} item(s) swapped")
 
