@@ -1,6 +1,6 @@
 ---
 name: react-coach-screen
-description: Write a React + Carbon screen for one BAW coach (coach-ui/src/screens/<name>.jsx) that replaces the coach's legacy layout while the coach flow, scripts and buttons stay native. Covers the screen contract (props, binding, pressing coach buttons), the shared building blocks, and how to build, attach and test the screen with the baw-dev-tools MCP tools. Use when modernizing a coach and the screen should be designed for that coach rather than rendered by the generic form.
+description: Write a React + Carbon screen for one BAW coach (coach-ui/src/screens/<name>.jsx) that replaces the coach's legacy layout while the coach flow, scripts and buttons stay native. Covers the screen contract (props, binding, pressing coach buttons), the shared building blocks, and how to build, attach and test the screen with the baw-dev-tools MCP tools. Use when modernizing a coach and the screen should be designed for that coach rather than built from Modernizer Widgets.
 ---
 
 # React coach screen
@@ -93,5 +93,5 @@ Mention in your report which Carbon tools you used and what the audit changed. W
 ## 3. Build, attach, test
 
 1. `build_screens` compiles every screen. On an error, fix the file at the reported line and build again.
-2. In the coach spec, add `"screen": "<registered name>"` to that coach. Coaches without `screen` keep the generic form.
+2. In the coach spec, add `"screen": "<registered name>"` to that coach. Coaches without `screen` are built from Modernizer Widgets.
 3. `modernize_app` with a new snapshot, then `install_app`, then `test_service` for `<service> (Modernized)`. Open the screenshots and check your screen looks as designed. If not, change the screen and repeat with a new snapshot.

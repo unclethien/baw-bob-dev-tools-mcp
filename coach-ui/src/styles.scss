@@ -140,3 +140,72 @@
   gap: 0.5rem;
   margin-top: 1.5rem;
 }
+
+// A coach built from widgets, on a page the Theme widget dressed: BAW's own containers take the look of the screen
+// components (components/edit-section.jsx, review-section.jsx, section-tabs.jsx, action-bar.jsx).
+// Containers that hold field widgets lay them out in a grid; text areas and read-only values take a whole row;
+// a row of Button widgets becomes its button bar. The Theme widget sets the --pp-* variables on the page.
+// mdw.css may load before BAW's own stylesheets, so these rules carry more weight than BAW's (html body.…).
+$fields: '.pp-widget-text, .pp-widget-textarea, .pp-widget-number, .pp-widget-date, .pp-widget-checkbox, .pp-widget-select, .pp-widget-radio';
+
+html body.pp-widget-page {
+  font-family: var(--pp-page-font, 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif);
+
+  // BAW positions the coach's body absolutely, so left and right 0 let the auto margins centre it.
+  #mainBody { box-sizing: border-box; max-width: var(--pp-page-width); left: 0; right: 0; margin: 0 auto; padding: 0 1rem 1rem;
+    background: var(--pp-background); }
+  .pp-app.pp-widget .pp-header { margin: 0 -1rem 1.5rem; }
+
+  .ContentBox:has(> .CoachView > div > :is(#{$fields})) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 1.25rem 1.5rem;
+    padding: 1.5rem 0.5rem;
+    background: #ffffff;
+    > .CoachView { margin: 0; }
+  }
+  .ContentBox > .CoachView:has(> div > :is(.pp-widget-textarea, .pp-widget-readonly)) { grid-column: 1 / -1; }
+
+  // A container whose fields are all read-only: a review tile, rows of label and value.
+  .ContentBox:has(> .CoachView > div > .pp-widget-readonly):not(:has(> .CoachView > div > .pp-widget:not(.pp-widget-readonly))) {
+    display: block;
+    padding: 1rem;
+    .pp-review-row { border-bottom: 1px solid #e0e0e0; }
+  }
+
+  .ContentBox:has(> .CoachView > div > .pp-widget-button) {
+    display: flex;
+    justify-content: var(--pp-theme-align, flex-end);
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    > .CoachView { display: block; }
+  }
+
+  // Panel: a white section with its title, one under the other.
+  .Panel {
+    margin-bottom: 1rem;
+    > .panel { display: block; width: 100%; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: #ffffff; }
+    .panel-heading { padding: 0.5rem 1rem 0; border: 0; background: #ffffff; }
+    .panel-title { display: block; margin: 0.75rem 0 0; font-size: 1rem; font-weight: 600; color: var(--pp-link-primary); }
+    .panel-body { padding: 0 1rem; }
+  }
+
+  // Tab Section: contained tabs on the theme's colours.
+  .Tab_Section {
+    .nav-tabs { border: 0; }
+    .nav-tabs > li > a {
+      margin: 0 1px 0 0;
+      padding: 0.75rem 1rem;
+      border: 0;
+      border-top: 2px solid transparent;
+      border-radius: 0;
+      background: #e0e0e0;
+      color: #525252;
+      font-size: 0.875rem;
+    }
+    .nav-tabs > li.active > a { background: #ffffff; color: #161616; font-weight: 600; border-top-color: var(--pp-interactive); }
+    .nav-tabs > li.pp-tab-error > a::after { content: ' •'; }
+    .tab-content { padding: 1rem 2rem; border: 0; background: #ffffff; }
+    .tab-content > .ContentBox { padding: 0; }
+  }
+}

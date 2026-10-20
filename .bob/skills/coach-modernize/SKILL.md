@@ -9,11 +9,11 @@ Inputs: an app `.twx` in `work/` and an **approved** coach spec from `inspect_co
 
 ## Steps
 
-1. **Write the screens** with the react-coach-screen skill: one screen per coach of every service marked `"modernize": true`, then `"screen": "<name>"` on each coach in the spec. Run `build_screens` until it compiles. A coach without `screen` uses the generic form (fine for a quick pass when the user asks for one).
+1. **Write the screens** with the react-coach-screen skill: one screen per coach of every service marked `"modernize": true`, then `"screen": "<name>"` on each coach in the spec. Run `build_screens` until it compiles. A coach without `screen` is built from Modernizer Widgets (fine for a quick pass when the user asks for one, and editable by drag and drop in Coach Designer).
 
 2. **Choose the target.** The output is a new snapshot of the same app. When you did not create the app in this task, tell the user the snapshot will be added to it and install only after they approve; to keep the original app untouched, build or copy it as a new app with the user first.
 
-3. **Generate:** `modernize_app` with the `.twx`, the coach spec and a snapshot name not used in the app (`list_snapshots`). It adds `<service> (Modernized)` next to each legacy service, styled by the spec's theme file: colours, font, shape, width, button placement, and the header's logo and product name. To change the look, edit the theme file and generate again with a new snapshot.
+3. **Generate:** coaches without `screen` are built from Modernizer Widgets, so the app needs an installed snapshot of the MDW toolkit: if `list_snapshots("MDW")` shows none built from the current widgets, call `build_widget_toolkit("modernizer", <new snapshot>)` and `install_app` it. Then `modernize_app` with the `.twx`, the coach spec, a snapshot name not used in the app (`list_snapshots`) and `toolkit_snapshot`. It adds `<service> (Modernized)` next to each legacy service, styled by the spec's theme file: colours, font, shape, width, button placement, and the header's logo and product name. To change the look, edit the theme file and generate again with a new snapshot.
 
 4. **Install:** `install_app` with the returned `.twx`. Continue only when `"ok": true`. If `modernize_app` returned `install`, there is no BAW server: stop, give the user the `.twx` and its import steps, and list the services to check by hand.
 
@@ -31,4 +31,5 @@ Inputs: an app `.twx` in `work/` and an **approved** coach spec from `inspect_co
 | `stuck …` with no alert | The screen fired the wrong button, or none | Fire `spec.buttons[].viewId`; check the button's `to` in the spec |
 | `no coach rendered` / page errors mention your screen | The screen threw while rendering | Read the error, fix the screen, `build_screens` |
 | `Invalid theme` from `modernize_app` | The spec has no `"theme"`, or the theme file has a problem | Fix the listed problem (app-theme skill) |
+| `pass toolkit_snapshot` or `is not installed` from `modernize_app` | No Modernizer Widgets snapshot given, or not installed yet | `build_widget_toolkit`, `install_app`, then `modernize_app` with `toolkit_snapshot` |
 | `Screens not in the bundle` from `modernize_app` | Registered name differs from `"screen"` | Make the `registerScreen` name, the file name and `"screen"` match |

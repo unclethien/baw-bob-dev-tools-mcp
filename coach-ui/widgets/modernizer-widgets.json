@@ -213,6 +213,11 @@
           "type": "String"
         },
         {
+          "name": "intro",
+          "label": "Intro text",
+          "type": "String"
+        },
+        {
           "name": "steps",
           "label": "Steps",
           "type": "String",

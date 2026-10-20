@@ -69,6 +69,12 @@ def stable_ids(toolkit, name):
     return lambda: str(uuid.uuid5(space, f"{name}/{next(count)}"))
 
 
+def widget_kinds(toolkit):
+    """{view ID: kind} of the toolkit's widgets. The IDs are the same in every build (see build), so they also
+    name the widgets of an app whose package does not carry the toolkit."""
+    return {"64." + stable_ids(toolkit, f"view/{kind}")(): kind for kind in widgets(toolkit)}
+
+
 def metadata_xml(tags):
     """META-INF/metadata.xml: the palette categories of each view. tags: {view id: [tag]}."""
     objects = "".join(f'\n    <object id="{oid}">\n        <tags>' + "".join(f"\n            <tag>{escape(t)}</tag>" for t in names)

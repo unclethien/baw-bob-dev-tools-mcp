@@ -75,7 +75,7 @@ function inspectCoach() {
   const forward = react
     ? [...buttons].reverse().find((b) => b.className.includes('btn--primary')) || buttons[buttons.length - 1]
     : buttons.find((b) => b.className.includes('btn-primary')) || [...buttons].reverse().find((b) => !back.test(b.textContent.trim()));
-  const title = (react?.querySelector('h1') || document.querySelector('h1,.panel-title,.BPMSectionHeader'))?.textContent.trim();
+  const title = (document.querySelector('.pp-app h1') || document.querySelector('h1,.panel-title,.BPMSectionHeader'))?.textContent.trim();
   return {
     react: !!react, title: title || document.title, button: forward?.textContent.trim(), buttons: buttons.map((b) => b.textContent.trim()),
     alert: document.querySelector('.pp--inline-notification--error')?.textContent.trim(),

@@ -288,15 +288,31 @@ def build_screens() -> str:
 
 
 @mcp.tool()
-def modernize_app(twx: str, coach_spec: str, snapshot: str) -> dict:
+def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: str | None = None) -> dict:
     """Add a React + Carbon copy of each service, "<service> (Modernized)", driven by the coach spec and
-    styled by its "theme" file. A coach with "screen": "<name>" uses the React screen registered under
-    that name; the others use the generic form. Builds the screens first. Output: a new snapshot of the same app."""
+    styled by its "theme" file. Each coach is rebuilt from Modernizer Widgets inside native Panels or a Tab
+    Section, so it stays editable by drag and drop in Coach Designer; the app then depends on the toolkit
+    snapshot toolkit_snapshot, built with build_widget_toolkit("modernizer", ...) and installed first. A coach
+    with "screen": "<name>" instead shows the hand-written React screen registered under that name. Builds the
+    widgets and screens first. Output: a new snapshot of the same app."""
     source, spec = local(twx), local(coach_spec)
     require_new_snapshot(target_of(source)["acronym"], snapshot)
+    args = []
+    services = [s for s in json.loads(spec.read_text())["services"] if s.get("modernize")]
+    if any(not c.get("screen") for s in services for c in s["coaches"]):
+        acronym = widget_toolkit.TOOLKITS["modernizer"]["acronym"]
+        if not toolkit_snapshot:
+            raise ToolError(f"Coaches without a hand-written screen are built from Modernizer Widgets: pass toolkit_snapshot, "
+                            f"a snapshot of {acronym} built with build_widget_toolkit and installed with install_app")
+        toolkit = WORK / f"{acronym}-{re.sub(r'[^A-Za-z0-9.]+', '_', toolkit_snapshot)}.twx"
+        if not toolkit.exists():
+            raise ToolError(f"No {rel(toolkit)}: build it with build_widget_toolkit(\"modernizer\", {toolkit_snapshot!r}), then install it")
+        if configured() and not any(v["version_name"] == toolkit_snapshot for v in snapshots(acronym)):
+            raise ToolError(f"{acronym} {toolkit_snapshot} is not installed on the server: install {rel(toolkit)} with install_app first")
+        args = ["--toolkit", toolkit]
     build = build_screens()
     dest = WORK / f"{target_of(source)['acronym']}-{snapshot}.twx"
-    summary = python("modernize_coaches.py", source, spec, dest, "--snapshot", snapshot)
+    summary = python("modernize_coaches.py", source, spec, dest, "--snapshot", snapshot, *args)
     result = {"twx": rel(dest), "summary": summary, "build": build[-500:]}
     if not configured():
         result["install"] = IMPORT_STEPS.format(twx=rel(dest))

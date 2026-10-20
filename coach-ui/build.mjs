@@ -1,6 +1,6 @@
 // Bundle the coach UI into BAW web managed files, each an IIFE that sets one global:
-// - coach-screens.js / .css (window.CoachScreens): the screens hand-written for an app's coaches and the
-//   generic form; each app ships its own copy.
+// - coach-screens.js / .css (window.CoachScreens): the screens hand-written for an app's coaches; each app
+//   ships its own copy.
 // - mdw.js / .css (window.ModernizerWidgets): the widgets of the Modernizer Widgets toolkit, shared by apps.
 //
 // BAW pages run Dojo's AMD loader. The bundle is wrapped so a global `define` is
@@ -17,8 +17,7 @@ mkdirSync('bundle', { recursive: true });
 const screens = existsSync('src/screens') ? readdirSync('src/screens').filter((f) => f.endsWith('.jsx')).sort() : [];
 // Widgets of the Modernizer Widgets toolkit live in src/widgets/*.jsx and register with registerWidget(kind, Component).
 const widgetFiles = existsSync('src/widgets') ? readdirSync('src/widgets').filter((f) => f.endsWith('.jsx')).sort() : [];
-const screensEntry = ["export { mount } from './runtime.jsx';", "import './form-screen.jsx';",
-  ...screens.map((f) => `import './screens/${f}';`)].join('\n');
+const screensEntry = ["export { mount } from './runtime.jsx';", ...screens.map((f) => `import './screens/${f}';`)].join('\n');
 // Screens written for one app's coaches never go into the toolkit that every app shares.
 const toolkitEntry = ["export * from './toolkit.js';", ...widgetFiles.map((f) => `import './widgets/${f}';`)].join('\n');
 

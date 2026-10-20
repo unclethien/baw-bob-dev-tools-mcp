@@ -43,7 +43,7 @@ try {
       const nvp = { items: pairs.map(([name, value]) => ({ get: (key) => (key === 'name' ? name : value) })) };
       const v = (spec) => harness.view(spec);
       v({ kind: 'theme', id: 'Theme1', options: { theme: JSON.stringify({ primary: '#7a1fa2', banner: { product: 'ACME Insurance' } }) } });
-      v({ kind: 'header', id: 'Header1', options: { title: 'Requester', subtitle: 'ZZ App', steps: { items: ['One', 'Two'] }, step: 1 } });
+      v({ kind: 'header', id: 'Header1', options: { title: 'Requester', subtitle: 'ZZ App', intro: 'Tell us who you are.', steps: { items: ['One', 'Two'] }, step: 1 } });
       v({ kind: 'errors', id: 'Errors1' });
       v({ kind: 'text', id: 'Text1', label: 'Name', value: 'Ada', options: { example: 'Ada Lovelace' } });
       v({ kind: 'textarea', id: 'Area1', label: 'Notes', value: 'Hello' });
@@ -67,6 +67,7 @@ try {
     check('radio lists its options', JSON.stringify(radios) === JSON.stringify(['Alpha', 'Beta']), radios);
     check('header shows title and steps', await text(page, '[data-kind=header] h1') === 'Requester'
       && (await page.$$('[data-kind=header] .pp--progress-step')).length === 2);
+    check('header shows the intro text', await text(page, '[data-kind=header] .pp-lead') === 'Tell us who you are.');
     check('header takes the product name from the Theme widget', await text(page, '[data-kind=header] .pp-brand-mark') === 'ACME Insurance');
     check('the theme colour reaches every widget', await page.$eval('[data-kind=text] .pp-widget', (el) => el.style.getPropertyValue('--pp-theme-primary')) === '#7a1fa2');
     check('theme draws nothing on the page', await page.$eval('[data-kind=theme]', (el) => el.textContent.trim()) === '');
@@ -172,6 +173,14 @@ try {
         document.querySelectorAll('[role=tabpanel]').forEach((p) => { p.hidden = p.id !== tab.getAttribute('aria-controls'); });
       }));
       harness.view({ kind: 'text', id: 'InTab', label: 'In tab two', visibility: 'REQUIRED', parent: document.getElementById('p2') });
+      // BAW's Tab Section markup: a tab strip of links, and panes in the same order without aria-controls.
+      root.insertAdjacentHTML('beforeend', '<div class="Tab_Section"><div><ul class="nav nav-tabs nav-tabs-strip"><li class="active"><a id="b1">One</a></li>'
+        + '<li><a id="b2">Two</a></li></ul><div class="tab-content"><div class="ContentBox"><div class="tab-pane" role="tabpanel" id="bp1"></div>'
+        + '<div class="tab-pane tab-hidden" role="tabpanel" id="bp2"></div></div></div></div></div>');
+      document.querySelectorAll('.nav-tabs-strip a').forEach((a) => a.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tabs-strip li').forEach((li) => li.classList.toggle('active', li === a.parentElement));
+      }));
+      harness.view({ kind: 'text', id: 'InBawTab', label: 'In BAW tab two', visibility: 'REQUIRED', parent: document.getElementById('bp2') });
       harness.view({ kind: 'button', id: 'Back', label: 'Back', options: { kind: 'secondary' } });
       harness.view({ kind: 'button', id: 'Next', label: 'Next' });
     });
@@ -188,6 +197,12 @@ try {
     await page.click('[data-kind=button]:last-of-type button');
     await sleep(50);
     check('the tab that holds the first error is selected', await page.$eval('#t2', (t) => t.getAttribute('aria-selected')) === 'true');
+    check("a BAW Tab Section's tab that holds an error is marked", await page.$eval('#b2', (a) => a.parentElement.classList.contains('pp-tab-error')));
+    await page.type('#p2 input', 'filled');
+    await page.click('[data-kind=button]:last-of-type button');
+    await sleep(50);
+    check("a BAW Tab Section's tab that holds the first error is selected", await page.$eval('#b2', (a) => a.parentElement.classList.contains('active')));
+    check('a tab without errors is not marked', await page.$$eval('.pp-tab-error', (els) => els.length) === 1);
     check('the required field in the other tab blocks the Button', !(await page.evaluate(() => harness.triggered.map((t) => t.id))).includes('Next'));
     check('no page errors (visibility)', errors.length === 0, errors);
     await page.close();
