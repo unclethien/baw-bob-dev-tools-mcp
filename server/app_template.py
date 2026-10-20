@@ -16,7 +16,7 @@ import re
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, unescape
 
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
@@ -175,9 +175,37 @@ PROPERTY = """<property>
             </property>"""
 
 
+def target(package: str) -> dict:
+    """The project, branch and snapshot that META-INF/package.xml installs into, as plain text."""
+    part = package.split("</target>", 1)[0]
+    attr = lambda tag, key: unescape(re.search(rf'<{tag} [^>]*\b{key}="([^"]*)"', part).group(1), {"&quot;": '"'})  # noqa: E731
+    return {"acronym": attr("project", "shortName"), "name": attr("project", "name"), "projectId": attr("project", "id"),
+            "branchId": attr("branch", "id"), "branchName": attr("branch", "name"), "snapshot": attr("snapshot", "name"),
+            "snapshotId": attr("snapshot", "id"), "created": attr("snapshot", "originalCreationDate")}
+
+
+def toolkit_dependencies(package: str) -> list[dict]:
+    """The package's dependencies on non-system toolkits (our widget toolkits, and any other the app uses), in the
+    form dependency_xml writes, as plain text."""
+    found = []
+    for block in re.findall(r"<dependency [^>]*>.*?</dependency>", package, re.S):
+        project = re.search(r'<project id="([^"]+)" name="([^"]*)" shortName="([^"]+)" isToolkit="true" isHidden="[^"]*" isSystem="false"', block)
+        if not project:
+            continue
+        snap = re.search(r'<snapshot id="([^"]+)" name="([^"]*)" originalCreationDate="([^"]*)"', block)
+        found.append({"id": re.search(r'<dependency [^>]*\bid="([^"]+)"', block).group(1),
+                      "rank": int(re.search(r'<dependency rank="(\d+)"', block).group(1)),
+                      "projectId": project.group(1), "name": unescape(project.group(2), {"&quot;": '"'}), "acronym": project.group(3),
+                      "branchId": re.search(r'<branch id="([^"]+)"', block).group(1),
+                      "branchName": unescape(re.search(r'<branch id="[^"]+" name="([^"]*)"', block).group(1), {"&quot;": '"'}),
+                      "snapshotId": snap.group(1), "snapshot": unescape(snap.group(2), {"&quot;": '"'}), "created": snap.group(3)})
+    return found
+
+
 def read_base(path: Path) -> dict:
     """What a generated app takes from an app exported from the target server: the package header,
-    the system toolkits' IDs, the target environment, and the app's own identity (to add a snapshot to it)."""
+    the system toolkits' IDs, the target environment, the app's own identity (to add a snapshot to it),
+    and its dependencies on our widget toolkits, so a new snapshot keeps them."""
     with zipfile.ZipFile(path) as z:
         package = z.read("META-INF/package.xml").decode("utf-8")
         defaults = next((z.read(f"objects/{oid}.xml").decode("utf-8") for oid in
@@ -193,14 +221,12 @@ def read_base(path: Path) -> dict:
             branch = re.search(r'<branch id="([^"]+)"', block).group(1)
             snap = re.search(r'<snapshot id="([^"]+)" name="([^"]*)" originalCreationDate="([^"]*)"', block)
             toolkits[project.group(3)] = (dep_id, rank, project.group(1), project.group(2), branch, *snap.groups())
-    target = package.split("</target>", 1)[0]
-    attr = lambda tag, key: re.search(rf'<{tag} [^>]*\b{key}="([^"]*)"', target).group(1)  # noqa: E731
+    t = target(package)
     environment = re.search(r"<targetEnvironment>([^<]+)</targetEnvironment>", defaults)
     return {"header": header.group(0), "toolkits": {**SYSTEM_TOOLKITS, **toolkits},
             "environment": environment.group(1) if environment else TARGET_ENVIRONMENT,
-            "acronym": attr("project", "shortName"), "name": attr("project", "name"),
-            "projectId": attr("project", "id"), "branchId": attr("branch", "id"), "branchName": attr("branch", "name"),
-            "snapshot": attr("snapshot", "name")}
+            "acronym": t["acronym"], "name": t["name"], "projectId": t["projectId"], "branchId": t["branchId"],
+            "branchName": t["branchName"], "snapshot": t["snapshot"], "dependencies": toolkit_dependencies(package)}
 
 
 def builtin() -> dict:
@@ -208,12 +234,12 @@ def builtin() -> dict:
 
 
 def dependency_xml(d: dict) -> str:
-    """A dependency on one of our own toolkits. d: id (2069.*), rank, projectId, name, acronym, branchId,
-    snapshotId, snapshot, created."""
+    """A dependency on a non-system toolkit. d: id (2069.*), rank, projectId, name, acronym, branchId, branchName
+    (default Main), snapshotId, snapshot, created."""
     q = {'"': "&quot;"}
     return (f'\n        <dependency rank="{d["rank"]}" isManaged="false" id="{d["id"]}">'
             f'\n            <project id="{d["projectId"]}" name="{escape(d["name"], q)}" shortName="{d["acronym"]}" isToolkit="true" isHidden="false" isSystem="false"/>'
-            f'\n            <branch id="{d["branchId"]}" name="Main"/>'
+            f'\n            <branch id="{d["branchId"]}" name="{escape(d.get("branchName") or "Main", q)}"/>'
             f'\n            <snapshot id="{d["snapshotId"]}" name="{escape(d["snapshot"], q)}" originalCreationDate="{d["created"]}"/>'
             "\n        </dependency>")
 
