@@ -17,7 +17,7 @@ export const page = {
     theme = next || {};
     notify();
   },
-  // field.validate() returns { message, ... } or null. Returns the function that unregisters the field and
+  // field: { validate(), element }; validate() returns { message, ... } or null. Returns the function that unregisters the field and
   // drops its error. A field registered again under the same id (the next coach) is left alone.
   register(id, field) {
     fields.set(id, field);
@@ -29,12 +29,25 @@ export const page = {
     };
   },
   get errors() { return errors; },
+  // Errors in screen order: fields register as they mount, which need not be the order they appear in.
   validateAll() {
     errors = [...fields].map(([id, field]) => {
       const error = field.validate();
-      return error && { ...error, id };
-    }).filter(Boolean);
+      return error && { ...error, id, element: field.element };
+    }).filter(Boolean).sort(byPosition);
     notify();
     return errors;
   },
 };
+
+function byPosition(a, b) {
+  if (!a.element || !b.element) return 0;
+  return a.element.compareDocumentPosition(b.element) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+}
+
+// Shows a field that sits in a tab that is not selected: selects the tab whose panel holds it (ARIA tabs).
+export function reveal(element) {
+  const panel = element && element.closest('[role="tabpanel"]');
+  const tab = panel && panel.id && element.ownerDocument.querySelector(`[role="tab"][aria-controls="${panel.id}"]`);
+  if (tab && tab.getAttribute('aria-selected') !== 'true') tab.click();
+}

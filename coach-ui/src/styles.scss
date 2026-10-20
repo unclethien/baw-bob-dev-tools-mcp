@@ -125,7 +125,14 @@
   background: transparent;
 
   .pp-actions { margin-top: 0; }
+  .pp-header { margin: 0 0 1.5rem; }
+  .pp--inline-notification { margin: 0; }
+  dl { margin: 0; }
+  .pp-review-row { border-bottom: 0; }
 }
+
+// Shown only in Coach Designer, for widgets that draw nothing on the page (the Theme widget).
+.pp-widget-marker { padding: 0.5rem; font-size: 0.75rem; color: var(--pp-text-secondary); border: 1px dashed var(--pp-border-subtle); }
 
 .pp-actions {
   display: flex;

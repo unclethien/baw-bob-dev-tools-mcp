@@ -5,4 +5,5 @@ import { widgetContext } from './widget-host.js';
 
 export { mountWidget };
 export { page } from './page-registry.js';
+export { plain } from './widget-host.js';
 export const attach = (view, kind, optionNames) => mountWidget(view.context.element, kind, widgetContext(view, optionNames));

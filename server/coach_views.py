@@ -78,13 +78,13 @@ def managed_asset_xml(asset_id, version, name, asset_uuid, mime, length, guid=No
 
 def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=(), load="", change="", unload="",
              description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True, new_id=None):
-    """Coach View object XML. options: (name, label, class ref) config options, all single values.
+    """Coach View object XML. options: (name, label, class ref) or (name, label, class ref, is list) config options.
     palette_icon, preview_html and preview_js are managed file IDs (61.*) for Coach Designer.
     new_id makes the IDs and guids inside the view (a toolkit keeps them across builds); versionIds are always new."""
     new_id = new_id or uid
-    def config_option(opt, label, class_ref, seq):
+    def config_option(opt, label, class_ref, seq, is_list=False):
         return (f'<configOption name="{opt}">{BOOKKEEPING}<coachViewConfigOptionId>66.{new_id()}</coachViewConfigOptionId><coachViewId>{view_id}</coachViewId>'
-                f"<isList>false</isList><propertyType>OBJECT</propertyType><label>{escape(label)}</label><classId>{class_ref}</classId>"
+                f"<isList>{str(is_list).lower()}</isList><propertyType>OBJECT</propertyType><label>{escape(label)}</label><classId>{class_ref}</classId>"
                 f'<processId isNull="true" /><actionflowId isNull="true" /><isAdaptive>false</isAdaptive><seq>{seq}</seq><description isNull="true" />'
                 f'<groupName isNull="true" /><guid>{new_id()}</guid><versionId>{uid()}</versionId></configOption>')
 
@@ -117,7 +117,7 @@ def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=
 <validateJsFunction isNull="true" />{asset("previewAdvHtml", preview_html)}{asset("previewAdvJs", preview_js)}<useUrlBinding>false</useUrlBinding>
 <guid>{new_id()}</guid><versionId>{version}</versionId><field1 isNull="true" /><field2 isNull="true" /><field3>0</field3><field4 isNull="true" /><field5>false</field5><clobField1 isNull="true" />
 {binding}
-{"".join(config_option(o, label, ref, i) for i, (o, label, ref) in enumerate(options))}
+{"".join(config_option(o[0], o[1], o[2], i, *o[3:]) for i, o in enumerate(options))}
 {"".join(resource(a, i) for i, a in enumerate(asset_ids))}
 {inline_script("Inline CSS", "CSS", 0)}{inline_script("Inline Javascript", "JS", 1)}{inline_script("Header HTML", "HTML", 2)}
 </coachView></teamworks>

@@ -15,6 +15,6 @@ const INPUTS = {
 
 export function Field({ field, binding, error }) {
   const Input = INPUTS[fieldKind(field)] || TextField;
-  const id = `pp-${(field.prop || field.path).replace(/\./g, '-')}`;
+  const id = `pp-${String(field.prop || field.path).replace(/[^\w-]/g, '-')}`;
   return <Input id={id} field={field} binding={binding} validity={{ invalid: !!error, invalidText: error }} readOnly={!!field.readonly} />;
 }
