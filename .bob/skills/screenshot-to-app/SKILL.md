@@ -88,7 +88,7 @@ A screenshot shows one screen, not who works on it next. When the user asks for 
    > Approve this design, or tell me what to change. When approved, I will build the app.
 
    Change the spec or the theme file as asked and show the changes again, until the user approves.
-2. `create_app` with the spec, and the chosen app as `base`. Fix every problem it lists, in the spec or the theme file. Then `inspect_coaches` on the `.twx` and check every screen is there.
+2. `create_app` with the spec, `toolkit_snapshot` (an installed ABW snapshot, as in step 4 of the baw-app-builder skill), and the chosen app as `base`. Fix every problem it lists, in the spec or the theme file. Then `inspect_coaches` on the `.twx` and check every screen is there.
    If `create_app` returns `install`, there is no BAW server: stop here, give the user the `.twx` and its import steps, and ask them to compare the screens with the screenshots after importing.
 3. **STOP: ask before importing.** Do not call `install_app` yet. Tell the user the `.twx` path, the app, acronym and snapshot, then ask:
    > The app is built. Do you want me to import it into BAW now?

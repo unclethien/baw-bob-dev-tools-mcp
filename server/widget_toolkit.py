@@ -3,14 +3,19 @@
 Toolkits of coach widgets that Coach Designer shows in its palette, and the link from an app to them.
 
 A toolkit .twx holds one Coach View per widget, each with a palette icon and a Coach Designer
-preview, plus the widgets' bundle as web managed files. The toolkit's project and branch IDs are
-fixed below, so every build installs as a new snapshot of the same toolkit.
+preview. The toolkit's project and branch IDs are fixed below, so every build installs as a new
+snapshot of the same toolkit. Two kinds of toolkit:
+
+- Modernizer Widgets (MDW): every view mounts its widget from the widgets' bundle (web managed files).
+- App Builder Widgets (ABW), "classic": no JavaScript framework. Each view is BAW markup with an optional
+  content box for child views, and a small draw script that fills the markup from the view's options.
 
 An app uses a toolkit through a dependency in its META-INF/package.xml and a copy of the toolkit's
 package in toolkits/<snapshot id>.zip. A layout item names a toolkit view by its plain ID (64.*), as it
 does for UI Toolkit views; only type references (classId) carry a "<dependency uuid>/" prefix.
 
     python3 server/widget_toolkit.py build modernizer 0.0.1 work/MDW-0.0.1.twx
+    python3 server/widget_toolkit.py build builder 1.0.0 work/ABW-1.0.0.twx
     python3 server/widget_toolkit.py use work/app.twx work/MDW-0.0.1.twx work/app-widgets.twx --swap "Requester:Text1=text" --swap "Requester:Button1=button"
 """
 
@@ -31,23 +36,26 @@ from coach_views import managed_asset_xml, view_xml
 PROJECT = Path(__file__).resolve().parent.parent
 COACH_UI = PROJECT / "coach-ui"
 BUNDLE = COACH_UI / "bundle"
-ICONS = COACH_UI / "widgets" / "icons"
+WIDGETS_DIR = COACH_UI / "widgets"
 
 TOOLKITS = {
-    "modernizer": {"name": "Modernizer Widgets", "acronym": "MDW",
+    "modernizer": {"name": "Modernizer Widgets", "acronym": "MDW", "icons": WIDGETS_DIR / "icons",
                    "projectId": "2066.bd5e169d-837c-4cc4-9754-348c6d267872", "branchId": "2063.c491e35e-3dcc-43da-8fd0-5c8af6a6970e"},
+    "builder": {"name": "App Builder Widgets", "acronym": "ABW", "icons": WIDGETS_DIR / "builder" / "icons", "classic": WIDGETS_DIR / "builder",
+                "projectId": "2066.b8279094-3587-446c-be41-08068fad976f", "branchId": "2063.8e436544-fc09-4d9f-afc0-704288dc8c2f"},
 }
 
 
 @functools.cache
 def widgets(toolkit):
     """The toolkit's widget contract (coach-ui/widgets/<toolkit>-widgets.json), by kind. Each widget: view, binding,
-    label (has a Label property), options [(name, label, type, is list)], boundary, sample (the preview's value)
-    and tags (palette categories)."""
-    contract = json.loads((COACH_UI / "widgets" / f"{toolkit}-widgets.json").read_text())
+    label (has a Label property), options [(name, label, type, is list)], boundary, sample (the preview's value),
+    tags (palette categories) and source (the classic widget's markup and script name)."""
+    contract = json.loads((WIDGETS_DIR / f"{toolkit}-widgets.json").read_text())
     return {w["kind"]: {"view": w["view"], "binding": w["binding"], "label": w["label"],
                         "options": [(o["name"], o["label"], o.get("type", "String"), o.get("list", False)) for o in w["options"]],
-                        "boundary": w["boundary"], "sample": w["preview"]["value"], "tags": w["tags"]} for w in contract["widgets"]}
+                        "boundary": w["boundary"], "sample": w["preview"]["value"], "tags": w["tags"], "source": w.get("source", w["kind"])}
+            for w in contract["widgets"]}
 
 
 # System Data types that widget bindings and options use, beyond the ones generated apps use.
@@ -154,6 +162,74 @@ def preview_js(kind, acronym, sample, options):
 """
 
 
+CONTENT = "<!-- content -->"  # where a classic widget's markup holds its content box
+DESIGN_CONTENT_BOX = '<div class="ContentBox LastContentBox DesignContentBox" data-designContentBoxID="ContentBox1"></div>'
+XSI = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
+
+
+def classic_layout(markup):
+    """A classic widget's own layout, as the UI Toolkit's Panel has it: Custom HTML before the content box, the
+    content box (ContentBox1, which holds the views placed in the widget), Custom HTML after it."""
+    def config(name, value=None):
+        val = f"<ns2:value>{escape(value)}</ns2:value>" if value is not None else ""
+        return f"<ns2:configData><ns2:id>{uid()}</ns2:id><ns2:optionName>{name}</ns2:optionName>{val}</ns2:configData>"
+
+    def custom_html(n, html):
+        return (f'<ns2:layoutItem xsi:type="ns2:CustomHTML" {XSI}><ns2:id>{uid()}</ns2:id><ns2:layoutItemId>CustomHTML{n}</ns2:layoutItemId>'
+                + config("@customHTML.textContent", html) + config("@customHTML.contentType", "TEXT")
+                + config("@customHTML.variableContent") + config("@customHTML.assetContent") + "</ns2:layoutItem>")
+    if not markup:
+        return ""
+    if CONTENT not in markup:
+        return custom_html(1, markup)
+    before, after = markup.split(CONTENT, 1)
+    box = (f'<ns2:layoutItem xsi:type="ns2:ContentBox" {XSI}><ns2:id>{uid()}</ns2:id><ns2:layoutItemId>ContentBox1</ns2:layoutItemId>'
+           + config("@contentBox.repeatingContentManagedByView", "false") + config("@contentBox.layoutPreview", "VERTICAL") + "</ns2:layoutItem>")
+    return custom_html(1, before) + box + custom_html(2, after)
+
+
+CLASSIC_READ = """function abwValue(o) { return o && o.get ? o.get("value") : undefined; }
+function abwRead(opts, names) {
+  var meta = opts._metadata || {}, options = {};
+  names.forEach(function (name) { options[name] = abwValue(opts[name]); });
+  return { label: abwValue(meta.label), labelVisibility: abwValue(meta.labelVisibility), options: options };
+}
+"""
+
+
+def classic_load_js(script, options):
+    """A classic widget's load handler: its draw() fills the view's markup from the view's label and options."""
+    if not script:
+        return ""
+    return f"{script}\n{CLASSIC_READ}draw(this.context.element, abwRead(this.context.options, {json.dumps([o[0] for o in options])}), false);"
+
+
+def classic_preview_js(script, options):
+    """Coach Designer preview of a classic widget: the same draw() on the preview markup, redrawn on every change."""
+    draw = f"(function () {{\n{script}\nreturn draw;\n}})()" if script else "function () {}"
+    return f"""var mixObject = {{
+  _abwDraw: {draw},
+  createPreview: function (containingDiv, labelText, callback) {{
+    var opts = this.context.options || {{}};
+    {CLASSIC_READ.replace(chr(10), chr(10) + "    ")}
+    this._abw = {{ div: containingDiv, state: abwRead(opts, {json.dumps([o[0] for o in options])}) }};
+    this._abw.state.label = labelText;
+    try {{ this._abwDraw(containingDiv, this._abw.state, true); }} finally {{ callback(); }}
+  }},
+  propertyChanged: function (name, value) {{
+    if (!this._abw) return;
+    var state = this._abw.state;
+    if (name === "@label") state.label = value;
+    else if (name === "@labelVisibility") state.labelVisibility = value;
+    else state.options[name] = value;
+    this._abwDraw(this._abw.div, state, true);
+  }},
+  modelChanged: function () {{}},
+  getLabelDomElement: function () {{ return this._abw ? this._abw.div.querySelector(".panel-title") : null; }}
+}};
+"""
+
+
 def managed_file(name, mime, data, files, objects, file_entries, new_id):
     asset_id, asset_uuid, version = "61." + new_id(), new_id(), uid()
     files[f"objects/{asset_id}.xml"] = managed_asset_xml(asset_id, version, name, asset_uuid, mime, len(data), guid=new_id())
@@ -167,22 +243,32 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
     """Write the toolkit .twx. Returns the names of its widgets. Object IDs are the same in every build;
     versionIds and the snapshot ID are new, so BAW installs the new content as a new snapshot."""
     tk = TOOLKITS[toolkit]
+    classic = tk.get("classic")
     base = app_template.builtin()
     files, objects, file_entries, tags = {}, [], [], {}
     asset = lambda name, mime, data: managed_file(name, mime, data, files, objects, file_entries, stable_ids(toolkit, f"file/{name}"))  # noqa: E731
-    assets = [asset(name, mime, (bundle / name).read_bytes()) for name, mime in BUNDLE_FILES]
-    preview_html = asset("mdw-preview.html", "text/html", PREVIEW_HTML.encode())
+    assets = [] if classic else [asset(name, mime, (bundle / name).read_bytes()) for name, mime in BUNDLE_FILES]
+    shared_preview = None if classic else asset("mdw-preview.html", "text/html", PREVIEW_HTML.encode())
     for kind, w in widgets(toolkit).items():
-        icon_path = ICONS / f"{kind}.svg"
+        icon_path = tk["icons"] / f"{kind}.svg"
         icon = asset(f"{kind}.svg", "image/svg+xml", icon_path.read_bytes()) if icon_path.exists() else None
-        preview = asset(f"{kind}-preview.js", "application/javascript", preview_js(kind, tk["acronym"], w["sample"], w["options"]).encode())
+        if classic:
+            read = lambda ext: (classic / f"{w['source']}{ext}").read_text() if (classic / f"{w['source']}{ext}").exists() else ""  # noqa: E731
+            markup, script = read(".html"), read(".js")
+            preview_html = asset(f"{kind}-preview.html", "text/html", (markup.replace(CONTENT, DESIGN_CONTENT_BOX) or "<div></div>\n").encode())
+            preview = asset(f"{kind}-preview.js", "application/javascript", classic_preview_js(script, w["options"]).encode())
+            code = {"load": classic_load_js(script, w["options"]), "layout": classic_layout(markup)}
+        else:
+            preview_html = shared_preview
+            preview = asset(f"{kind}-preview.js", "application/javascript", preview_js(kind, tk["acronym"], w["sample"], w["options"]).encode())
+            code = {"load": load_js(kind, w["options"]), "change": CHANGE_JS, "unload": UNLOAD_JS}
         new_id = stable_ids(toolkit, f"view/{kind}")
         view_id, version = "64." + new_id(), uid()
         files[f"objects/{view_id}.xml"] = view_xml(
             view_id, version, escape(w["view"]), binding_ref=f"{TWSYS}/{TYPES[w['binding']]}" if w["binding"] else None,
             options=[(o, label, f"{TWSYS}/{TYPES[t]}", is_list) for o, label, t, is_list in w["options"]], asset_ids=assets,
-            load=load_js(kind, w["options"]), change=CHANGE_JS, unload=UNLOAD_JS, description=f"{tk['name']}: {w['view']}",
-            palette_icon=icon, preview_html=preview_html, preview_js=preview, has_label=w["label"], emit_boundary=w["boundary"], new_id=new_id)
+            description=f"{tk['name']}: {w['view']}", palette_icon=icon, preview_html=preview_html, preview_js=preview,
+            has_label=w["label"], emit_boundary=w["boundary"], new_id=new_id, **code)
         objects.append((view_id, version, w["view"], "coachView"))
         tags[view_id] = w["tags"] + [tk["name"]]
     settings_id = stable_ids(toolkit, "settings")
@@ -230,6 +316,22 @@ def add_dependency(package: str, toolkit_twx: Path):
     return package.replace("\n    </dependencies>", app_template.dependency_xml(dep) + "\n    </dependencies>", 1), dep
 
 
+def embed(package: str, toolkit_twx: Path):
+    """Make an app's package depend on a built toolkit (add_dependency) and carry the toolkit as BAW's own exports
+    do, in toolkits/<snapshot id>.zip. Returns (package, dep, {file: bytes} to add, files to drop: the previous
+    snapshot's zip)."""
+    package, dep = add_dependency(package, toolkit_twx)
+    add = {f"toolkits/{dep['snapshotId']}.zip": toolkit_twx.read_bytes()}
+    drop = {f"toolkits/{dep['previous']}.zip"} if dep.get("previous") else set()
+    return package, dep, add, drop
+
+
+def view_ids(toolkit, toolkit_twx: Path):
+    """{kind: view ID} of the widgets in a built toolkit."""
+    views = toolkit_dependency(toolkit_twx, 0)["views"]
+    return {kind: views[w["view"]] for kind, w in widgets(toolkit).items()}
+
+
 def option_text(value):
     """A layout option's value as text: lists and objects as JSON, booleans as true/false."""
     if isinstance(value, bool):
@@ -265,7 +367,7 @@ def use_widgets(app_twx: Path, toolkit_twx: Path, dest: Path, swaps, snapshot=No
     swaps: (service name or None for every service, coach name, layout item id, widget kind, {option: value}).
     """
     with zipfile.ZipFile(app_twx) as twx:
-        package, dep = add_dependency(twx.read("META-INF/package.xml").decode("utf-8"), toolkit_twx)
+        package, dep, add, drop = embed(twx.read("META-INF/package.xml").decode("utf-8"), toolkit_twx)
         toolkit = next(k for k, t in TOOLKITS.items() if t["acronym"] == dep["acronym"])
         if snapshot:
             target, rest = package.split("</target>", 1)
@@ -301,17 +403,15 @@ def use_widgets(app_twx: Path, toolkit_twx: Path, dest: Path, swaps, snapshot=No
                 raise SystemExit(f"META-INF/package.xml has no entry {entry}")
             package = package.replace(entry, f'<object id="{oid}" versionId="{new_version}"', 1)
         with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
-            toolkit_zip = f"toolkits/{dep['snapshotId']}.zip"
-            stale = {toolkit_zip} | ({f"toolkits/{dep['previous']}.zip"} if dep.get("previous") else set())
             for info in twx.infolist():
                 if info.filename == "META-INF/package.xml":
                     out.writestr(info.filename, package)
                 elif info.filename in changed:
                     out.writestr(info.filename, changed[info.filename])
-                elif info.filename not in stale:
+                elif info.filename not in add and info.filename not in drop:
                     out.writestr(info, twx.read(info.filename))
-            # BAW's own exports carry every non-system toolkit an app depends on, even without toolkits.
-            out.writestr(toolkit_zip, toolkit_twx.read_bytes())
+            for name, data in add.items():
+                out.writestr(name, data)
     return dep
 
 

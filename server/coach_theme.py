@@ -23,14 +23,14 @@ A theme file is JSON, e.g. work/acme.theme.json:
 An app spec names its theme file ("theme": "work/acme.theme.json") and may add its own banner
 "title" and "text". A coach spec names it too, for the React screens.
 
-For UI Toolkit coaches the theme becomes CSS and a banner inside each coach's Custom HTML. The CSS
+For UI Toolkit coaches the theme becomes CSS in each coach's Theme widget and a banner in its App Header
+widget (App Builder Widgets, see widget_toolkit.py). The CSS
 targets the markup BAW renders: every view carries data-viewid="<layout item id>" and
 data-type="...<View_Name>", inputs sit in .form-group > .control-label + .input > .form-control,
 panels are .SPARKPanel with a .panel-heading, and buttons are .btn (.btn-primary for the primary style).
 """
 
 import base64
-import html
 import json
 import re
 from pathlib import Path
@@ -143,16 +143,6 @@ def icon_url(name, color):
     return f'url("data:image/svg+xml,{quote(svg)}")'
 
 
-def banner_html(banner, title):
-    """The banner replaces the plain coach title: logo, the coach title, product name and a short text."""
-    esc = lambda s: html.escape(str(s or ""))
-    logo = f'<img class="app-banner-logo" src="{banner["logoData"]}" alt="">' if banner.get("logoData") else ""
-    return (f'<div class="app-banner"><div class="app-banner-brand">{logo}</div>'
-            f'<div class="app-banner-title">{esc(banner.get("title") or title)}</div>'
-            f'<div class="app-banner-product">{esc(banner.get("product"))}</div>'
-            f'<div class="app-banner-text">{esc(banner.get("text"))}</div></div>')
-
-
 def css(theme, inputs, width):
     """CSS for one coach. inputs: (layout item id, spec type, icon or None) of every input view on it."""
     primary = theme.get("primary", "#0f62fe")
@@ -189,10 +179,10 @@ def css(theme, inputs, width):
         ".btn-primary:hover { filter: brightness(1.08); }",
         (f".btn:not(.btn-primary) {{ background: {secondary} !important; border-color: {secondary} !important; color: #fff !important; }}" if secondary
          else f".btn:not(.btn-primary) {{ background: #fff !important; border: 1px solid {button} !important; color: {button} !important; }}"),
-        # the bar's content box renders as a table, which ignores justify-content
-        f'[data-viewid="Action_Bar"] > .ContentBox {{ display: flex !important; flex-wrap: wrap; align-items: center;'
-        f' justify-content: {ALIGN[theme.get("buttonAlign", "left")]} !important; gap: 12px; padding: 8px 0; }}',
-        '[data-viewid="Action_Bar"] > .ContentBox > .Button.CoachView { margin: 0 !important; }',
+        # the Button Bar widget's content box (App Builder Widgets)
+        f'.app-button-bar > .ContentBox {{ display: flex !important; flex-wrap: wrap; align-items: center;'
+        f' justify-content: {ALIGN[theme.get("buttonAlign", "left")]} !important; gap: 12px; }}',
+        '.app-button-bar > .ContentBox > .Button.CoachView { margin: 0 !important; }',
     ]
     if theme.get("fieldIcons"):
         # (layout item id, element that gets the icon box, icon); text-like inputs sit beside the box,

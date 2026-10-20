@@ -9,7 +9,9 @@ and anything the React form cannot render (kept native) or will leave out (dropp
 
 Coaches built from Modernizer Widgets (modernize_coaches.py) are read back the same way: field widgets
 as fields with their options, Panels and Tab Sections as sections, the Header's title and intro, and
-Button widgets as buttons. Such a service is not offered for modernizing again.
+Button widgets as buttons. Such a service is not offered for modernizing again. In coaches built from
+App Builder Widgets (generate_app.py), Sections and Review Lists are sections, the App Header gives the
+coach's intro, and the Button Bar holds the buttons.
 
 Review the spec before running modernize_coaches.py. Fix labels, mark fields
 "required" or give them a "pattern" (a regular expression), a "message" and an
@@ -40,6 +42,7 @@ FIELD_TYPES = {
 }
 CHOICE_VIEWS = {"Single Select", "Radio Button Group"}
 WIDGETS = widget_kinds("modernizer")  # view ID -> kind
+BUILDER = widget_kinds("builder")
 FIELD_WIDGETS = {"text", "textarea", "number", "date", "checkbox", "select", "radio"}
 WIDGET_KEYS = ("pattern", "message", "example", "min", "max")  # field widget options that are spec keys
 SCREEN_VIEWS = ("Coach Screen (", "PP React ")  # the screen view, and its name in apps modernized before the rename
@@ -103,6 +106,7 @@ class CoachReader:
             "viewId": next((v.text for v in children(el, "layoutItemId")), ""),
             "view": view or "unknown view",
             "widget": WIDGETS.get(view_id),
+            "builder": BUILDER.get(view_id),
             "config": config,
             "label": (config.get("@label") or "").strip(),
             "visibility": config.get("@visibility") or "",
@@ -143,10 +147,12 @@ class CoachReader:
         it = self.item(el)
         view = it["view"]
         self.widgets = self.widgets or bool(it["widget"])
-        if it["widget"] in ("theme", "errors"):
+        if it["widget"] in ("theme", "errors") or it["builder"] == "theme":
             return
         if it["widget"] == "header":
             self.header = it["config"]
+        elif it["builder"] == "header":
+            self.header = {"intro": it["config"].get("intro")}
         elif view == "Button" or it["widget"] == "button":
             self.buttons.append(it)
         elif view == "Custom HTML":
@@ -162,7 +168,7 @@ class CoachReader:
                 self.columns(it["children"], in_tabs)
             elif not it["children"]:
                 self.dropped.append(f'{it["viewId"]} (empty {view} "{it["label"]}")')
-            elif view in ("Panel", "Collapsible Panel", "Well") and it["label"] and not in_tabs:
+            elif (view in ("Panel", "Collapsible Panel", "Well") or it["builder"] in ("section", "review")) and it["label"] and not in_tabs:
                 self.section(it["label"])
                 for kid in it["children"]:
                     self.walk(kid)
