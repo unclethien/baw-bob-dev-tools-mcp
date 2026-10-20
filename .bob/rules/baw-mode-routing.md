@@ -25,6 +25,16 @@ In the reason, repeat what the user asked for, with any app, acronym, files or s
 
 Questions about this repository's code, documentation or the MCP server itself stay in the current mode.
 
+### The widget toolkits
+
+The coaches these modes build come from two toolkits this repository generates: **App Builder Widgets** (`ABW`, classic widgets, used by `create_app`) and **Modernizer Widgets** (`MDW`, React + Carbon widgets, used by `modernize_app`). They are not the IBM BAW Coach Widget or BAW Package Manager modes' work:
+
+| The user asks to | Where it goes |
+|---|---|
+| Build or install App Builder Widgets or Modernizer Widgets, or a new snapshot of them | The BAW mode that uses them (`baw-app-builder` for ABW, `baw-coach-modernizer` for MDW), with `build_widget_toolkit` |
+| Change what a widget in either toolkit shows or does, add a widget to them, or change their icons | `agent`: the widgets are code in `coach-ui/widgets/` and `coach-ui/src/widgets/` |
+| Rearrange the widgets on one coach | Coach Designer, by hand: drag and drop in the coach's layout |
+
 ## 4. From a BAW mode, hand other work back
 
 The BAW modes edit only `work/`, `app-specs/` and, for the Modernizer, `coach-ui/src/screens/`. When the user asks a BAW mode for something else, switch without asking, following section 1:

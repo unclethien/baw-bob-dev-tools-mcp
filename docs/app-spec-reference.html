@@ -299,8 +299,11 @@ h3[id]{scroll-margin-top:var(--s06)}
     <li><strong>Review</strong> (dashed: optional) shows every answer read-only, with Back and Submit.</li>
     <li><strong>Confirmation</strong> (optional) shows a generated reference number and the fields you pick.</li>
   </ul>
-  <p>Every screen is built from standard UI Toolkit views bound to one business object, so the app runs as soon
-  as it is installed, and <code>inspect_coaches</code> and <code>modernize_app</code> work on it like on any other app.</p>
+  <p>Every screen is built from standard UI Toolkit views bound to one business object, placed in
+  <strong>App Builder Widgets</strong>: Theme, App Header, Section, Review List and Button Bar. These come from a
+  toolkit installed once per server (<code>build_widget_toolkit</code>, then <code>install_app</code>), so the app
+  runs as soon as it is installed, authors can rearrange each screen by drag and drop in Coach Designer, and
+  <code>inspect_coaches</code> and <code>modernize_app</code> work on it like on any other app.</p>
 
   <div class="note">
     <div class="body">
@@ -334,8 +337,10 @@ h3[id]{scroll-margin-top:var(--s06)}
   ]
 }</code></pre>
   <p>Check a spec without touching the server. The generator validates the whole spec first and lists every
-  problem at once. It never contacts the server: building and installing are separate steps.</p>
-<pre><code>python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx</code></pre>
+  problem at once. It never contacts the server: building and installing are separate steps. It needs a built
+  App Builder Widgets toolkit, which <code>widget_toolkit.py</code> writes:</p>
+<pre><code>python3 server/widget_toolkit.py build builder 1.0.0 work/ABW-1.0.0.twx
+python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --toolkit work/ABW-1.0.0.twx</code></pre>
   <div class="note warn">
     <div class="body">
       <strong>A valid spec goes on to build</strong>
@@ -612,24 +617,24 @@ h3[id]{scroll-margin-top:var(--s06)}
   <p>A theme file holds an app's look: colours, font, shapes, field icons, width, button placement, and the
   product name and logo in the header. The agent writes it from your description of the look, or reads it from a
   screenshot. There is no default look: without a theme file, the agent asks you to describe one. Several apps can
-  share one file, and the coach spec of <code>modernize_app</code> names the same file, so the React screens look
-  like the classic ones. To change the look, edit the file and build again with a new snapshot.</p>
+  share one file, and the coach spec of <code>modernize_app</code> names the same file, so the modernized React + Carbon coaches
+  look like the classic ones. To change the look, edit the file and build again with a new snapshot.</p>
   <p>The file is JSON with these keys, all optional. Unknown keys are rejected.</p>
   <div class="tablewrap" role="region" tabindex="0" aria-label="Theme file keys, scrollable">
     <table>
       <thead><tr><th scope="col">Key</th><th scope="col">Value</th><th scope="col">Default</th><th scope="col">What it colours or changes</th></tr></thead>
       <tbody>
-        <tr><td class="mono">primary</td><td>colour</td><td class="mono">#0f62fe</td><td>Banner, section title bars, field icon boxes; the React header</td></tr>
+        <tr><td class="mono">primary</td><td>colour</td><td class="mono">#0f62fe</td><td>Banner, section title bars, field icon boxes; the modernized header</td></tr>
         <tr><td class="mono">onPrimary</td><td>colour</td><td class="mono">#ffffff</td><td>Text and icons on <code>primary</code></td></tr>
         <tr><td class="mono">heading</td><td>colour</td><td><code>onPrimary</code></td><td>Banner title and product name</td></tr>
         <tr><td class="mono">button</td><td>colour</td><td><code>primary</code></td><td>Forward and Submit buttons, the active tab</td></tr>
-        <tr><td class="mono">secondaryButton</td><td>colour</td><td>outlined</td><td>Back and Cancel buttons; without it they are white with a <code>button</code>-coloured outline (dark grey in React screens)</td></tr>
+        <tr><td class="mono">secondaryButton</td><td>colour</td><td>outlined</td><td>Back and Cancel buttons; without it they are white with a <code>button</code>-coloured outline (dark grey in modernized coaches)</td></tr>
         <tr><td class="mono">background</td><td>colour</td><td class="mono">#f4f6f8</td><td>The page behind the form</td></tr>
         <tr><td class="mono">font</td><td>font family</td><td>inherited</td><td>Font of the page, e.g. <code>"Open Sans"</code>; system fonts follow it. Letters, digits, spaces and hyphens, up to 40</td></tr>
         <tr><td class="mono">shape</td><td class="mono">square | rounded | pill</td><td class="mono">rounded</td><td>Corners of fields, panels and buttons; <code>pill</code> gives pill-shaped buttons</td></tr>
         <tr><td class="mono">fieldIcons</td><td class="mono">true | false</td><td class="mono">false</td><td>A coloured icon box before every input; fields pick their icon with <code>icon</code>. Classic coaches only</td></tr>
         <tr><td class="mono">width</td><td>600 to 3000, or <code>"full"</code></td><td>960, or 1400 with more than 3 columns</td><td>Maximum content width in pixels</td></tr>
-        <tr><td class="mono">buttonAlign</td><td class="mono">left | center | right</td><td>left (React screens: right)</td><td>Where the button bar sits</td></tr>
+        <tr><td class="mono">buttonAlign</td><td class="mono">left | center | right</td><td>left (modernized coaches: right)</td><td>Where the button bar sits</td></tr>
         <tr><td class="mono">banner.product</td><td>text</td><td></td><td>Product or system name in the header, e.g. <code>QUOTE DESK</code></td></tr>
         <tr><td class="mono">banner.logo</td><td>image path</td><td></td><td>Logo in the header: an image inside the project, relative to the project folder, e.g. <code>work/acme-logo.png</code>. PNG, JPG, GIF, WebP or SVG, at most 200 KB. It is embedded in the app, so the server needs no access to the file</td></tr>
       </tbody>
@@ -735,7 +740,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <h2>Validation errors</h2>
   <p>The generator checks the whole spec and its theme file and lists every problem before it builds anything. A
   real run on a spec with six mistakes:</p>
-<pre><code>$ python3 server/generate_app.py work/bad.app.json work/bad.twx
+<pre><code>$ python3 server/generate_app.py work/bad.app.json work/bad.twx --toolkit work/ABW-1.0.0.twx
 Invalid app spec:
   app.acronym must be 2-8 upper-case letters or digits, starting with a letter
   step 1: field name 'start date' must be an identifier
@@ -760,6 +765,8 @@ Invalid app spec:
         <tr><td class="mono">process.name is required</td><td>Give the workflow a name: <code>"process": { "name": "Quote Workflow" }</code></td></tr>
         <tr><td class="mono">process.approval must be an object</td><td>Use <code>{}</code> for the default approval task, or an object with your names and labels</td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>From <code>create_app</code> or <code>install_app</code>: bump <code>app.snapshot</code></td></tr>
+        <tr><td class="mono">pass toolkit_snapshot</td><td>From <code>create_app</code>: name an installed App Builder Widgets snapshot; build one with <code>build_widget_toolkit("builder", ...)</code> and install it first</td></tr>
+        <tr><td class="mono">is not installed on the server</td><td>From <code>create_app</code>: <code>install_app</code> the toolkit <code>.twx</code> it names, then build again</td></tr>
       </tbody>
     </table>
   </div>
@@ -771,7 +778,8 @@ Invalid app spec:
   <h2>What a spec cannot express</h2>
   <p>A spec builds forms. These need something else:</p>
   <ul>
-    <li><strong>Tables, file uploads, links and menus.</strong> Add them in a React screen with the coach-modernize skill.</li>
+    <li><strong>Tables, file uploads, links and menus.</strong> Add them in a hand-written React screen for that coach
+    in the BAW Coach Modernizer (the react-coach-screen skill).</li>
     <li><strong>Validation and rules.</strong> No required-field blocking, no field-to-field rules, no show/hide logic.</li>
     <li><strong>Lookups and integrations.</strong> Dropdown options are fixed in the spec; nothing calls another system.</li>
     <li><strong>Workflows beyond one approval.</strong> <a href="#process"><code>process</code></a> builds a form task

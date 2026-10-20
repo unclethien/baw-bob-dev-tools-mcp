@@ -1,11 +1,11 @@
 ---
 name: react-coach-screen
-description: Write a React + Carbon screen for one BAW coach (coach-ui/src/screens/<name>.jsx) that replaces the coach's legacy layout while the coach flow, scripts and buttons stay native. Covers the screen contract (props, binding, pressing coach buttons), the shared building blocks, and how to build, attach and test the screen with the baw-dev-tools MCP tools. Use when modernizing a coach and the screen should be designed for that coach rather than built from Modernizer Widgets.
+description: Write a React + Carbon screen for one BAW coach (coach-ui/src/screens/<name>.jsx) that replaces the coach's legacy layout while the coach flow, scripts and buttons stay native. Covers the screen contract (props, binding, pressing coach buttons), the shared building blocks, and how to build, attach and test the screen with the baw-dev-tools MCP tools. Use only when a modernized coach needs a screen designed for it rather than the default layout of Modernizer Widgets - the user asks for one, or the design needs a layout, component or behaviour the coach spec cannot express.
 ---
 
 # React coach screen
 
-You write one `.jsx` file per coach. The baw-dev-tools MCP server compiles it into the app's React bundle and puts it inside the coach. The coach keeps its buttons (hidden), its flow and its scripts; your screen reads and writes the coach's business object and presses those buttons.
+Modernized coaches are built from Modernizer Widgets unless their spec entry names a `screen`. A hand-written screen is one `.jsx` file for one coach. It looks the same as the widgets, but in Coach Designer it is one block that authors cannot rearrange, so write one only where it is needed. The baw-dev-tools MCP server compiles every screen into the app's own bundle (`coach-screens.js`, global `window.CoachScreens`, separate from the toolkit) and puts it inside the coach. The coach keeps its buttons (hidden), its flow and its scripts; your screen reads and writes the coach's business object and presses those buttons.
 
 ## 1. Design first
 

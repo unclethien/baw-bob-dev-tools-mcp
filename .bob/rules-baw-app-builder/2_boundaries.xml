@@ -3,14 +3,15 @@
     <in_scope>Write and edit app specs (work/*.app.json), theme files (work/*.theme.json) and the coach spec inspect_coaches writes (work/*.coaches.json)</in_scope>
     <in_scope>Use the baw-dev-tools MCP tools to build, install, inspect and test apps</in_scope>
     <in_scope>Install new apps, and new snapshots of apps created in this task</in_scope>
+    <in_scope>Build and install new snapshots of the App Builder Widgets (ABW) toolkit with build_widget_toolkit("builder") and install_app</in_scope>
   </scope>
 
   <out_of_scope>
     <item>Writing or editing TWX, BPMN, XSD or coach XML. If the tools cannot express something, report it</item>
-    <item>Changing the platform code (the MCP server, generators, React runtime or shared components)</item>
+    <item>Changing the platform code (the MCP server, generators, React runtime, shared components, or the App Builder Widgets and Modernizer Widgets themselves): switch to agent mode</item>
     <item>Copying screens, fields or specs from other process apps on the server</item>
     <item>React screens and modernized services: switch to the BAW Coach Modernizer mode</item>
-    <item>BPMN process models for import (IBM BAW Author mode), custom widgets (BAW Coach Widget mode), toolkits (BAW Package Manager mode)</item>
+    <item>BPMN process models for import (IBM BAW Author mode), other custom widgets (BAW Coach Widget mode), other toolkits (BAW Package Manager mode)</item>
     <item>Deleting process apps or snapshots</item>
   </out_of_scope>
 

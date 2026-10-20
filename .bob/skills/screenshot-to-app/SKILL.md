@@ -112,13 +112,13 @@ A screenshot shows one screen, not who works on it next. When the user asks for 
 - For each screen, its sections, with the field and column counts.
 - The theme file, the colours you sampled and where each one is used.
 - **Assumptions**, for example dropdown options you chose and help texts you wrote.
-- **Not built**: things in the screenshot that the app spec cannot express, such as tables, file uploads, links and menus. For each one, offer to add it in a React screen.
+- **Not built**: things in the screenshot that the app spec cannot express, such as tables, file uploads, links and menus. For each one, offer to add it in a hand-written React screen (BAW Coach Modernizer).
 
 ## Then: a React version (optional)
 
 Only when the user asks for the screens to be modernized:
 
-1. `inspect_coaches` on the `.twx`. It writes the coach spec with the sections, columns (in reading order), dropdown and radio options, and required flags you built. Set its `"theme"` to the same theme file, so the React screens keep the screenshot's look.
-2. Call `switch_mode` to `baw-coach-modernizer` without asking, with the app, acronym, snapshot, `.twx`, coach spec and theme file in the reason, and the items listed under "Not built". That mode follows the coach-inventory, react-coach-screen and coach-modernize skills.
+1. `inspect_coaches` on the `.twx`. It writes the coach spec with the sections, columns (in reading order), dropdown and radio options, and required flags you built. Set its `"theme"` to the same theme file, so the modernized screens keep the screenshot's look.
+2. Call `switch_mode` to `baw-coach-modernizer` without asking, with the app, acronym, snapshot, `.twx`, coach spec and theme file in the reason, and the items listed under "Not built". That mode follows the coach-inventory and coach-modernize skills, and the react-coach-screen skill for any coach that needs a hand-written screen.
 
-A React screen can follow the screenshot's layout more closely. `Field` renders `select` and `radio`. `<div className="pp-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>` gives exactly two columns. The screen can also add the items listed under "Not built".
+The modernized coaches are built from Modernizer Widgets. A hand-written React screen can follow the screenshot's layout more closely: `Field` renders `select` and `radio`, `<div className="pp-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>` gives exactly two columns, and the screen can add the items listed under "Not built". Suggest one only for those cases, since it is one block in Coach Designer.

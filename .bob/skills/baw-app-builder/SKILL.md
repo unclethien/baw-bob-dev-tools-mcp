@@ -48,7 +48,7 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 
    Change the spec or the theme file as asked and show the changes again, until the user approves.
 
-4. **Build:** the coaches are built from App Builder Widgets, so the server needs a snapshot of the ABW toolkit: if `list_snapshots("ABW")` shows none built from the current widgets, call `build_widget_toolkit("builder", <new snapshot>)` and `install_app` it. Then `create_app` with the spec path, `toolkit_snapshot`, and the chosen app's acronym as `base` (no `base` for the built-in template). It validates the spec and its theme file first and lists every problem; fix them and call it again. If the app already exists on the server, the build becomes a new snapshot of it, so bump `app.snapshot` for every change.
+4. **Build:** the coaches are built from App Builder Widgets (Theme, App Header, Section, Review List, Button Bar), so authors can rearrange them by drag and drop in Coach Designer. The server needs a snapshot of the ABW toolkit: use the newest snapshot that `list_snapshots("ABW")` shows and that has its `work/ABW-<snapshot>.twx`. When there is none, or the widgets changed since it was built, call `build_widget_toolkit("builder", <new snapshot>)` and `install_app` it first. Without a BAW server, use the newest `work/ABW-*.twx` or build one; the user imports it before the app. Then `create_app` with the spec path, `toolkit_snapshot`, and the chosen app's acronym as `base` (no `base` for the built-in template). It validates the spec and its theme file first and lists every problem; fix them and call it again. If the app already exists on the server, the build becomes a new snapshot of it, so bump `app.snapshot` for every change.
 
 5. **Check the flow:** `inspect_coaches` on the returned `.twx`. Every step must show its fields and a button leading to the next coach. With `"tabs"` the first coach shows one section per tab and `sectionStyle: "tabs"`.
 
@@ -75,7 +75,7 @@ When `create_app` returns `install`, no server is configured: the server tools (
 - to add a snapshot to an app they already have, rebuild with `base` set to a `.twx` they exported from it (same acronym);
 - what to check when they run the service: each step, the buttons, the review and the confirmation.
 
-When the user asks for a React + Carbon UI next, call `switch_mode` to `baw-coach-modernizer` without asking, with the app, acronym, snapshot, `.twx`, coach spec (step 5 wrote it) and theme file in the reason. That mode writes the screens.
+When the user asks for a React + Carbon UI next, call `switch_mode` to `baw-coach-modernizer` without asking, with the app, acronym, snapshot, `.twx`, coach spec (step 5 wrote it) and theme file in the reason. That mode builds the modernized coaches from Modernizer Widgets.
 
 ## When something fails
 

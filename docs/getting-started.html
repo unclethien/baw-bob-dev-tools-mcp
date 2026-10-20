@@ -260,7 +260,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <h2>Where you will end up</h2>
   <ul>
     <li>The project on your laptop, connected to a BAW test server.</li>
-    <li>IBM Bob showing the <code>baw-dev-tools</code> MCP server with 14 tools and two modes:
+    <li>IBM Bob showing the <code>baw-dev-tools</code> MCP server with 15 tools and two modes:
     🏗️ BAW App Builder and ✨ BAW Coach Modernizer.</li>
     <li>A small ZZ app you asked Bob for, installed on the server, tested in a browser, with a link you can open.</li>
   </ul>
@@ -275,8 +275,8 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td><a href="#step-4">4</a></td><td>Add your server settings</td><td><code>.env</code> is readable only by you</td></tr>
         <tr><td><a href="#step-5">5</a></td><td>Install the screen tools</td><td><code>npm install</code> finishes</td></tr>
         <tr><td><a href="#step-6">6</a></td><td>Check the connection</td><td>Your server's apps are listed</td></tr>
-        <tr><td><a href="#step-7">7</a></td><td>Build a package</td><td>A <code>.twx</code> is written to <code>work/</code></td></tr>
-        <tr><td><a href="#step-8">8</a></td><td>Connect Bob</td><td>14 tools in Bob's MCP panel</td></tr>
+        <tr><td><a href="#step-7">7</a></td><td>Build a package</td><td>Two <code>.twx</code> files are written to <code>work/</code></td></tr>
+        <tr><td><a href="#step-8">8</a></td><td>Connect Bob</td><td>15 tools in Bob's MCP panel</td></tr>
         <tr><td><a href="#step-9">9</a></td><td>Build your first app</td><td>Bob reports a run URL</td></tr>
         <tr><td><a href="#step-10">10</a></td><td>Look at the result and change it</td><td>The app opens in your browser</td></tr>
       </tbody>
@@ -327,7 +327,7 @@ node --version</code></pre>
         <tr><td>git</td><td>any</td><td>Getting the code</td><td class="mono">xcode-select --install</td></tr>
         <tr><td>uv</td><td>any</td><td>Runs the MCP server with its pinned packages</td><td class="mono">brew install uv</td></tr>
         <tr><td>Python</td><td>3.11 or newer</td><td>The server and the build scripts</td><td class="mono">brew install python</td></tr>
-        <tr><td>Node.js</td><td>18 or newer</td><td>React screens and the browser tests</td><td class="mono">brew install node</td></tr>
+        <tr><td>Node.js</td><td>18 or newer</td><td>The coach widgets, React screens and the browser tests</td><td class="mono">brew install node</td></tr>
         <tr><td>Chrome, Brave or Helium</td><td>installed in <code>/Applications</code></td><td>The browser tests (<code>test_service</code>, <code>test_process</code>)</td><td>From the vendor's website</td></tr>
       </tbody>
     </table>
@@ -370,7 +370,7 @@ chmod 600 .env</code></pre>
   <p><strong>Check:</strong> <code>ls -l .env</code> starts with <code>-rw-------</code>.</p>
 
   <h3 id="step-5"><span class="num">5</span>Install the screen tools</h3>
-  <p>The React screens and the browser tests have their own packages:</p>
+  <p>The coach widgets, the React screens and the browser tests have their own packages:</p>
 <pre><code>(cd coach-ui &amp;&amp; npm install)</code></pre>
   <p><strong>Check:</strong> it ends with "added &hellip; packages" and no <code>ERR!</code> lines.</p>
 
@@ -396,10 +396,14 @@ HSSX2      app      Smart Hire</code></pre>
 
   <h3 id="step-7"><span class="num">7</span>Build a package</h3>
   <p>The tools build every app from a template that ships with them, so nothing has to be downloaded from the server
-  first. Build the example app once to check that the build works. This step does not use the server:</p>
-<pre><code>python3 server/generate_app.py app-specs/example-equipment-request.json work/ZZEQ-1.0.0.twx</code></pre>
-  <p><strong>Check:</strong> the first line reads <code>Wrote work/ZZEQ-1.0.0.twx: app ZZ Equipment Request (ZZEQ), snapshot 1.0.0</code>.
-  The file is not installed; you can delete it.</p>
+  first. An app's coaches are made of App Builder Widgets, so the build needs that toolkit too (see
+  <a href="#toolkits">the widget toolkits</a>). Build both once to check that the build works. This step does not use the
+  server:</p>
+<pre><code>python3 server/widget_toolkit.py build builder 1.0.0 work/check-ABW.twx
+python3 server/generate_app.py app-specs/example-equipment-request.json work/check-ZZEQ.twx --toolkit work/check-ABW.twx</code></pre>
+  <p><strong>Check:</strong> the first command prints <code>Wrote work/check-ABW.twx: App Builder Widgets (ABW) 1.0.0, widgets: Theme,
+  App Header, Section, Review List, Button Bar</code>, and the second <code>Wrote work/check-ZZEQ.twx: app ZZ Equipment
+  Request (ZZEQ), snapshot 1.0.0</code>. Neither file is installed; you can delete them.</p>
 
   <h3 id="step-8"><span class="num">8</span>Connect Bob</h3>
   <p>Bob starts the MCP server from <code>.bob/mcp.json</code>, which needs the full path to this folder. This
@@ -410,14 +414,14 @@ grep baw_mcp.py .bob/mcp.json</code></pre>
   hand; the first run downloads its packages, so Bob does not time out waiting for them later:</p>
 <pre><code>uv run --quiet --script server/baw_mcp.py &lt; /dev/null &amp;&amp; echo "Server starts"</code></pre>
   <p>Now open this folder as the workspace in Bob and open Bob's MCP panel.</p>
-  <p><strong>Check:</strong> <code>baw-dev-tools</code> shows as connected with <strong>14 tools</strong>:</p>
-  <div class="tablewrap" role="region" tabindex="0" aria-label="The 14 tools, scrollable">
+  <p><strong>Check:</strong> <code>baw-dev-tools</code> shows as connected with <strong>15 tools</strong>:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="The 15 tools, scrollable">
     <table>
       <thead><tr><th scope="col">Group</th><th scope="col">Tools</th><th scope="col">Bob asks first?</th></tr></thead>
       <tbody>
         <tr><td>Read the server</td><td class="mono">list_apps, list_snapshots, list_services, export_app</td><td>No</td></tr>
         <tr><td>Read screenshots</td><td class="mono">view_image, image_colors, crop_image</td><td>Only <code>crop_image</code>, which writes a file</td></tr>
-        <tr><td>Build</td><td class="mono">inspect_coaches, create_app, build_screens, modernize_app</td><td><code>create_app</code> and <code>modernize_app</code></td></tr>
+        <tr><td>Build</td><td class="mono">build_widget_toolkit, inspect_coaches, create_app, build_screens, modernize_app</td><td><code>create_app</code> and <code>modernize_app</code></td></tr>
         <tr><td>Install and test</td><td class="mono">install_app, test_service, test_process</td><td><code>install_app</code></td></tr>
       </tbody>
     </table>
@@ -440,6 +444,8 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
     <li><strong>Stops for your approval.</strong> Bob shows the design: the look, each screen with its fields and
     buttons, and what it assumed. It also asks which installed app the package should match. Any app works, since
     only its BAW version is used; or say "the built-in template". Ask for changes, or approve.</li>
+    <li>The first time on a server, builds the App Builder Widgets toolkit with <code>build_widget_toolkit</code> and
+    installs it with <code>install_app</code>; later apps reuse it.</li>
     <li>Calls <code>create_app</code>, which builds the <code>.twx</code> in <code>work/</code>, and checks the screens
     with <code>inspect_coaches</code>.</li>
     <li><strong>Asks whether to import it into BAW.</strong> Say yes, and Bob calls <code>install_app</code>; the
@@ -458,6 +464,8 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
   <h3 id="step-10"><span class="num">10</span>Look at the result and change it</h3>
   <ul>
     <li><strong>Run it:</strong> open the run URL in a browser where you are logged in to the Cloud Pak console.</li>
+    <li><strong>Rearrange it:</strong> open the app in Process Designer: each coach is a layout of App Builder Widgets
+    (App Header, Section, Review List, Button Bar) around the UI Toolkit fields, which you can drag, drop and relabel.</li>
     <li><strong>Screenshots:</strong> <code>work/shots-&lt;ACRONYM&gt;-&hellip;/</code> has one picture per screen from the test.</li>
     <li><strong>Change it:</strong> ask Bob, e.g. <em>"Add a cost centre dropdown with 100, 200 and 300, then install
     and test again."</em> Bob edits the spec and bumps <code>app.snapshot</code>, because every install needs a new
@@ -466,8 +474,9 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
     Bob edits the theme file and rebuilds; every app using that file follows it.</li>
     <li><strong>Give it a modern UI:</strong> ask Bob for a React UI in the same chat. It switches to
     <strong>✨ BAW Coach Modernizer</strong> by itself (allow <strong>Mode</strong> in Bob's auto-approve settings to skip
-    the prompt), then writes React + Carbon screens in the same theme and installs them as another snapshot, next to the
-    classic service: "&lt;service&gt; (Modernized)".</li>
+    the prompt), then builds React + Carbon coaches from Modernizer Widgets in the same theme and installs them as another snapshot,
+    next to the classic service: "&lt;service&gt; (Modernized)". They are drag-and-drop layouts too; ask for a
+    hand-written screen when a coach needs more than the widgets give.</li>
   </ul>
   <p><strong>Check:</strong> the app opens, and the screens match the screenshots.</p>
 </section>
@@ -486,6 +495,25 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
     and <code>coach-ui/src/screens/</code>.</li>
   </ul>
 
+  <h3 id="toolkits">The widget toolkits</h3>
+  <p>The coaches the tools build are layouts of small widgets that ship as two BAW toolkits. Each widget has a palette
+  icon in Coach Designer and a live preview that follows its label and options.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="The widget toolkits, scrollable">
+    <table>
+      <thead><tr><th scope="col">Toolkit</th><th scope="col">Used by</th><th scope="col">Widgets</th></tr></thead>
+      <tbody>
+        <tr><td>App Builder Widgets (<code>ABW</code>), no JavaScript framework</td><td><code>create_app</code></td><td>Theme, App Header, Section, Review List, Button Bar</td></tr>
+        <tr><td>Modernizer Widgets (<code>MDW</code>), React + Carbon</td><td><code>modernize_app</code></td><td>Theme, Header, Error Summary, Text Field, Text Area, Number Field, Date Field, Checkbox, Select, Radio Group, Button</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Each toolkit is installed <strong>once per server</strong>, and every app on it can use it. Bob does this for you
+  the first time it needs one: <code>build_widget_toolkit</code> writes <code>work/ABW-&lt;snapshot&gt;.twx</code> or
+  <code>work/MDW-&lt;snapshot&gt;.twx</code>, and <code>install_app</code> installs it. Each build is a new snapshot of
+  the same toolkit; an app keeps the snapshot it was built with until it is built again. Changing what a widget looks
+  like or does is a code change in <code>coach-ui/</code>: ask Bob in Agent mode, then build and install a new
+  toolkit snapshot.</p>
+
   <h3 id="browser">Use another browser</h3>
   <p>The browser test tries <code>BROWSER_PATH</code> first, then Brave, Chrome and Helium. To use another Chromium browser
   with Bob, add it to the server's environment in <code>.bob/mcp.json</code>:</p>
@@ -499,11 +527,13 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
   <p>The Bob modes and skills live in <code>.bob/</code>; other clients get the tools, but not the step-by-step skills.</p>
 
   <h3 id="no-server">No BAW server? Import the app yourself</h3>
-  <p>Without step 4's settings, Bob can still write the app spec and build the <code>.twx</code>: <code>create_app</code>,
-  <code>inspect_coaches</code>, <code>build_screens</code>, <code>modernize_app</code> and the screenshot tools work
-  without a server. The other tools answer <code>No BAW server is configured</code>. Bob then gives you the file and
-  the import steps:</p>
+  <p>Without step 4's settings, Bob can still write the app spec and build the <code>.twx</code>: <code>build_widget_toolkit</code>,
+  <code>create_app</code>, <code>inspect_coaches</code>, <code>build_screens</code>, <code>modernize_app</code> and the
+  screenshot tools work without a server. The other tools answer <code>No BAW server is configured</code>. Bob then
+  gives you the files and the import steps:</p>
   <ol>
+    <li>The first time, import the widget toolkit <code>.twx</code> the result names (<code>work/ABW-&hellip;</code>
+    or <code>work/MDW-&hellip;</code>) the same way, unless the server already has that snapshot.</li>
     <li>Open Workflow Center, go to <strong>Process Apps</strong> and click <strong>Import</strong>.</li>
     <li>Choose the <code>.twx</code> from <code>work/</code> and finish the wizard. Its snapshot name must be new in
     that app.</li>
@@ -519,13 +549,17 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
   <code>app.name</code> and <code>app.acronym</code> to an unused name and acronym, then:</p>
 <pre><code>cp app-specs/example-equipment-request.json work/ZZOFFICE.app.json
 # edit work/ZZOFFICE.app.json: "name": "ZZ Office Request", "acronym": "ZZOFFICE"
-python3 server/generate_app.py work/ZZOFFICE.app.json work/ZZOFFICE-1.0.0.twx
+python3 server/baw_ops.py versions ABW      # the App Builder Widgets snapshots already installed, if any
+python3 server/widget_toolkit.py build builder 1.0.1 work/ABW-1.0.1.twx    # a snapshot name not in that list
+python3 server/baw_ops.py install work/ABW-1.0.1.twx
+python3 server/generate_app.py work/ZZOFFICE.app.json work/ZZOFFICE-1.0.0.twx --toolkit work/ABW-1.0.1.twx
 python3 server/baw_ops.py install work/ZZOFFICE-1.0.0.twx
 python3 server/baw_ops.py services ZZOFFICE</code></pre>
   <div class="note warn">
     <div class="body">
       <strong>The scripts skip the guard rails</strong>
-      <p><code>baw_ops.py install</code> does not check the snapshot name; only the MCP tools do. And
+      <p><code>baw_ops.py install</code> does not check the snapshot name; only the MCP tools do. Skip the toolkit
+      lines when <code>work/</code> already has an installed <code>ABW</code> snapshot's <code>.twx</code>, and pass that one. And
       for a new snapshot of an app that already exists, pass an export of that app as <code>--base</code>, so the build
       reuses its identity; <code>create_app</code> does this for you. To install by hand with <code>curl</code>, follow the
       <a href="baw-import-export-terminal-guide.html">terminal guide</a>, which includes those checks.</p>
@@ -542,12 +576,14 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
       <thead><tr><th scope="col">You see</th><th scope="col">Why</th><th scope="col">Fix</th></tr></thead>
       <tbody>
         <tr><td><code>baw-dev-tools</code> is not connected in Bob</td><td>Wrong path in <code>.bob/mcp.json</code>, or uv not on Bob's path</td><td>Redo step 8; run the <code>uv run</code> line and read its error</td></tr>
-        <tr><td>Fewer than 14 tools</td><td>An old copy of the project</td><td><code>git pull</code>, then restart the server from Bob's MCP panel</td></tr>
+        <tr><td>Fewer than 15 tools</td><td>An old copy of the project</td><td><code>git pull</code>, then restart the server from Bob's MCP panel</td></tr>
         <tr><td class="mono">Login to BAW_URL &hellip; failed with HTTP 401</td><td>Wrong credentials</td><td>Fix <code>.env</code>; check with step 6</td></tr>
         <tr><td class="mono">Cannot reach BAW_URL</td><td>Wrong host, or no VPN</td><td>Fix <code>BAW_URL</code>; check with step 6</td></tr>
         <tr><td class="mono">Invalid app spec</td><td>The spec breaks a rule</td><td>Each line names the problem; see <a href="app-spec-reference.html#errors">validation errors</a></td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>The snapshot name is used</td><td>Bump <code>app.snapshot</code></td></tr>
         <tr><td>Install ends in <code>failure</code></td><td>Often an acronym already used by another app</td><td>Pick another acronym; read <code>details</code> in the result</td></tr>
+        <tr><td class="mono">pass toolkit_snapshot</td><td>The app's coaches need a widget toolkit and none was named</td><td>Ask Bob to build and install the toolkit; see <a href="#toolkits">the widget toolkits</a></td></tr>
+        <tr><td class="mono">&hellip; is not installed on the server</td><td>The toolkit <code>.twx</code> was built but not installed</td><td><code>install_app</code> it first</td></tr>
         <tr><td class="mono">No BAW server is configured</td><td><code>.env</code> is missing a setting</td><td>Fix step 4, or <a href="#no-server">import the app yourself</a></td></tr>
         <tr><td><code>test_service</code> cannot start a browser</td><td>No Chrome, Brave or Helium in the usual place</td><td>Install one, or set <a href="#browser"><code>BROWSER_PATH</code></a></td></tr>
       </tbody>
@@ -559,7 +595,8 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
 
 <footer class="shell">
   <p>Steps checked on 9 October 2026 on macOS against BAW on Cloud Pak for Business Automation (TechZone): the
-  connection, the app list, the package build, the server start and the 401, 500 and unknown-host errors ran as shown. Bob's MCP panel and the first
+  connection, the app list, the package build, the server start and the 401, 500 and unknown-host errors ran as shown.
+  The toolkit and package build in step 7 was checked again on 20 October 2026. Bob's MCP panel and the first
   app build follow the project README.</p>
   <p>Next: <a href="app-spec-reference.html">App spec reference</a> · All docs: <a href="index.html">BAW Dev Tools MCP docs</a></p>
 </footer>
