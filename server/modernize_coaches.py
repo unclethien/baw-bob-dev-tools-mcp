@@ -9,7 +9,7 @@ service's business object, rendered from the coach's spec. The coach's original
 buttons move into a hidden layout and the React buttons press them, so the coach
 flow, its scripts and its variables run unchanged. Views the form cannot render
 ("native" in the spec) stay under the React screen. A coach with "screen": "<name>" in the
-spec shows the screen registered under that name (react-coach/src/screens/) instead of the form.
+spec shows the screen registered under that name (coach-ui/src/screens/) instead of the form.
 
 The output keeps the source app's identity. Pass --snapshot to install it as a new
 snapshot of the same app, next to the original services.
@@ -31,14 +31,14 @@ from xml.sax.saxutils import escape
 from coach_inventory import view_names
 from coach_theme import load_theme
 from coach_builder import SYSTEM_TYPES
-from react_coach_view import react_assets, react_view
+from coach_views import screen_assets, screen_view
 from twx_clone import UUID_RE, foreign_uuids
 
 SUFFIX = " (Modernized)"
 PROJECT = Path(__file__).resolve().parent.parent
 DESIGNER_NS = "http://www.ibm.com/bpm/CoachDesignerNG"
 XSI_NS = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
-REACT_ITEM, ACTIONS_ITEM = "PPReactScreen1", "PPNativeActions"
+SCREEN_ITEM, ACTIONS_ITEM = "CoachScreen1", "PPNativeActions"
 SPEC_KEYS = ("path", "label", "type", "readonly", "required", "pattern", "message", "example", "options")
 
 
@@ -97,28 +97,28 @@ def screen_spec(app, service, coach):
     }
 
 
-def new_layout(old, p, coach, react_view_id, actions_view_id, theme, variable, spec):
+def new_layout(old, p, coach, screen_view_id, actions_view_id, theme, variable, spec):
     spans = elements(old, p)
     by_id = {vid: old[s:e] for s, e, vid in spans}
-    react = view_item(p, REACT_ITEM, react_view_id, [
+    screen = view_item(p, SCREEN_ITEM, screen_view_id, [
         ("@label", ""), ("@helpText", ""), ("@labelVisibility", "HIDE"),
         ("screen", coach.get("screen", "form")), ("theme", json.dumps(theme, separators=(",", ":"))), ("spec", json.dumps(spec, separators=(",", ":")))], binding=f"tw.local.{variable}")
     buttons = [retag(by_id[b["viewId"]], p, "contributions") for b in coach["buttons"] if b["viewId"] in by_id]
     actions = view_item(p, ACTIONS_ITEM, actions_view_id, [("@label", "Actions"), ("@helpText", ""), ("@labelVisibility", "HIDE")], children=buttons)
     native = [retag(by_id[n["viewId"]], p, "layoutItem") for n in coach["native"] if n["viewId"] in by_id]
-    return react + "".join(native) + actions
+    return screen + "".join(native) + actions
 
 
 # ---------------------------------------------------------------- service copies
 
 
-def copy_service(text, service, app, theme, react_view_id, actions_view_id, owned):
+def copy_service(text, service, app, theme, screen_view_id, actions_view_id, owned):
     p = re.search(rf'xmlns:(\w+)="{re.escape(DESIGNER_NS)}"', text).group(1)
     for coach in service["coaches"]:
         at = text.index(f'id="{coach["id"]}"')
         open_tag = re.compile(rf"<{p}:layout(?:\s[^>]*)?>").search(text, at)
         close = text.index(f"</{p}:layout>", open_tag.end())
-        layout = new_layout(text[open_tag.end():close], p, coach, react_view_id, actions_view_id, theme, service["variable"],
+        layout = new_layout(text[open_tag.end():close], p, coach, screen_view_id, actions_view_id, theme, service["variable"],
                             screen_spec(app, service, coach))
         text = text[:open_tag.end()] + layout + text[close:]
     name = escape(service["name"] + SUFFIX, {'"': "&quot;"})
@@ -161,25 +161,26 @@ def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, s
         names = view_names(twx)
         actions_view_id = next(i for i, n in names.items() if n == "Horizontal Layout")
 
-        # Managed files: reuse the app's pp-react.* files (new content, new version) so names stay unique.
+        # Managed files: reuse the app's coach-screens.* files (new content, new version) so names stay unique.
+        # pp-react.* files of apps modernized before the rename stay as they are: their PP React views still use them.
         existing = {}
-        for aid, name in re.findall(r'<object id="(61\.[^"]+)" versionId="[^"]+" name="(pp-react\.[a-z]+)" type="managedAsset"/>', package):
+        for aid, name in re.findall(r'<object id="(61\.[^"]+)" versionId="[^"]+" name="(coach-screens\.[a-z]+)" type="managedAsset"/>', package):
             asset_uuid = re.search(rf'<file path="([^"]+)" id="{re.escape(aid)}"/>', package).group(1)
             existing[name] = (aid, asset_uuid, uid())
             package = re.sub(rf'(<object id="{re.escape(aid)}" versionId=")[^"]+', rf"\g<1>{existing[name][2]}", package)
-        script = (bundle / "pp-react.js").read_text()
+        script = (bundle / "coach-screens.js").read_text()
         missing = sorted({c["screen"] for s in services for c in s["coaches"] if c.get("screen") and f'"{c["screen"]}"' not in script})
         if missing:
-            raise SystemExit(f"Screens not in the bundle: {', '.join(missing)}. Register them in react-coach/src/screens/ and rebuild")
-        asset_ids, entries, files = react_assets(bundle, existing)
+            raise SystemExit(f"Screens not in the bundle: {', '.join(missing)}. Register them in coach-ui/src/screens/ and rebuild")
+        asset_ids, entries, files = screen_assets(bundle, existing)
         objects = [e for e, _ in entries]
         file_entries = [f for _, f in entries if f]
 
         views = {}
         for ref in sorted({s["classRef"] for s in services}):
             bo = re.search(rf'<object id="{re.escape(ref.rsplit("/", 1)[-1])}" versionId="[^"]+" name="([^"]+)"', package)
-            view_id, entry, view_files = react_view(asset_ids, ref, f"{system_data_ref(package)}/{SYSTEM_TYPES['String']}",
-                                                    name=f"PP React Form ({bo.group(1) if bo else ref})")
+            view_id, entry, view_files = screen_view(asset_ids, ref, f"{system_data_ref(package)}/{SYSTEM_TYPES['String']}",
+                                                    name=f"Coach Screen ({bo.group(1) if bo else ref})")
             views[ref] = view_id
             objects.append(entry)
             files.update(view_files)
@@ -220,8 +221,8 @@ def main():
     parser.add_argument("twx", type=Path, help="Exported process app (the spec's source)")
     parser.add_argument("spec", type=Path, help="Coach spec from coach_inventory.py")
     parser.add_argument("dest", type=Path)
-    parser.add_argument("--bundle", type=Path, default=PROJECT / "react-coach" / "bundle",
-                        help="Built React bundle directory (npm run build in react-coach/)")
+    parser.add_argument("--bundle", type=Path, default=PROJECT / "coach-ui" / "bundle",
+                        help="Built bundle directory (npm run build in coach-ui/)")
     parser.add_argument("--theme", help="Theme file (default: the spec's theme)")
     parser.add_argument("--snapshot", help="Install as this new snapshot of the same app")
     args = parser.parse_args()

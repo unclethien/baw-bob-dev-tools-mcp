@@ -5,7 +5,7 @@ description: Write the theme file (work/<name>.theme.json) that gives a BAW app 
 
 # App theme
 
-Every app spec and every coach spec names a **theme file**. `create_app` and `modernize_app` refuse a spec without one, and there is no default look. Never write CSS or edit `react-coach/src/styles.scss` to change a look: change the theme file.
+Every app spec and every coach spec names a **theme file**. `create_app` and `modernize_app` refuse a spec without one, and there is no default look. Never write CSS or edit `coach-ui/src/styles.scss` to change a look: change the theme file.
 
 ## 1. Get the look
 

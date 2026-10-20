@@ -34,7 +34,7 @@ Guard rails:
 ## How it fits together
 
 ```
-Agent (Bob) ── writes ──▶ work/*.theme.json, work/*.app.json, work/*.coaches.json, react-coach/src/screens/*.jsx
+Agent (Bob) ── writes ──▶ work/*.theme.json, work/*.app.json, work/*.coaches.json, coach-ui/src/screens/*.jsx
      │
      └── calls MCP tools ──▶ server/baw_mcp.py ──▶ generators (TWX) ──▶ BAW Operations REST API
                                         └──▶ verify-service.mjs (headless browser) ──▶ screenshots in work/
@@ -42,7 +42,7 @@ Agent (Bob) ── writes ──▶ work/*.theme.json, work/*.app.json, work/*.c
 
 - **Theme file** (`*.theme.json`): the look of an app, which Bob writes from the user's description or a screenshot: colours, font, corner shape, field icon boxes, width, button placement, and the header's product name and logo. Bob asks for a look when none is given; there is no default. The same file styles the classic coaches `create_app` builds and the React screens `modernize_app` adds, so changing the look means editing one file and rebuilding. Examples: `app-specs/example-*.theme.json`.
 - **App spec** (`app-specs/`): business object, steps or tabs (`"layout": "tabs"`), titled sections with 1-6 columns (fields placed per column, relative column widths), fields (text, text area, date, checkbox, integer, decimal, dropdown, radio group; required markers and help text), button labels including Cancel, review and confirmation, the `theme` file it uses and an optional `banner` (the header strip's title and text). `create_app` turns it into a client-side human service exposed as a URL, built from standard UI Toolkit views. `example-equipment-request.json` is a simple multi-step form; `example-supplier-registration.json` was written from `screenshots/example-supplier-registration.png`; `example-themed-quote.json` shows tabs, a banner, placed columns, field icons and Cancel. An optional `process` section adds a workflow on top: the form becomes the first task of a process with lanes, and an `approval` adds a review task in a second lane with Approve and Send Back, where Send Back returns the work to the form. The diagram opens and can be edited in Business Automation Studio's process editor.
-- **Coach spec**: written by `inspect_coaches` and refined by the agent: labels, required fields, patterns, examples, and the `theme` file for the React screens. A coach with `"screen": "<name>"` shows a React screen the agent wrote in `react-coach/src/screens/<name>.jsx`; other coaches use a generic form. The legacy coach flow, scripts and buttons keep running underneath, and the React screen presses the coach's own buttons.
+- **Coach spec**: written by `inspect_coaches` and refined by the agent: labels, required fields, patterns, examples, and the `theme` file for the React screens. A coach with `"screen": "<name>"` shows a React screen the agent wrote in `coach-ui/src/screens/<name>.jsx`; other coaches use a generic form. The legacy coach flow, scripts and buttons keep running underneath, and the React screen presses the coach's own buttons.
 
 ## Requirements
 
@@ -57,7 +57,9 @@ git clone https://github.com/unclethien/baw-bob-dev-tools-mcp.git
 cd baw-bob-dev-tools-mcp
 cp .env.example .env            # then fill in BAW_URL, BAW_USER, BAW_PASSWORD or BAW_APIKEY
 chmod 600 .env
-(cd react-coach && npm install)
+(cd coach-ui && npm install)
+# A clone made before coach-ui/ was renamed from react-coach/: git does not move ignored files, so first run
+# mkdir -p coach-ui/src && mv react-coach/src/screens coach-ui/src/ && rm -rf react-coach
 ```
 
 Settings are read from the environment first, then `.env`:
@@ -75,7 +77,7 @@ Settings are read from the environment first, then `.env`:
    - **🏗️ BAW App Builder** turns a written requirement, or screenshots of the screens, into a running app.
    - **✨ BAW Coach Modernizer** gives an existing app a React UI that Bob writes.
 
-   Bob switches between them in the same chat, and from Agent mode into the right one (`.bob/rules/baw-mode-routing.md`): ask for a React UI after building an app and it moves to the Modernizer; ask the Modernizer for a new app or new fields, steps or a workflow and it moves back to the App Builder. To skip the switch prompt, allow **Mode** in Bob's auto-approve settings. Both modes edit only `work/` and `app-specs/` (the Modernizer also `react-coach/src/screens/`), and do everything else through the MCP tools.
+   Bob switches between them in the same chat, and from Agent mode into the right one (`.bob/rules/baw-mode-routing.md`): ask for a React UI after building an app and it moves to the Modernizer; ask the Modernizer for a new app or new fields, steps or a workflow and it moves back to the App Builder. To skip the switch prompt, allow **Mode** in Bob's auto-approve settings. Both modes edit only `work/` and `app-specs/` (the Modernizer also `coach-ui/src/screens/`), and do everything else through the MCP tools.
 2. Copy `.bob/mcp.example.json` to `.bob/mcp.json` and set the absolute path to `server/baw_mcp.py`. To switch servers without editing `.env`, add an `"env": { "BAW_URL": "..." }` block there.
 3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 14 tools.
 4. Try it in BAW App Builder mode:

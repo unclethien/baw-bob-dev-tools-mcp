@@ -27,7 +27,7 @@ Questions about this repository's code, documentation or the MCP server itself s
 
 ## 4. From a BAW mode, hand other work back
 
-The BAW modes edit only `work/`, `app-specs/` and, for the Modernizer, `react-coach/src/screens/`. When the user asks a BAW mode for something else, switch without asking, following section 1:
+The BAW modes edit only `work/`, `app-specs/` and, for the Modernizer, `coach-ui/src/screens/`. When the user asks a BAW mode for something else, switch without asking, following section 1:
 
 | The user asks to | Mode slug |
 |---|---|

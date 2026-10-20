@@ -20,7 +20,7 @@ customModes:
     groups:
       - read
       - - edit
-        - fileRegex: ^(work|app-specs|react-coach/src/screens)/
+        - fileRegex: ^(work|app-specs|coach-ui/src/screens)/
           description: App specs, coach specs and React screens
       - mcp
       - skill

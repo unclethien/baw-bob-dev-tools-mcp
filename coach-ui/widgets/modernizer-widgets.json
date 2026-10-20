@@ -1,0 +1,56 @@
+{
+  "toolkit": "Modernizer Widgets",
+  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; options: configuration options; boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart).",
+  "widgets": [
+    {
+      "kind": "text",
+      "view": "Text Field",
+      "binding": "String",
+      "options": [
+        {
+          "name": "example",
+          "label": "Example"
+        },
+        {
+          "name": "pattern",
+          "label": "Pattern"
+        },
+        {
+          "name": "message",
+          "label": "Error message"
+        }
+      ],
+      "boundary": false,
+      "preview": {
+        "value": "Sample text"
+      },
+      "tags": [
+        "Basic",
+        "Input"
+      ]
+    },
+    {
+      "kind": "button",
+      "view": "Button",
+      "binding": null,
+      "options": [
+        {
+          "name": "kind",
+          "label": "Kind (primary or secondary)"
+        },
+        {
+          "name": "validate",
+          "label": "Validate before firing"
+        }
+      ],
+      "boundary": true,
+      "preview": {
+        "value": null
+      },
+      "tags": [
+        "Basic",
+        "Input"
+      ]
+    }
+  ]
+}

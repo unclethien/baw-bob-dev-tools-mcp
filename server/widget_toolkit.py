@@ -15,6 +15,7 @@ does for UI Toolkit views; only type references (classId) carry a "<dependency u
 """
 
 import argparse
+import functools
 import json
 import re
 import sys
@@ -25,27 +26,27 @@ from xml.sax.saxutils import escape
 
 import app_template
 from coach_builder import SYSTEM_TYPES, TWSYS
-from react_coach_view import managed_asset_xml, view_xml
+from coach_views import managed_asset_xml, view_xml
 
 PROJECT = Path(__file__).resolve().parent.parent
-BUNDLE = PROJECT / "react-coach" / "bundle"
-ICONS = PROJECT / "react-coach" / "widgets" / "icons"
+COACH_UI = PROJECT / "coach-ui"
+BUNDLE = COACH_UI / "bundle"
+ICONS = COACH_UI / "widgets" / "icons"
 
 TOOLKITS = {
     "modernizer": {"name": "Modernizer Widgets", "acronym": "MDW",
                    "projectId": "2066.bd5e169d-837c-4cc4-9754-348c6d267872", "branchId": "2063.c491e35e-3dcc-43da-8fd0-5c8af6a6970e"},
 }
 
-# view: the name in the palette; binding: the bound type, or None; options: (option, label); boundary: fires the
-# view's boundary event; sample: the preview's value; tags: the palette categories, like the UI Toolkit's own views.
-WIDGETS = {
-    "modernizer": {
-        "text": {"view": "Text Field", "binding": "String", "options": [("example", "Example"), ("pattern", "Pattern"), ("message", "Error message")],
-                 "boundary": False, "sample": "Sample text", "tags": ["Basic", "Input"]},
-        "button": {"view": "Button", "binding": None, "options": [("kind", "Kind (primary or secondary)"), ("validate", "Validate before firing")],
-                   "boundary": True, "sample": None, "tags": ["Basic", "Input"]},
-    },
-}
+
+@functools.cache
+def widgets(toolkit):
+    """The toolkit's widget contract (coach-ui/widgets/<toolkit>-widgets.json), by kind. Each widget: view, binding,
+    options [(name, label)], boundary, sample (the preview's value) and tags (palette categories)."""
+    contract = json.loads((COACH_UI / "widgets" / f"{toolkit}-widgets.json").read_text())
+    return {w["kind"]: {"view": w["view"], "binding": w["binding"], "options": [(o["name"], o["label"]) for o in w["options"]],
+                        "boundary": w["boundary"], "sample": w["preview"]["value"], "tags": w["tags"]} for w in contract["widgets"]}
+
 
 BUNDLE_FILES = [("mdw.js", "application/javascript"), ("mdw.css", "text/css")]
 
@@ -70,25 +71,8 @@ def metadata_xml(tags):
 
 
 def load_js(kind, options):
-    """The Coach View's load handler: hands the widget a context built from BAW's coach view API."""
-    opts = ", ".join(f'{json.dumps(o)}: opt({json.dumps(o)})' for o, _ in options)
-    return f"""var view = this;
-function meta(name, fallback) {{
-  var m = view.context.options._metadata && view.context.options._metadata[name];
-  var v = m && m.get("value");
-  return v === undefined || v === null || v === "" ? fallback : v;
-}}
-function opt(name) {{ var o = view.context.options[name]; return o ? o.get("value") : null; }}
-this._ppWidget = window.PPReact.mountWidget(this.context.element, {json.dumps(kind)}, {{
-  read: function () {{
-    return {{ label: meta("label", ""), helpText: meta("helpText", ""), visibility: meta("visibility", "DEFAULT"), options: {{ {opts} }}, preview: false }};
-  }},
-  binding: {{
-    get: function () {{ return view.context.binding ? view.context.binding.get("value") : null; }},
-    set: function (value) {{ if (view.context.binding) view.context.binding.set("value", value); }}
-  }},
-  trigger: function () {{ view.context.trigger(); }}
-}});"""
+    """The Coach View's load handler: the toolkit bundle's widget host builds the widget's context from the view."""
+    return f"this._ppWidget = window.ModernizerWidgets.attach(this, {json.dumps(kind)}, {json.dumps([o for o, _ in options])});"
 
 
 CHANGE_JS = "if (this._ppWidget) this._ppWidget.update();"
@@ -113,7 +97,7 @@ def preview_js(kind, acronym, sample, options):
     function url(name) {{ return self.context.getManagedAssetUrl(name, self.context.assetType_WEB, {json.dumps(acronym)}); }}
     function mount() {{
       try {{
-        self._ppWidget = win.PPReact.mountWidget(containingDiv, {json.dumps(kind)}, {{
+        self._ppWidget = win.ModernizerWidgets.mountWidget(containingDiv, {json.dumps(kind)}, {{
           read: function () {{ return {{ label: self._ppState.label, helpText: "", visibility: "EDITABLE", options: self._ppState.options, preview: true }}; }},
           binding: {{ get: function () {{ return self._ppState.options.example ? "" : {json.dumps(sample)}; }}, set: function () {{}} }},
           trigger: function () {{}}
@@ -125,11 +109,15 @@ def preview_js(kind, acronym, sample, options):
       link.id = "mdw-css"; link.rel = "stylesheet"; link.href = url("mdw.css");
       doc.head.appendChild(link);
     }}
-    if (win.PPReact && win.PPReact.mountWidget) return mount();
-    var script = doc.getElementById("mdw-js");
+    if (win.ModernizerWidgets) return mount();
+    // One script per toolkit snapshot: its URL names the snapshot, so previews of two versions never wait on each other.
+    var src = url("mdw.js"), script = doc.querySelector('script[data-mdw="' + src + '"]');
+    if (script && script.getAttribute("data-done")) return callback();
     if (!script) {{
       script = doc.createElement("script");
-      script.id = "mdw-js"; script.src = url("mdw.js");
+      script.setAttribute("data-mdw", src); script.src = src;
+      script.addEventListener("load", function () {{ script.setAttribute("data-done", "1"); }});
+      script.addEventListener("error", function () {{ script.setAttribute("data-done", "1"); }});
       doc.head.appendChild(script);
     }}
     script.addEventListener("load", mount);
@@ -166,7 +154,7 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
     assets = [asset(name, mime, (bundle / name).read_bytes()) for name, mime in BUNDLE_FILES]
     preview_html = asset("mdw-preview.html", "text/html", PREVIEW_HTML.encode())
     string_ref = f"{TWSYS}/{SYSTEM_TYPES['String']}"
-    for kind, w in WIDGETS[toolkit].items():
+    for kind, w in widgets(toolkit).items():
         icon_path = ICONS / f"{kind}.svg"
         icon = asset(f"{kind}.svg", "image/svg+xml", icon_path.read_bytes()) if icon_path.exists() else None
         preview = asset(f"{kind}-preview.js", "application/javascript", preview_js(kind, tk["acronym"], w["sample"], w["options"]).encode())
@@ -193,7 +181,7 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
         out.writestr("META-INF/package.xml", app_template.package_xml(base, app, ids, objects, toolkit=True, files=file_entries))
         for name, data in files.items():
             out.writestr(name, data)
-    return [w["view"] for w in WIDGETS[toolkit].values()]
+    return [w["view"] for w in widgets(toolkit).values()]
 
 
 def toolkit_dependency(toolkit_twx: Path, rank):
@@ -257,7 +245,7 @@ def use_widgets(app_twx: Path, toolkit_twx: Path, dest: Path, swaps, snapshot=No
                 if not m:
                     continue
                 close = m.end() + re.search(r"</\w+:layout>", text[m.end():]).start()
-                view_ref = dep["views"][WIDGETS[toolkit][kind]["view"]]
+                view_ref = dep["views"][widgets(toolkit)[kind]["view"]]
                 text = text[:m.end()] + swap_view(text[m.end():close], item_id, view_ref, options) + text[close:]
                 changed[name] = text
                 swapped.add((coach, item_id))
