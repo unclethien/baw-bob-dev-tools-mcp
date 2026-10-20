@@ -34,6 +34,7 @@ FIELD_TYPES = {
     "Single Select": "select", "Radio Button Group": "radio",
 }
 CHOICE_VIEWS = {"Single Select", "Radio Button Group"}
+SCREEN_VIEWS = ("Coach Screen (", "PP React ")  # the screen view, and its name in apps modernized before the rename
 CONTAINERS = {"Panel", "Tab Section", "Vertical Layout", "Horizontal Layout", "Collapsible Panel", "Well"}
 BACKWARD = re.compile(r"\b(back|previous|prev|cancel|close)\b", re.I)
 
@@ -219,8 +220,8 @@ def inventory_service(root, names):
     for form in forms:
         reader = CoachReader(names).read(first(form, "layout"))
         readers.append((form, reader))
-    react = [r for _, r in readers for leaf in r.leaves + r.native if leaf["view"].startswith("PP React")]
-    react += [b for _, r in readers for b in r.dropped if "PP React" in b]
+    react = [r for _, r in readers for leaf in r.leaves + r.native if leaf["view"].startswith(SCREEN_VIEWS)]
+    react += [b for _, r in readers for b in r.dropped if any(name in b for name in SCREEN_VIEWS)]
     counts = Counter(leaf["binding"].split(".")[2] for _, r in readers for leaf in r.leaves
                      if leaf["view"] in FIELD_TYPES and leaf["binding"].count(".") >= 3)
     if react or not counts:

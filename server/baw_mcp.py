@@ -32,7 +32,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 SERVER = Path(__file__).resolve().parent
 ROOT = SERVER.parent
 WORK = ROOT / "work"
-REACT = ROOT / "react-coach"
+COACH_UI = ROOT / "coach-ui"
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 sys.path.insert(0, str(SERVER))
 
@@ -41,7 +41,7 @@ from baw_ops import BawOps, ConfigError, configured, missing_settings  # noqa: E
 mcp = MCPServer("baw-dev-tools", instructions=(
     "Platform tools for IBM BAW on CP4BA. You design and write: app specs (work/<ACR>.app.json), "
     "theme files (work/<name>.theme.json, from the look the user describes), "
-    "coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx). "
+    "coach specs (work/*.coaches.json) and React screens (coach-ui/src/screens/*.jsx). "
     "These tools build, install, inspect and test them; view_image shows a screenshot to build from "
     "or to compare with, image_colors reads its exact colours and crop_image cuts out its logo. "
     "Paths are relative to the project root. Without a BAW server (BAW_URL not set), the build tools still "
@@ -283,9 +283,9 @@ def create_app(app_spec: str, base: str | None = None) -> dict:
 
 @mcp.tool()
 def build_screens() -> str:
-    """Compile the React screens (react-coach/src) into the bundle. Returns compiler output;
+    """Compile the React screens and widgets (coach-ui/src) into the bundles. Returns compiler output;
     fix any error it reports in your screen file and build again."""
-    return run(["npm", "run", "build", "--silent"], cwd=REACT, timeout=300) or "Built react-coach/bundle"
+    return run(["npm", "run", "build", "--silent"], cwd=COACH_UI, timeout=300) or "Built coach-ui/bundle"
 
 
 @mcp.tool()
@@ -333,13 +333,13 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
 
 def run_browser(args: list, out: Path) -> dict:
     """Run verify-service.mjs and return its report, with screenshot paths relative to the project."""
-    result = subprocess.run(["node", "scripts/verify-service.mjs", *args, "--out", str(out)], cwd=REACT, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(["node", "scripts/verify-service.mjs", *args, "--out", str(out)], cwd=COACH_UI, capture_output=True, text=True, timeout=600)
     try:
         report = json.loads(result.stdout[result.stdout.index("{"):])
     except ValueError:
         raise ToolError((result.stdout + result.stderr)[-3000:])
     for step in report.get("steps", []):
-        step["screenshot"] = rel((REACT / step["screenshot"]).resolve())
+        step["screenshot"] = rel((COACH_UI / step["screenshot"]).resolve())
     return report
 
 

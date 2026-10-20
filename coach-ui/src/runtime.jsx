@@ -1,6 +1,6 @@
 // Bridge between a BAW Coach View and a React screen.
 //
-// The Coach View's load handler calls window.PPReact.mount(element, name, ctx), where
+// The Coach View's load handler calls window.CoachScreens.mount(element, name, ctx), where
 // ctx exposes the bound business object (read/write by dotted path), the boundary-event
 // trigger, fire(viewId) to press one of the coach's own buttons, and the screen options (the app's theme, field list). React state lives in BAW's binding, so the coach flow, variables and
 // server-side logic stay native; React only owns rendering.
@@ -106,7 +106,7 @@ function WidgetHost({ widget: Widget, store, ctx }) {
 // The Coach View (or the Coach Designer preview) owns the context, so this stays free of BAW APIs.
 export function mountWidget(element, kind, ctx) {
   const Widget = widgets[kind];
-  if (!Widget) throw new Error(`PPReact: no widget named "${kind}"`);
+  if (!Widget) throw new Error(`Modernizer Widgets: no widget named "${kind}"`);
   const container = document.createElement('div');
   element.appendChild(container);
   const store = createStore(ctx);
@@ -123,7 +123,7 @@ export function mountWidget(element, kind, ctx) {
 
 export function mount(element, name, ctx) {
   const Screen = screens[name];
-  if (!Screen) throw new Error(`PPReact: no screen named "${name}"`);
+  if (!Screen) throw new Error(`Coach screens: no screen named "${name}"`);
   const container = document.createElement('div');
   element.appendChild(container);
   const store = createStore(ctx);

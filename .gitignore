@@ -10,7 +10,7 @@
 work/
 
 # Screens written per project by the agent
-react-coach/src/screens/
+coach-ui/src/screens/
 
 __pycache__/
 *.pyc

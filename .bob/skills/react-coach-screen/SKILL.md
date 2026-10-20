@@ -1,6 +1,6 @@
 ---
 name: react-coach-screen
-description: Write a React + Carbon screen for one BAW coach (react-coach/src/screens/<name>.jsx) that replaces the coach's legacy layout while the coach flow, scripts and buttons stay native. Covers the screen contract (props, binding, pressing coach buttons), the shared building blocks, and how to build, attach and test the screen with the baw-dev-tools MCP tools. Use when modernizing a coach and the screen should be designed for that coach rather than rendered by the generic form.
+description: Write a React + Carbon screen for one BAW coach (coach-ui/src/screens/<name>.jsx) that replaces the coach's legacy layout while the coach flow, scripts and buttons stay native. Covers the screen contract (props, binding, pressing coach buttons), the shared building blocks, and how to build, attach and test the screen with the baw-dev-tools MCP tools. Use when modernizing a coach and the screen should be designed for that coach rather than rendered by the generic form.
 ---
 
 # React coach screen
@@ -13,7 +13,7 @@ From the coach spec (`work/*.coaches.json`, from `inspect_coaches`), read the co
 
 ## 2. Write the screen
 
-File: `react-coach/src/screens/<acr>-<coach>.jsx`, lower-case kebab, e.g. `zzeq-requester.jsx`. The registered name must equal the file name without `.jsx`.
+File: `coach-ui/src/screens/<acr>-<coach>.jsx`, lower-case kebab, e.g. `zzeq-requester.jsx`. The registered name must equal the file name without `.jsx`.
 
 ```jsx
 import { useState } from 'react';

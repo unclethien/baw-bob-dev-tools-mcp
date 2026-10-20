@@ -1,7 +1,7 @@
 <mode_boundaries>
   <scope>
     <in_scope>Inspect process apps, snapshots and services with the baw-dev-tools MCP tools</in_scope>
-    <in_scope>Create and edit coach specs (work/*.coaches.json) and React screens (react-coach/src/screens/*.jsx)</in_scope>
+    <in_scope>Create and edit coach specs (work/*.coaches.json) and React screens (coach-ui/src/screens/*.jsx)</in_scope>
     <in_scope>Build, install and test modernized snapshots of apps with the MCP tools</in_scope>
   </scope>
 

@@ -1,5 +1,5 @@
 {
-  "name": "react-coach",
+  "name": "coach-ui",
   "private": true,
   "description": "React Coach Views for BAW, bundled as IIFE managed files",
   "scripts": {
