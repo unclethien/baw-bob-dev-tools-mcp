@@ -1,6 +1,6 @@
 {
   "toolkit": "Modernizer Widgets",
-  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; label: the view has a Label property; options: configuration options (type: a System Data type or NameValuePair; list: a list of them); boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart; the toolkit's name is added so a palette search for it lists every widget).",
+  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; label: the view has a Label property; options: configuration options (type: a System Data type or NameValuePair; list: a list of them); boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart; the toolkit's name is added so a palette search for it lists every widget). A new widget needs only its component (coach-ui/src/widgets/<kind>.jsx), its entry here and its icon (icons/<kind>.svg), plus coach-ui/src/widgets/<kind>.scss when it uses a Carbon component the stock widgets do not: the build, the harness, the inspector and the modernizer read this file and that folder.",
   "widgets": [
     {
       "kind": "text",

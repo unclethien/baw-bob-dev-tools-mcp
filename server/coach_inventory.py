@@ -32,7 +32,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from app_template import SYSTEM_VIEWS
-from widget_toolkit import widget_kinds
+from widget_toolkit import widget_kinds, widgets
 
 XSI_TYPE = "{http://www.w3.org/2001/XMLSchema-instance}type"
 FIELD_TYPES = {
@@ -43,8 +43,13 @@ FIELD_TYPES = {
 CHOICE_VIEWS = {"Single Select", "Radio Button Group"}
 WIDGETS = widget_kinds("modernizer")  # view ID -> kind
 BUILDER = widget_kinds("builder")
-FIELD_WIDGETS = {"text", "textarea", "number", "date", "checkbox", "select", "radio"}
-WIDGET_KEYS = ("pattern", "message", "example", "min", "max")  # field widget options that are spec keys
+CONTRACT = widgets("modernizer")
+FIELD_WIDGETS = {kind for kind, w in CONTRACT.items() if w["binding"]}  # widgets that bind one value
+# Field widgets with a list of choices: their option "options" holds NameValuePair items.
+CHOICE_WIDGETS = {kind for kind in FIELD_WIDGETS
+                  if any((name, type_, is_list) == ("options", "NameValuePair", True) for name, _, type_, is_list in CONTRACT[kind]["options"])}
+SPEC_KEYS_FIRST = ("pattern", "message", "example", "min", "max")  # the order a spec has always listed these; other options follow
+SPEC_RESERVED = {"path", "label", "type", "readonly", "required", "help", "options"}  # spec keys an option must not overwrite
 SCREEN_VIEWS = ("Coach Screen (", "PP React ")  # the screen view, and its name in apps modernized before the rename
 CONTAINERS = {"Panel", "Tab Section", "Vertical Layout", "Horizontal Layout", "Collapsible Panel", "Well"}
 BACKWARD = re.compile(r"\b(back|previous|prev|cancel|close)\b", re.I)
@@ -111,7 +116,7 @@ class CoachReader:
             "label": (config.get("@label") or "").strip(),
             "visibility": config.get("@visibility") or "",
             "colorStyle": config.get("colorStyle") or "",
-            "options": widget_options(config) if WIDGETS.get(view_id) in ("select", "radio") else static_options(config),
+            "options": widget_options(config) if WIDGETS.get(view_id) in CHOICE_WIDGETS else static_options(config),
             "binding": next((b.text for b in children(el, "binding")), "") or "",
             "children": kids,
         }
@@ -209,6 +214,13 @@ def renderable(it):
     return it["view"] in FIELD_TYPES and (it["view"] not in CHOICE_VIEWS or bool(it["options"]))
 
 
+def widget_spec_keys(kind):
+    """The options of a field widget that are spec keys: every option its contract declares, except the choice list
+    (read from the items) and those the spec uses for something else."""
+    names = [name for name, *_ in CONTRACT[kind]["options"] if name != "options" and name not in SPEC_RESERVED]
+    return sorted(names, key=lambda n: SPEC_KEYS_FIRST.index(n) if n in SPEC_KEYS_FIRST else len(SPEC_KEYS_FIRST))
+
+
 def field_spec(it, variable):
     path = it["binding"][len(f"tw.local.{variable}."):]
     kind = it["widget"] or FIELD_TYPES[it["view"]]
@@ -216,7 +228,7 @@ def field_spec(it, variable):
     if it["options"]:
         spec["options"] = it["options"]
     if it["widget"]:
-        spec.update({k: it["config"][k] for k in WIDGET_KEYS if it["config"].get(k)})
+        spec.update({k: it["config"][k] for k in widget_spec_keys(kind) if it["config"].get(k)})
         if (it["config"].get("@helpText") or "").strip():
             spec["help"] = it["config"]["@helpText"].strip()
     if kind == "output" or "READONLY" in it["visibility"]:

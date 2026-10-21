@@ -7,7 +7,7 @@
 // hidden from any UMD code inside it; otherwise those modules would register with
 // Dojo instead of the bundle and break.
 import { build } from 'esbuild';
-import { compile } from 'sass';
+import { compileString } from 'sass';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 
 mkdirSync('bundle', { recursive: true });
@@ -25,7 +25,11 @@ const toolkitEntry = ["export * from './toolkit.js';", ...widgetFiles.map((f) =>
 // root to 62.5% (10px), which shrinks the screen to 62.5%. Fixed pixels keep Carbon's sizes.
 // The same applies to the CSS and inline styles in our own .jsx files.
 const toPx = (css) => css.replace(/(?<![\w.-])(-?\d*\.?\d+)rem(?![\w-])/g, (_, n) => `${+(n * 16).toFixed(3)}px`);
-const css = toPx(compile('src/styles.scss', { loadPaths: ['node_modules'], style: 'compressed', quietDeps: true }).css);
+// A widget whose Carbon component the shared styles do not include brings its own src/widgets/<kind>.scss
+// (for example `@use '@carbon/react/scss/components/toggle';`); it is compiled after styles.scss, with its config.
+const widgetStyles = existsSync('src/widgets') ? readdirSync('src/widgets').filter((f) => f.endsWith('.scss')).sort() : [];
+const styles = ["@use 'styles';", ...widgetStyles.map((f) => `@use 'widgets/${f.slice(0, -5)}';`)].join('\n');
+const css = toPx(compileString(styles, { loadPaths: ['src', 'node_modules'], style: 'compressed', quietDeps: true }).css);
 writeFileSync('bundle/coach-screens.css', css);
 writeFileSync('bundle/mdw.css', css);
 

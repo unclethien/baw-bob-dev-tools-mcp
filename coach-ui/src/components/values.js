@@ -13,7 +13,9 @@ export function fieldKind(field) {
 
 const optionLabel = (field, value) => (field.options || []).find((o) => o.value === value)?.label ?? value;
 
+// A field may carry its own display(field, value) and isEmpty(field, value) (a widget of its own kind); they win.
 export function formatValue(field, value) {
+  if (field.display) return field.display(field, value);
   const kind = fieldKind(field);
   if (kind === 'checkbox') return value ? 'Yes' : 'No';
   if (kind === 'date') return toDate(value)?.toLocaleDateString() || '—';
@@ -21,4 +23,7 @@ export function formatValue(field, value) {
   return value === 0 ? '0' : value || '—';
 }
 
-export const isEmpty = (field, value) => (fieldKind(field) === 'checkbox' ? !value : value === null || value === undefined || value === '');
+export const isEmpty = (field, value) => {
+  if (field.isEmpty) return field.isEmpty(field, value);
+  return fieldKind(field) === 'checkbox' ? !value : value === null || value === undefined || value === '';
+};

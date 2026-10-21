@@ -146,7 +146,7 @@
 // Containers that hold field widgets lay them out in a grid; text areas and read-only values take a whole row;
 // a row of Button widgets becomes its button bar. The Theme widget sets the --pp-* variables on the page.
 // mdw.css may load before BAW's own stylesheets, so these rules carry more weight than BAW's (html body.…).
-$fields: '.pp-widget-text, .pp-widget-textarea, .pp-widget-number, .pp-widget-date, .pp-widget-checkbox, .pp-widget-select, .pp-widget-radio';
+$fields: '.pp-widget-field';
 
 html body.pp-widget-page {
   font-family: var(--pp-page-font, 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif);

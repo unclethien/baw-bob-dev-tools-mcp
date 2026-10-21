@@ -1,4 +1,5 @@
-// One input for a spec field: picks the Carbon input from the field's kind.
+// One input for a spec field: the field's own Input when it has one (a widget of its own kind), else the
+// Carbon input of its kind.
 import { fieldKind } from './values.js';
 import { CheckboxField } from './fields/checkbox-field.jsx';
 import { DateField } from './fields/date-field.jsx';
@@ -14,7 +15,7 @@ const INPUTS = {
 };
 
 export function Field({ field, binding, error }) {
-  const Input = INPUTS[fieldKind(field)] || TextField;
+  const Input = field.Input || INPUTS[fieldKind(field)] || TextField;
   const id = `pp-${String(field.prop || field.path).replace(/[^\w-]/g, '-')}`;
   return <Input id={id} field={field} binding={binding} validity={{ invalid: !!error, invalidText: error }} readOnly={!!field.readonly} />;
 }

@@ -1,7 +1,7 @@
 // Check the Modernizer Widgets bundle offline: renders every widget in scripts/widget-harness.html through fake
 // BAW Coach Views (and as Coach Designer previews), and checks validation, visibility, the Button and the Theme.
 //
-// Usage: npm run build, then node scripts/check-widgets.mjs [--shot <png>]
+// Usage: npm run build, then node scripts/check-widgets.mjs [--shot <png>] (also writes <png>-contract.png, every contract widget)
 // Exit code 1 when a check fails.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -15,6 +15,8 @@ const BROWSERS = [process.env.BROWSER_PATH, '/Applications/Brave Browser.app/Con
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Helium.app/Contents/MacOS/Helium',
   '/usr/bin/chromium', '/usr/bin/google-chrome'];
 const harness = new URL('./widget-harness.html', import.meta.url).href;
+// Every widget of the toolkit's contract (widgets/modernizer-widgets.json), so a new widget is covered without editing this script.
+const contract = JSON.parse(fs.readFileSync(new URL('../widgets/modernizer-widgets.json', import.meta.url), 'utf8')).widgets;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const browser = await puppeteer.launch({
@@ -82,12 +84,12 @@ try {
   // 2. Coach Designer previews: every widget draws, and follows label and option changes.
   {
     const { page, errors } = await fresh();
-    const kinds = ['text', 'textarea', 'number', 'date', 'checkbox', 'select', 'radio', 'header', 'errors', 'button', 'theme'];
+    const kinds = contract.map((w) => w.kind);
     await page.evaluate((list) => {
       window.previews = {};
-      list.forEach((kind) => { window.previews[kind] = { state: { label: kind + ' label', options: {}, value: kind === 'text' ? 'Sample text' : null } }; });
-      list.forEach((kind) => { window.previews[kind].handle = harness.preview(kind, window.previews[kind].state).handle; });
-    }, kinds);
+      list.forEach(({ kind, value }) => { window.previews[kind] = { state: { label: kind + ' label', options: {}, value } }; });
+      list.forEach(({ kind }) => { window.previews[kind].handle = harness.preview(kind, window.previews[kind].state).handle; });
+    }, contract.map((w) => ({ kind: w.kind, value: w.preview.value })));
     await sleep(300);
     const empty = [];
     for (const kind of kinds) if (!(await page.$eval(`[data-preview=${kind}]`, (el) => el.textContent.trim() || el.querySelector('input,select,textarea,button')))) empty.push(kind);
@@ -112,6 +114,49 @@ try {
     await page.click('[data-preview=text] input');
     check('a preview button never fires', (await page.evaluate(() => harness.triggered.length)) === 0);
     check('no page errors (preview)', errors.length === 0, errors);
+    await page.close();
+  }
+
+  // 2b. Every widget of the contract renders at runtime with its sample value, and a field widget shows its label.
+  {
+    const { page, errors } = await fresh();
+    await page.evaluate((list) => {
+      list.forEach(({ kind, value }) => harness.view({ kind, id: `Any_${kind}`, label: `${kind} label`, value }));
+    }, contract.map((w) => ({ kind: w.kind, value: w.preview.value })));
+    await sleep(300);
+    const missing = [];
+    for (const w of contract) {
+      const cell = `[data-kind=${w.kind}]`;
+      const drawn = await page.$eval(`${cell} .pp-widget`, () => true).catch(() => false);
+      const labelled = w.binding === null || ((await text(page, cell)) || '').includes(`${w.kind} label`);
+      if (!drawn || !labelled) missing.push(w.kind);
+    }
+    check('every contract widget renders at runtime', missing.length === 0, missing);
+    // A Carbon component whose styles the bundle lacks still renders, unstyled: every Carbon block a widget uses
+    // (pp--toggle for pp--toggle__switch) must appear in some CSS rule. A new widget adds its own <kind>.scss.
+    const unstyled = await page.evaluate(() => {
+      const selectors = [];
+      const collect = (rule) => { if (rule.selectorText) selectors.push(rule.selectorText); for (const r of rule.cssRules || []) collect(r); };
+      for (const sheet of document.styleSheets) { try { for (const r of sheet.cssRules) collect(r); } catch { /* cross-origin */ } }
+      const styled = new Set(selectors.join(' ').match(/\.pp--[\w-]+/g));
+      const out = {};
+      for (const cell of document.querySelectorAll('[data-kind]')) {
+        const blocks = {}; // block -> does any of its classes (modifiers aside) have a rule
+        cell.querySelectorAll('[class]').forEach((el) => el.classList.forEach((c) => {
+          const [block, ...rest] = c.startsWith('pp--') ? c.slice(4).split('--') : [];
+          if (block === undefined || rest.length) return;
+          const name = `pp--${block.split('__')[0]}`;
+          blocks[name] = blocks[name] || styled.has(`.${c}`);
+        }));
+        const bare = Object.keys(blocks).filter((b) => !blocks[b]);
+        if (bare.length) out[cell.dataset.kind] = bare;
+      }
+      return out;
+    });
+    check('every Carbon component a widget uses is styled', Object.keys(unstyled).length === 0, unstyled);
+    check('no page errors (contract widgets)', errors.length === 0, errors);
+    // The contract widgets with their sample values, for a look at widgets the first screenshot does not show.
+    if (args.shot) await page.screenshot({ path: args.shot.replace(/(\.png)?$/, '-contract.png'), fullPage: true });
     await page.close();
   }
 
