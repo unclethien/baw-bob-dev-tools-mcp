@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo script · The Quote screen as reusable BAW widgets</title>
+  <meta name="description" content="A one-hour demo script: IBM Bob rebuilds a Quote screen from small widgets in two toolkits, classic and React with Carbon, and creates a new Toggle widget live.">
+  <script>
+    // Apply the saved theme before first paint.
+    try {
+      const t = localStorage.getItem('demo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/sections.css">
+  <noscript><style>[data-cues] > [role="tabpanel"] { grid-area: auto !important; visibility: visible !important; }</style></noscript>
+</head>
+<body>
+  <a class="skip" href="#hero">Skip to the script</a>
+
+  <header class="masthead">
+    <a class="wordmark" href="#hero"><span class="wordmark-ibm">IBM</span><span>Demo script</span><span class="wordmark-sub">Quote screen as BAW widgets</span></a>
+    <div class="controls">
+      <button class="ctl timer" type="button" data-timer aria-pressed="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+        <span>Timer</span>
+        <output class="timer-read" aria-live="off">00:00</output>
+      </button>
+      <button class="ctl theme" type="button" data-theme-toggle aria-label="Theme: system">
+        <svg class="ico ico-system" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12"/><path d="M8 20h8M12 16v4"/></svg>
+        <svg class="ico ico-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="ico ico-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        <span class="theme-label" data-theme-label>System</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Run of show: each section sits at its minute mark -->
+  <nav class="rail" aria-label="Run of show">
+    <ol>
+      <li><a href="#hero"><time>60 min</time><span>Overview</span></a></li>
+      <li><a href="#prep"><time>T&minus;30</time><span>Before</span></a></li>
+      <li><a href="#how"><time>00:00</time><span>How it works</span></a></li>
+      <li><a href="#act-1"><time>10:00</time><span>Act 1 · classic</span></a></li>
+      <li><a href="#act-2"><time>25:00</time><span>Act 2 · modern</span></a></li>
+      <li><a href="#close"><time>50:00</time><span>Close</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <!-- HERO ------------------------------------------------------------ -->
+    <section id="hero" class="section hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="kicker">IBM Bob × BAW Dev Tools MCP · demo script</p>
+        <h1 id="hero-title" class="display">The Quote screen as reusable BAW widgets.</h1>
+        <p class="lead">Bob turns pictures of an old CRM screen into a BAW app built from <b>small widgets in a toolkit</b>: first the classic way, then with React and Carbon. Along the way it <b>writes a new widget</b>, live.</p>
+        <dl class="figures" aria-label="At a glance">
+          <div><dt>60</dt><dd>min</dd></div>
+          <div><dt>2</dt><dd>acts</dd></div>
+          <div><dt>15</dt><dd>tools</dd></div>
+          <div><dt>2</dt><dd>toolkits</dd></div>
+          <div class="is-new"><dt>1</dt><dd>new widget</dd></div>
+        </dl>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#prep">Start with the prep</a>
+          <a class="btn btn-quiet" href="#act-2">Jump to Act 2</a>
+        </div>
+      </div>
+      <div class="sheets" aria-label="From the old CRM screen to classic widgets, to modern widgets with the new Toggle">
+        <figure class="sheet sheet-1">
+          <img src="media/01-legacy-quote.webp" width="1600" height="967" alt="The old CRM's Large Group Quote screen, Info tab: drop-down lists with Other boxes, and unchecked ERISA group? and Union group? checkboxes">
+          <figcaption><b>1</b> <span>The old screen, as pictures</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-2">
+          <img src="media/03-classic-quote.webp" width="1400" height="1214" alt="The classic BAW screen, Step 1 of 4: Benefit Funding, with Proposed Rating Method, Benefits Funding and Eligibility sections and ERISA group? and Union group? checkboxes">
+          <figcaption><b>2</b> <span>Act 1 · classic widgets</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-3">
+          <img src="media/05-modern-quote.webp" width="1400" height="1029" alt="The modern Carbon screen: a blue header with six steps, fields in four columns, and ERISA group? and Union group? as switches set to No">
+          <figcaption><b>3</b> <span>Act 2 · React + Carbon widgets</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-new">
+          <img src="media/09-toggle-on.webp" width="403" height="271" alt="At run time, ERISA group? switched on: a green toggle that reads Yes">
+          <figcaption><b>New widget</b> <span>Toggle</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- RUN OF SHOW AND BEFORE THE MEETING ------------------------------------ -->
+    <section id="prep" class="section prep" aria-labelledby="prep-title">
+      <header class="sec-head">
+        <p class="timecode">T&minus;30 <span aria-hidden="true">/</span> 00:00</p>
+        <h2 id="prep-title" class="h2">Run of show, then the prep.</h2>
+      </header>
+
+      <div class="prep-run">
+        <h3 class="h3">Run of show</h3>
+        <ol class="timeline">
+          <li><time>00:00</time><b>Opening</b><span>Where we left off, and today's goal</span></li>
+          <li><time>03:00</time><b>How it works</b><span>Two widget toolkits, and how Bob uses them</span></li>
+          <li><time>10:00</time><b>Act 1: the classic screen</b><span>Pictures in; a BAW app built from small classic widgets out; drag one in Coach Designer</span></li>
+          <li class="is-new"><time>25:00</time><b>Act 2: modern, with a new widget</b><span>One request: React + Carbon screens from small widgets, plus a new Toggle widget in the toolkit</span></li>
+          <li><time>50:00</time><b>Safety and questions</b></li>
+          <li><time>57:00</time><b>Next steps</b><span>Which widgets the team wants next</span></li>
+        </ol>
+      </div>
+
+      <div class="prep-before">
+        <h3 class="h3">Before the meeting <span>Thirty minutes before</span></h3>
+        <ol class="checklist">
+          <li>Check the BAW login file (<code>.env</code>) is filled in. Never show it on screen.</li>
+          <li>Get the latest project (<code>git switch main &amp;&amp; git pull</code>). Open it in Bob; the tools panel shows <b>baw-dev-tools</b> with <b>15 tools</b>. If it shows fewer, restart baw-dev-tools in that panel.</li>
+          <li><b>Make sure the Toggle does not exist yet</b>, so Bob creates it live. Run <code>git status</code> and check that these are absent:
+            <ul class="bullets">
+              <li><code>coach-ui/src/widgets/toggle.jsx</code>, <code>coach-ui/src/widgets/toggle.scss</code>, <code>coach-ui/widgets/icons/toggle.svg</code></li>
+              <li>a <code>"kind": "toggle"</code> entry in <code>coach-ui/widgets/modernizer-widgets.json</code></li>
+            </ul>
+            Commit or stash any other change first, so <code>git status</code> is clean and the rehearsal check (only the new Toggle files changed) is easy to read. After a rehearsal, reset with:
+            <figure class="prompt cmd"><figcaption>Terminal</figcaption><pre><code>rm -f coach-ui/src/widgets/toggle.jsx coach-ui/src/widgets/toggle.scss coach-ui/widgets/icons/toggle.svg
+git checkout -- coach-ui/widgets/modernizer-widgets.json</code></pre><button class="copy" type="button" data-copy>Copy</button></figure>
+          </li>
+          <li>Keep <code>screenshots/Quote/</code> as it is: the six pictures of the old screen (<code>image (1).png</code> to <code>image (6).png</code>) and the client's newer quote screen (<code>generate-quote.png</code>). It stays on this laptop and is never published.</li>
+          <li>Note the names already taken on the server, so a “version already exists” message is no surprise:
+            <ul class="bullets">
+              <li>App Builder Widgets (ABW): up to 1.0.4</li>
+              <li>Modernizer Widgets (MDW): up to 1.7.0, so Bob's new widget goes into 1.8.0 or later</li>
+              <li>The Quote app ZZQI: v1.0 to v3.0 and test snapshots such as <code>p7-toggle</code></li>
+            </ul>
+          </li>
+          <li>Do one full rehearsal, so you know how long each step takes. Keep the rehearsal app as a backup.</li>
+          <li>Open Business Automation Studio in a second browser tab.</li>
+          <li>In Bob, pick the <b><span class="emoji">🏗️</span> BAW App Builder</b> mode. Allow mode switches in Bob's auto-approve settings. Make the font bigger.</li>
+          <li>Afterwards, ask a BAW admin to archive the test snapshots: Bob cannot delete anything.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- OPENING AND HOW IT WORKS ------------------------------------------------ -->
+    <section id="how" class="section how" aria-labelledby="how-title">
+      <header class="sec-head">
+        <p class="timecode">00:00 <span aria-hidden="true">/</span> 03:00 <span aria-hidden="true">/</span> 10:00</p>
+        <h2 id="how-title" class="h2">Two toolkits of small widgets.</h2>
+        <p class="lead">Bob builds every screen from small BAW views that live in a toolkit, and installs the toolkit before the app that needs it.</p>
+      </header>
+
+      <figure class="diagram" aria-labelledby="diagram-cap">
+        <svg class="diagram-wide" viewBox="0 0 940 400" role="img" aria-labelledby="diagram-cap">
+          <defs>
+            <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead"/></marker>
+          </defs>
+          <g class="zone"><rect x="430" y="8" width="502" height="384"/><text x="446" y="30" text-anchor="start" class="z-title">IBM Business Automation Workflow</text></g>
+          <g class="edges">
+            <path d="M148 185H200" marker-end="url(#arw)"/>
+            <path d="M380 185H408V110H446" marker-end="url(#arw)"/>
+            <path d="M408 185V288H446" marker-end="url(#arw)"/>
+            <path class="dep" d="M748 108H720" marker-end="url(#arw)"/>
+            <path class="dep" d="M748 288H720" marker-end="url(#arw)"/>
+          </g>
+          <g class="flow">
+            <path d="M148 185H200"/><path d="M380 185H408V110H446"/><path d="M408 185V288H446"/>
+          </g>
+          <g class="edge-labels"><text x="174" y="175">MCP</text></g>
+
+          <g class="node"><rect x="8" y="100" width="140" height="170"/><text x="78" y="124" class="n-title">IBM Bob</text></g>
+          <g class="node node-accent"><rect x="20" y="138" width="116" height="52"/><text x="78" y="160" class="n-title">App Builder</text><text x="78" y="178" class="n-sub">classic BAW</text></g>
+          <g class="node node-accent"><rect x="20" y="204" width="116" height="52"/><text x="78" y="226" class="n-title">Modernizer</text><text x="78" y="244" class="n-sub">React + Carbon</text></g>
+
+          <g class="node"><rect x="200" y="100" width="180" height="170"/><text x="290" y="126" class="n-title">baw-dev-tools</text><text x="290" y="145" class="n-sub">15 tools</text>
+            <text x="290" y="172" class="t-code">build_widget_toolkit</text><text x="290" y="189" class="t-code">install_app</text><text x="290" y="206" class="t-code">create_app</text><text x="290" y="223" class="t-code">modernize_app</text><text x="290" y="240" class="t-code">test_service</text><text x="290" y="258" class="n-sub">and more</text></g>
+
+          <g class="node"><rect x="446" y="48" width="272" height="124"/><text x="458" y="70" text-anchor="start" class="n-title">App Builder Widgets</text><text x="706" y="70" text-anchor="end" class="n-sub t-code">ABW</text><text x="458" y="88" text-anchor="start" class="n-sub">5 classic widgets</text></g>
+          <g class="tile"><rect x="458" y="100" width="80" height="24"/><text x="498" y="116">Theme</text></g>
+          <g class="tile"><rect x="543" y="100" width="80" height="24"/><text x="583" y="116">App Header</text></g>
+          <g class="tile"><rect x="628" y="100" width="80" height="24"/><text x="668" y="116">Section</text></g>
+          <g class="tile"><rect x="458" y="130" width="80" height="24"/><text x="498" y="146">Review List</text></g>
+          <g class="tile"><rect x="543" y="130" width="80" height="24"/><text x="583" y="146">Button Bar</text></g>
+
+          <g class="node"><rect x="446" y="196" width="272" height="184"/><text x="458" y="218" text-anchor="start" class="n-title">Modernizer Widgets</text><text x="706" y="218" text-anchor="end" class="n-sub t-code">MDW</text><text x="458" y="236" text-anchor="start" class="n-sub">11 React + Carbon widgets, plus 1 new</text></g>
+          <g class="tile"><rect x="458" y="248" width="80" height="24"/><text x="498" y="264">Theme</text></g>
+          <g class="tile"><rect x="543" y="248" width="80" height="24"/><text x="583" y="264">Header</text></g>
+          <g class="tile"><rect x="628" y="248" width="80" height="24"/><text x="668" y="264">Error Summary</text></g>
+          <g class="tile"><rect x="458" y="278" width="80" height="24"/><text x="498" y="294">Text Field</text></g>
+          <g class="tile"><rect x="543" y="278" width="80" height="24"/><text x="583" y="294">Text Area</text></g>
+          <g class="tile"><rect x="628" y="278" width="80" height="24"/><text x="668" y="294">Number Field</text></g>
+          <g class="tile"><rect x="458" y="308" width="80" height="24"/><text x="498" y="324">Date Field</text></g>
+          <g class="tile"><rect x="543" y="308" width="80" height="24"/><text x="583" y="324">Checkbox</text></g>
+          <g class="tile"><rect x="628" y="308" width="80" height="24"/><text x="668" y="324">Select</text></g>
+          <g class="tile"><rect x="458" y="338" width="80" height="24"/><text x="498" y="354">Radio Group</text></g>
+          <g class="tile"><rect x="543" y="338" width="80" height="24"/><text x="583" y="354">Button</text></g>
+          <g class="tile tile-new"><rect x="628" y="338" width="80" height="24"/><text x="668" y="354">Toggle</text></g>
+          <g class="badge"><rect x="672" y="330" width="34" height="14"/><text x="689" y="340.5">NEW</text></g>
+
+          <g class="node node-target"><rect x="748" y="70" width="172" height="76"/><text x="834" y="94" class="n-title">Classic Quote app</text><text x="834" y="114" class="n-sub">depends on one</text><text x="834" y="129" class="n-sub">ABW version</text></g>
+          <g class="node node-target"><rect x="748" y="250" width="172" height="76"/><text x="834" y="274" class="n-title">Modern Quote app</text><text x="834" y="294" class="n-sub">depends on one</text><text x="834" y="309" class="n-sub">MDW version, 1.8.0+</text></g>
+        </svg>
+
+        <svg class="diagram-tall" viewBox="0 0 360 808" role="img" aria-labelledby="diagram-cap">
+          <defs>
+            <marker id="arw2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead"/></marker>
+          </defs>
+          <g class="zone"><rect x="0" y="290" width="360" height="510"/><text x="14" y="312" text-anchor="start" class="z-title">IBM Business Automation Workflow</text></g>
+          <g class="edges">
+            <path d="M180 126V160" marker-end="url(#arw2)"/>
+            <path d="M180 254V288" marker-end="url(#arw2)"/>
+            <path class="dep" d="M180 468V434" marker-end="url(#arw2)"/>
+            <path class="dep" d="M180 728V694" marker-end="url(#arw2)"/>
+          </g>
+          <g class="flow"><path d="M180 126V160"/><path d="M180 254V288"/></g>
+          <g class="edge-labels"><text x="188" y="148" text-anchor="start">MCP</text><text x="188" y="456" text-anchor="start">depends on</text><text x="188" y="716" text-anchor="start">depends on</text></g>
+
+          <g class="node"><rect x="8" y="8" width="344" height="118"/><text x="180" y="30" class="n-title">IBM Bob</text></g>
+          <g class="node node-accent"><rect x="20" y="42" width="156" height="70"/><text x="98" y="68" class="n-title">App Builder</text><text x="98" y="88" class="n-sub">classic BAW</text></g>
+          <g class="node node-accent"><rect x="184" y="42" width="156" height="70"/><text x="262" y="68" class="n-title">Modernizer</text><text x="262" y="88" class="n-sub">React + Carbon</text></g>
+
+          <g class="node"><rect x="8" y="162" width="344" height="92"/><text x="180" y="186" class="n-title">baw-dev-tools</text><text x="180" y="204" class="n-sub">15 tools</text><text x="180" y="226" class="t-code">build_widget_toolkit · install_app · create_app</text><text x="180" y="243" class="t-code">modernize_app · test_service · and more</text></g>
+
+          <g class="node"><rect x="12" y="326" width="336" height="106"/><text x="24" y="348" text-anchor="start" class="n-title">App Builder Widgets</text><text x="336" y="348" text-anchor="end" class="n-sub t-code">ABW</text><text x="24" y="366" text-anchor="start" class="n-sub">5 classic widgets</text></g>
+          <g class="tile"><rect x="24" y="376" width="76" height="24"/><text x="62" y="392">Theme</text></g>
+          <g class="tile"><rect x="104" y="376" width="76" height="24"/><text x="142" y="392">App Header</text></g>
+          <g class="tile"><rect x="184" y="376" width="76" height="24"/><text x="222" y="392">Section</text></g>
+          <g class="tile"><rect x="264" y="376" width="76" height="24"/><text x="302" y="392">Review List</text></g>
+          <g class="tile"><rect x="24" y="402" width="76" height="24"/><text x="62" y="418">Button Bar</text></g>
+
+          <g class="node node-target"><rect x="12" y="468" width="336" height="56"/><text x="180" y="490" class="n-title">Classic Quote app</text><text x="180" y="508" class="n-sub">depends on one ABW version</text></g>
+
+          <g class="node"><rect x="12" y="546" width="336" height="146"/><text x="24" y="568" text-anchor="start" class="n-title">Modernizer Widgets</text><text x="336" y="568" text-anchor="end" class="n-sub t-code">MDW</text><text x="24" y="586" text-anchor="start" class="n-sub">11 React + Carbon widgets, plus 1 new</text></g>
+          <g class="tile"><rect x="24" y="596" width="76" height="24"/><text x="62" y="612">Theme</text></g>
+          <g class="tile"><rect x="104" y="596" width="76" height="24"/><text x="142" y="612">Header</text></g>
+          <g class="tile"><rect x="184" y="596" width="76" height="24"/><text x="222" y="612">Error Summary</text></g>
+          <g class="tile"><rect x="264" y="596" width="76" height="24"/><text x="302" y="612">Text Field</text></g>
+          <g class="tile"><rect x="24" y="626" width="76" height="24"/><text x="62" y="642">Text Area</text></g>
+          <g class="tile"><rect x="104" y="626" width="76" height="24"/><text x="142" y="642">Number Field</text></g>
+          <g class="tile"><rect x="184" y="626" width="76" height="24"/><text x="222" y="642">Date Field</text></g>
+          <g class="tile"><rect x="264" y="626" width="76" height="24"/><text x="302" y="642">Checkbox</text></g>
+          <g class="tile"><rect x="24" y="656" width="76" height="24"/><text x="62" y="672">Select</text></g>
+          <g class="tile"><rect x="104" y="656" width="76" height="24"/><text x="142" y="672">Radio Group</text></g>
+          <g class="tile"><rect x="184" y="656" width="76" height="24"/><text x="222" y="672">Button</text></g>
+          <g class="tile tile-new"><rect x="264" y="656" width="76" height="24"/><text x="302" y="672">Toggle</text></g>
+          <g class="badge"><rect x="306" y="648" width="34" height="14"/><text x="323" y="658.5">NEW</text></g>
+
+          <g class="node node-target"><rect x="12" y="728" width="336" height="56"/><text x="180" y="750" class="n-title">Modern Quote app</text><text x="180" y="768" class="n-sub">depends on one MDW version, 1.8.0 or later</text></g>
+        </svg>
+        <figcaption id="diagram-cap">Bob builds a toolkit, installs it on BAW, then builds the app that depends on it. An app keeps the toolkit version it was built with; a new widget means a new version.</figcaption>
+      </figure>
+
+      <div class="talk" data-cues>
+        <div class="ledger-tabs" role="tablist" aria-label="Opening and how it works">
+          <button role="tab" id="h-t1" aria-controls="h-p1" aria-selected="true">Opening</button>
+          <button role="tab" id="h-t2" aria-controls="h-p2" aria-selected="false" tabindex="-1">Toolkits</button>
+          <button role="tab" id="h-t3" aria-controls="h-p3" aria-selected="false" tabindex="-1">Each widget</button>
+          <button role="tab" id="h-t4" aria-controls="h-p4" aria-selected="false" tabindex="-1">Roles</button>
+          <button role="tab" id="h-t5" aria-controls="h-p5" aria-selected="false" tabindex="-1">New widget</button>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p1" aria-labelledby="h-t1">
+          <blockquote class="cue-say"><b class="say-label">Say · opening, 3 min</b>
+            <ul>
+              <li>“Last time Bob rebuilt your quote screen from pictures, and gave it a modern look. You asked for one change: break the screen into smaller, reusable pieces in a toolkit, so your developers can manage them in BAW.”</li>
+              <li>“Today we build the same screen twice from small widgets: once in the normal BAW style, once with React and Carbon.”</li>
+              <li>“And because the old screen has something no stock widget does well, Bob will write a brand-new widget during the demo and put it in the toolkit.”</li>
+            </ul>
+          </blockquote>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p2" aria-labelledby="h-t2" hidden>
+          <p class="cue-do"><b>Do</b> <span>Show the toolkit diagram.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“In BAW, a screen is called a coach, and its building blocks are called views. A view that lives in a toolkit can be reused by every app that depends on that toolkit, and it shows up in Coach Designer's palette.”<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup></li>
+              <li>“We give Bob two toolkits of small widgets.”</li>
+            </ul>
+          </blockquote>
+          <div class="ledger">
+            <table class="toolkits">
+              <thead><tr><th scope="col">Toolkit</th><th scope="col">Built with</th><th scope="col">Widgets</th><th scope="col">Used by</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">App Builder Widgets (ABW)</th><td data-label="Built with">Classic BAW, no framework</td><td data-label="Widgets">Theme, App Header, Section, Review List, Button Bar, around the standard BAW inputs</td><td data-label="Used by">The classic screen (Act 1)</td></tr>
+                <tr><th scope="row">Modernizer Widgets (MDW)</th><td data-label="Built with">React + Carbon</td><td data-label="Widgets">Theme, Header, Error Summary, Text Field, Text Area, Number Field, Date Field, Checkbox, Select, Radio Group, Button</td><td data-label="Used by">The modern screen (Act 2)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p3" aria-labelledby="h-t3" hidden>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“Each widget is a normal BAW view. It binds to a BAW variable, and it honours BAW's own settings: required, read-only and hidden.”<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup></li>
+              <li>“Each widget has a palette icon and a live preview on the Designer canvas, so a developer can drag it, drop it and see it change.”<sup><a href="#ref-3" aria-label="Reference 3">3</a></sup></li>
+              <li>“An app depends on one version of a toolkit. A new widget means a new toolkit version. Apps that already use an older version keep it until someone moves them.”<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup></li>
+            </ul>
+          </blockquote>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p4" aria-labelledby="h-t4" hidden>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul><li>“Bob has 15 tools and two roles. The ones that change something ask first.”</li></ul>
+          </blockquote>
+          <div class="ledger">
+            <table>
+              <thead><tr><th scope="col">Role</th><th scope="col">What it does today</th></tr></thead>
+              <tbody>
+                <tr><th scope="row"><span class="emoji">🏗️</span> BAW App Builder</th><td>Turns pictures or a request into a working app, built from App Builder Widgets</td></tr>
+                <tr><th scope="row"><span class="emoji">✨</span> BAW Coach Modernizer</th><td>Gives an app a React + Carbon copy of its screens, built from Modernizer Widgets. It can also <b>add a new widget</b> to that toolkit when the plan needs one</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p5" aria-labelledby="h-t5" hidden>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“A new widget is three small files: the React component, one entry in the toolkit's list, and its palette icon. Bob checks it in a browser before it builds the toolkit.”</li>
+              <li>“Bob can add widgets, but it may not change an existing one. Other apps depend on those, so changing one is a developer's job, done on purpose.”</li>
+              <li>“Bob stops twice by itself: it shows us the plan before building, and it asks before installing anything on BAW.”</li>
+            </ul>
+          </blockquote>
+          <p class="cue-do"><b>Do</b> <span>Open Bob's tools panel and show <b>baw-dev-tools</b> with its 15 tools, including <code>build_widget_toolkit</code>.</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACT 1 ------------------------------------------------------------ -->
+    <section id="act-1" class="section act" aria-labelledby="act1-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">10:00 <span aria-hidden="true">/</span> 25:00</p>
+          <h2 id="act1-title" class="h2">Act 1. The classic screen.</h2>
+          <p class="lead">Pictures in; a BAW app built from small classic widgets out.</p>
+        </header>
+        <div class="pair" aria-label="The old screen and Bob's classic result">
+          <figure>
+            <img src="media/01-legacy-quote.webp" width="1600" height="967" alt="The old CRM's Large Group Quote screen, Info tab: drop-down lists with Other boxes, and unchecked ERISA group? and Union group? checkboxes">
+            <figcaption>The requirement: the old screen</figcaption>
+          </figure>
+          <figure>
+            <img src="media/03-classic-quote.webp" width="1400" height="1214" alt="The classic BAW screen Bob built, Step 1 of 4: Benefit Funding, with three sections, the ERISA group? and Union group? checkboxes, and a Next button">
+            <figcaption>Bob's test picture: the classic screen</figcaption>
+          </figure>
+        </div>
+        <figure class="prompt">
+          <figcaption>Step 2 · paste in Bob, <span class="emoji">🏗️</span> BAW App Builder mode</figcaption>
+          <pre><code>Build a ZZ app from the screenshots in screenshots/Quote, image (1).png to image (6).png. They show one long page, scrolled, so some parts appear twice. Build it from App Builder Widgets. Install it, test it and compare the result with the screenshots.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="Act 1 steps">
+          <button role="tab" id="a1-t1" aria-controls="a1-p1" aria-selected="true"><i>1</i><span>Old screen</span></button>
+          <button role="tab" id="a1-t2" aria-controls="a1-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Ask</span></button>
+          <button role="tab" id="a1-t3" aria-controls="a1-p3" aria-selected="false" tabindex="-1"><i>3</i><span>Build</span></button>
+          <button role="tab" id="a1-t4" aria-controls="a1-p4" aria-selected="false" tabindex="-1"><i>4</i><span>Designer</span></button>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p1" aria-labelledby="a1-t1">
+          <h3 class="step-title">Step 1. Show the old screen</h3>
+          <p class="cue-do"><b>Do</b> <span>Flip through the six pictures: one long “Info” tab of a quote in an old CRM, captured while scrolling. Point at the drop-down lists and the yes/no checkboxes (ERISA group?, Union group?, Reinsurance Declined). We come back to those in Act 2.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“All we have is pictures. The pictures are the requirement.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p2" aria-labelledby="a1-t2" hidden>
+          <h3 class="step-title">Step 2. Ask Bob to rebuild it</h3>
+          <div class="cue-do"><b>Paste</b> <span>The request in the Paste block.</span></div>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li>Opens each picture and reads the screen: sections, columns, drop-downs, checkboxes, required fields. Reads the colours.</li>
+              <li>Writes a short description of the screen, then <b>stops and shows us the design</b>.</li>
+              <li>Picks the App Builder Widgets toolkit already on the server, or builds and installs a new version of it first.</li>
+            </ol>
+          </div>
+          <p class="cue-do"><b>Do</b> <span>Scroll through the design summary. Answer: “Approved.”</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say, while it works</b>
+            <ul>
+              <li>“Bob reads the pictures the way a developer would.”</li>
+              <li>“Watch the order: toolkit first, then the app that depends on it.”</li>
+            </ul>
+          </blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p3" aria-labelledby="a1-t3" hidden>
+          <h3 class="step-title">Step 3. Build, install and test</h3>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li>Builds the app (<code>create_app</code>) from App Builder Widgets.</li>
+              <li><b>Asks before installing.</b> Answer yes.</li>
+              <li>Opens it in a real browser, clicks through every screen, takes a picture of each and compares them with the originals.</li>
+            </ol>
+          </div>
+          <p class="cue-do"><b>Do</b> <span>Show Bob's test picture next to the old screen.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“About 60 fields in 4 steps, the same layout and colours. This time the screen is not one big block: each section, the header and the button bar are widgets from the toolkit.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p4" aria-labelledby="a1-t4" hidden>
+          <h3 class="step-title">Step 4. Open it in Coach Designer</h3>
+          <div class="cue-do"><b>Do</b>
+            <div>
+              <p>In Business Automation Studio, open the new app, the Quote Info service, then a coach.</p>
+              <ol class="num">
+                <li>Click a section: the properties panel shows an <b>App Builder Widgets</b> view called Section, with its own options.</li>
+                <li>In the palette, search “App Builder”: Theme, App Header, Section, Review List and Button Bar appear with their icons.</li>
+                <li>Drag a field from one section into another, then undo.</li>
+              </ol>
+            </div>
+          </div>
+          <figure class="shot">
+            <img src="media/04-abw-palette.webp" width="1400" height="486" alt="Coach Designer: an App Header with its Title option in the Configuration tab, and the App Builder Widgets palette with App Header, Button Bar, Review List, Section and Theme">
+            <figcaption>The App Builder Widgets palette, and an App Header's options.</figcaption>
+          </figure>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“These are ordinary BAW views in a toolkit. Your developers can move them, change their options, and reuse them in other apps.”</li>
+              <li>“Nothing here needs Bob any more. Bob got us here fast; BAW owns the result.”</li>
+            </ul>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACT 2 ------------------------------------------------------------ -->
+    <section id="act-2" class="section act" aria-labelledby="act2-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">25:00 <span aria-hidden="true">/</span> 50:00</p>
+          <h2 id="act2-title" class="h2">Act 2. Modern, with a new widget.</h2>
+          <p class="lead">One request: React + Carbon screens from small widgets, plus a new Toggle in the toolkit.</p>
+        </header>
+        <figure class="prompt">
+          <figcaption>Step 2 · paste in Bob, same chat</figcaption>
+          <pre><code>Give the app you just built a React UI with IBM Carbon, from Modernizer Widgets. Lay it out like screenshots/Quote/generate-quote.png: the fields in tabs by section, four columns, the client's blue from that screen on a white page, Submit and Cancel at the bottom right. Show the yes/no questions (ERISA group?, Union group?, Reinsurance Declined) as a Carbon toggle switch with Yes and No. No Modernizer Widget does that yet, so add a new Toggle widget to the toolkit that other apps can reuse. Show me the plan before you build.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <figure class="prompt">
+          <figcaption>Step 3 · after you approve the plan</figcaption>
+          <pre><code>Approved. Build it, install it and test it.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <ol class="seq" aria-label="What Bob does after the plan is approved, in order">
+          <li class="seq-new"><code>(files)</code> <span>write the Toggle</span></li>
+          <li class="seq-new"><code>(offline check)</code> <span>test every widget</span></li>
+          <li class="seq-new"><code>build_widget_toolkit</code> <span>new MDW version</span></li>
+          <li class="seq-ask"><code>install_app</code> <span>toolkit</span></li>
+          <li><code>modernize_app</code> <span>modern screens</span></li>
+          <li class="seq-ask"><code>install_app</code> <span>app</span></li>
+          <li><code>test_service</code> <span>every screen</span></li>
+        </ol>
+        <p class="seq-legend"><i class="dot dot-new"></i> the new Toggle <i class="dot dot-ask"></i> Bob asks you</p>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="Act 2 steps">
+          <button role="tab" id="a2-t1" aria-controls="a2-p1" aria-selected="true"><i>1</i><span>Target</span></button>
+          <button role="tab" id="a2-t2" aria-controls="a2-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Plan</span></button>
+          <button role="tab" id="a2-t3" aria-controls="a2-p3" aria-selected="false" tabindex="-1"><i>3</i><span>Build</span></button>
+          <button role="tab" id="a2-t4" aria-controls="a2-p4" aria-selected="false" tabindex="-1"><i>4a</i><span>Run it</span></button>
+          <button role="tab" id="a2-t5" aria-controls="a2-p5" aria-selected="false" tabindex="-1"><i>4b</i><span>Designer</span></button>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p1" aria-labelledby="a2-t1">
+          <h3 class="step-title">Step 1. Show the target look</h3>
+          <p class="cue-do"><b>Do</b> <span>Open <code>screenshots/Quote/generate-quote.png</code>, the client's newer quote screen. Point at the tabs, the four columns and the buttons at the bottom right. Then go back to the classic screen and point at the three yes/no checkboxes. Stay in the same chat.</span></p>
+          <figure class="shot">
+            <img src="media/02-target-quote.webp" width="1600" height="581" alt="The client's newer Generate Quote screen: a blue header, tabs from General Info to Census, fields in four columns, and Submit and Cancel buttons at the bottom right">
+            <figcaption>The client's newer “Generate Quote” screen.</figcaption>
+          </figure>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“A checkbox is a poor fit for a yes/no question. A switch reads better, and nobody has one in the toolkit yet.”</li></ul></blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p2" aria-labelledby="a2-t2" hidden>
+          <h3 class="step-title">Step 2. One request: modernize, and create the widget</h3>
+          <div class="cue-do"><b>Paste</b> <span>The request in the first Paste block.</span></div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“One request, five parts: what we want, what to work from, how it should look, the new widget, and where to stop.”</li></ul></blockquote>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li><b>Switches to its second role</b>, the Modernizer, by itself.</li>
+              <li>Reads the app it just built, and reads the blue from the client's screen.</li>
+              <li>Plans the tabs and columns, and lists the <b>new Toggle widget</b>: it saves one yes/no value, has On text and Off text options, and is used by the three questions.</li>
+              <li><b>Stops and shows us the plan.</b></li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say, while it works</b><ul><li>“The widget is part of the plan, so we approve the screen and the new widget together.”</li></ul></blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p3" aria-labelledby="a2-t3" hidden>
+          <h3 class="step-title">Step 3. Build it</h3>
+          <div class="cue-do"><b>Paste</b> <span>“Approved. Build it, install it and test it.” Then answer yes at both install stops.</span></div>
+          <div class="ledger">
+            <table class="order">
+              <caption>Bob does</caption>
+              <thead><tr><th scope="col">Order</th><th scope="col">Bob's step</th><th scope="col">Tool</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Writes the Toggle: its React component with Carbon's toggle, its Carbon styles, one entry in the toolkit's list, and a palette icon</td><td>(files)</td></tr>
+                <tr><td>2</td><td>Checks every widget in a browser, the new one included</td><td>(offline check)</td></tr>
+                <tr><td>3</td><td>Builds a <b>new</b> Modernizer Widgets version that contains the Toggle</td><td><code>build_widget_toolkit</code></td></tr>
+                <tr class="is-ask"><td>4</td><td><b>Asks before installing the toolkit.</b> Answer yes</td><td><code>install_app</code></td></tr>
+                <tr><td>5</td><td>Builds the modern screens from the widgets, with toggles on the three questions</td><td><code>modernize_app</code></td></tr>
+                <tr class="is-ask"><td>6</td><td><b>Asks before installing the app.</b> Answer yes</td><td><code>install_app</code></td></tr>
+                <tr><td>7</td><td>Tests every screen in a real browser</td><td><code>test_service</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say, while it works</b>
+            <ul>
+              <li>“Bob is writing a real BAW widget, not a picture of one. It uses IBM's Carbon toggle, which is meant for exactly this: an on/off choice that takes effect at once.”<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup></li>
+              <li>“It tests the widget before it builds the toolkit, so a broken widget never reaches BAW.”</li>
+              <li>“The toolkit gets a new version. Nothing that uses the old version changes.”</li>
+            </ul>
+          </blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p4" aria-labelledby="a2-t4" hidden>
+          <h3 class="step-title">Step 4. The reveal: run it</h3>
+          <div class="cue-do"><b>Do</b>
+            <span>Run the “(Modernized)” version in Business Automation Studio. Show the tabs and four columns. Flip <b>ERISA group?</b> to Yes. Carry on to the review step: it shows “Yes”.</span>
+          </div>
+          <div class="shots shots-run">
+            <figure class="shot">
+              <img src="media/05-modern-quote.webp" width="1400" height="1029" alt="The modern Carbon screen: a blue header with six steps, fields in four columns, and ERISA group? and Union group? as switches set to No">
+              <figcaption>The modern screen: steps, four columns, and a switch for each yes/no question.</figcaption>
+            </figure>
+            <figure class="shot">
+              <img src="media/09-toggle-on.webp" width="403" height="271" alt="ERISA group? switched on: a green toggle that reads Yes">
+              <figcaption>ERISA group? flipped to Yes.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p5" aria-labelledby="a2-t5" hidden>
+          <h3 class="step-title">Step 4. The reveal: Designer</h3>
+          <div class="cue-do"><b>Do</b>
+            <ol class="num">
+              <li>Open the modernized coach in Coach Designer. In the palette, search “Modernizer”: the <b>Toggle</b> is there with its icon, next to the stock widgets.</li>
+              <li>Drag a Toggle onto another tab. Its preview shows a switch at once. In its Configuration tab, show <b>On text</b> and <b>Off text</b>. Bind it to a yes/no variable and run it.</li>
+            </ol>
+          </div>
+          <div class="shots shots-designer">
+            <figure class="shot">
+              <img src="media/06-palette-toggle.webp" width="331" height="566" alt="The Designer palette searched for moder: Modernizer Widgets including Header, Number Field, Radio Group, Select, Text Area, Text Field, Theme and the new Toggle with its switch icon">
+              <figcaption>Palette: the new Toggle.</figcaption>
+            </figure>
+            <figure class="shot">
+              <img src="media/07-canvas-toggle.webp" width="787" height="634" alt="A Toggle dropped on the Designer canvas below the other fields; its preview shows a green switch with Yes">
+              <figcaption>Canvas: its preview.</figcaption>
+            </figure>
+            <figure class="shot shot-wide">
+              <img src="media/08-properties-toggle.webp" width="1586" height="203" alt="The Toggle's Configuration tab with two options, On text and Off text">
+              <figcaption>Configuration: On text and Off text.</figcaption>
+            </figure>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“Twenty minutes ago this widget did not exist. Now it is in your toolkit, with an icon, a preview and options, like IBM's own.”</li>
+              <li>“The old screen is still there next to the modern one, so nothing is lost. The process behind it has not changed.”</li>
+            </ul>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAFETY, QUESTIONS, NEXT STEPS, REHEARSAL ------------------------------------ -->
+    <section id="close" class="section guard" aria-labelledby="close-title">
+      <header class="sec-head">
+        <p class="timecode">50:00 <span aria-hidden="true">/</span> 57:00</p>
+        <h2 id="close-title" class="h2">Safety, questions and next steps.</h2>
+        <p class="lead">Tick each rehearsal check as it passes. The page remembers them; copy the results when you are done.</p>
+        <div class="meter" data-meter>
+          <div class="meter-bar"><span data-meter-fill></span></div>
+          <p><output data-meter-read>0 of 10</output> checks passed</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn btn-primary" type="button" data-checks-copy>Copy results</button>
+          <button class="btn btn-quiet" type="button" data-checks-clear>Clear ticks</button>
+        </div>
+      </header>
+
+      <div class="ledger" data-cues>
+        <div class="ledger-tabs" role="tablist" aria-label="Safety, questions, troubleshooting, next steps and the rehearsal checklist">
+          <button role="tab" id="c-t1" aria-controls="c-p1" aria-selected="true">Safety</button>
+          <button role="tab" id="c-t2" aria-controls="c-p2" aria-selected="false" tabindex="-1">Questions</button>
+          <button role="tab" id="c-t3" aria-controls="c-p3" aria-selected="false" tabindex="-1">If it breaks</button>
+          <button role="tab" id="c-t4" aria-controls="c-p4" aria-selected="false" tabindex="-1">Next steps</button>
+          <button role="tab" id="c-t5" aria-controls="c-p5" aria-selected="false" tabindex="-1">Rehearsal checklist</button>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p1" aria-labelledby="c-t1">
+          <table>
+            <thead><tr><th scope="col">Safety rule</th><th scope="col">Why it matters</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">A person approves every change</th><td>Bob stops before building and before installing</td></tr>
+              <tr><th scope="row">Every install is a new version</th><td>Nothing is overwritten; you can always go back</td></tr>
+              <tr><th scope="row">Bob adds widgets, never changes existing ones</th><td>Apps that depend on a widget keep working</td></tr>
+              <tr><th scope="row">A new widget is tested before the toolkit is built</th><td>A broken widget never reaches BAW</td></tr>
+              <tr><th scope="row">Bob cannot delete anything</th><td>No tool for it exists</td></tr>
+              <tr><th scope="row">The password stays in the connector</th><td>Bob never sees it</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p2" aria-labelledby="c-t2" hidden>
+          <dl class="qa" aria-label="Questions to expect">
+            <div><dt>Are these real BAW views?</dt><dd>Yes. Each widget is a Coach View in a toolkit, with a binding, configuration options, a palette icon and a design-time preview.<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup></dd></div>
+            <div><dt>Can our developers change a widget themselves?</dt><dd>Yes, like any view in a toolkit. A change becomes a new toolkit version, and each app moves to it when you choose.<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup></dd></div>
+            <div><dt>Can Bob change an existing widget?</dt><dd>Only when asked, in its general coding role, as a code change a developer reviews. The Modernizer may only add.</dd></div>
+            <div><dt>Why is the Toggle green?</dt><dd>That is Carbon's standard colour for “on”.</dd></div>
+            <div><dt>Which widgets can Bob create?</dt><dd>Any widget that saves one value: text, number, date or yes/no. Widgets that save several values at once, such as a drop-down with its own “Other” box, are the next step.</dd></div>
+            <div><dt>Does the modern screen still use BAW data and rules?</dt><dd>Yes. Every widget is bound to the app's own variables, and BAW's required, read-only and hidden settings apply.<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup></dd></div>
+            <div><dt>Can other AI assistants do this?</dt><dd>Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 15 tools.<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup></dd></div>
+          </dl>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p3" aria-labelledby="c-t3" hidden>
+          <table>
+            <thead><tr><th scope="col">Problem on stage</th><th scope="col">What to do</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Bob's tools panel shows 0 tools</th><td>Restart baw-dev-tools in that panel</td></tr>
+              <tr><th scope="row">“Login failed”</th><td>Check the login file off screen; switch to the rehearsal app meanwhile</td></tr>
+              <tr><th scope="row">“Snapshot already exists”</th><td>Let Bob pick the next version: that is a safety rule working</td></tr>
+              <tr><th scope="row">Bob uses a Checkbox instead of a new widget</th><td>Say: “No, add a new Toggle widget to Modernizer Widgets for those three questions.”</td></tr>
+              <tr><th scope="row">The new widget fails its check twice</th><td>Bob falls back to the stock Checkbox and finishes. Carry on; show the Toggle in the rehearsal app instead</td></tr>
+              <tr><th scope="row">The Toggle is missing from the palette</th><td>The app still uses the old toolkit version; ask Bob which Modernizer Widgets version the app depends on</td></tr>
+              <tr><th scope="row">An install is slow</th><td>Talk through the toolkit diagram while it runs</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p4" aria-labelledby="c-t4" hidden>
+          <div class="cue-do"><b>Do</b>
+            <div>
+              <p>Ask the client, and write the answers down:</p>
+              <ol class="num">
+                <li>Which parts of your screens should become widgets in your own toolkit?</li>
+                <li>Should the toolkit follow your brand, or stay with Carbon's defaults?</li>
+                <li>Which widgets need to save several values at once (for example a choice with its own “Other” box, or the broker commission's type, dollars and percent)?</li>
+                <li>Who on your team will own the toolkit, and how should new versions reach your apps?</li>
+                <li>Which screen comes next?</li>
+              </ol>
+            </div>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“In one hour: pictures became a BAW app built from small, reusable widgets, then a modern version from React widgets, and Bob added a widget your developers can use anywhere. Every step was tested in a browser and approved by a person before it reached BAW.”</li></ul></blockquote>
+          <p class="project">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps.</p>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p5" aria-labelledby="c-t5" hidden>
+          <fieldset class="scorecard" data-checks>
+            <legend>Rehearsal checklist</legend>
+            <label><input type="checkbox" value="1"><span>Bob shows the design before building the classic app.</span></label>
+            <label><input type="checkbox" value="2"><span>The classic app depends on App Builder Widgets, and Coach Designer shows its sections as Section widgets.</span></label>
+            <label><input type="checkbox" value="3"><span>Bob switches to the Modernizer by itself.</span></label>
+            <label><input type="checkbox" value="4"><span>Bob's plan lists the new Toggle widget before anything is built.</span></label>
+            <label><input type="checkbox" value="5"><span>Bob builds a <b>new</b> Modernizer Widgets version; it does not reuse an old one.</span></label>
+            <label><input type="checkbox" value="6"><span>Bob asks before each of the two installs.</span></label>
+            <label><input type="checkbox" value="7"><span><code>git status</code> shows only the new Toggle files and one changed file, <code>modernizer-widgets.json</code>.</span></label>
+            <label><input type="checkbox" value="8"><span><code>test_service</code> passes on every screen of the modern copy.</span></label>
+            <label><input type="checkbox" value="9"><span>A flipped toggle reads “Yes” on the review step.</span></label>
+            <label><input type="checkbox" value="10"><span>Toggle is in the palette with its icon; it drags, previews, binds and runs.</span></label>
+          </fieldset>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="refs page-refs">
+    <h3>References</h3>
+    <ol>
+      <li id="ref-1">IBM, Developing reusable views (BAW 26.0.x). <a href="https://www.ibm.com/docs/en/baw/SS8JB4_26.0.x/com.ibm.wbpm.wle.editor.doc/topics/tcreatingviews.html" target="_blank" rel="noopener">https://www.ibm.com/docs/en/baw/SS8JB4_26.0.x/com.ibm.wbpm.wle.editor.doc/topics/tcreatingviews.html</a></li>
+      <li id="ref-2">IBM, Creating, changing, and deleting a toolkit dependency in the Designer view. <a href="https://www.ibm.com/docs/en/baw/19.0.0?topic=mut-creating-changing-deleting-toolkit-dependency-in-designer-view" target="_blank" rel="noopener">https://www.ibm.com/docs/en/baw/19.0.0?topic=mut-creating-changing-deleting-toolkit-dependency-in-designer-view</a></li>
+      <li id="ref-3">IBM, Event handlers for view design-time preview (BAW 26.0.x). <a href="https://www.ibm.com/docs/en/baw/26.0.x?topic=api-event-handlers-view-design-time-preview" target="_blank" rel="noopener">https://www.ibm.com/docs/en/baw/26.0.x?topic=api-event-handlers-view-design-time-preview</a></li>
+      <li id="ref-4">IBM, Setting the visibility of coach views. <a href="https://www.ibm.com/docs/en/bpm/8.6.0?topic=views-setting-visibility-coach" target="_blank" rel="noopener">https://www.ibm.com/docs/en/bpm/8.6.0?topic=views-setting-visibility-coach</a></li>
+      <li id="ref-5">Carbon Design System, Toggle usage. <a href="https://carbondesignsystem.com/components/toggle/usage" target="_blank" rel="noopener">https://carbondesignsystem.com/components/toggle/usage</a></li>
+      <li id="ref-6">Model Context Protocol, Tools. <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools" target="_blank" rel="noopener">https://modelcontextprotocol.io/specification/2025-06-18/server/tools</a></li>
+    </ol>
+    <p class="fine">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps. Previous script: <a href="../baw-mcp-demo-script/index.html">From screenshots to a working BAW app</a>.</p>
+  </footer>
+
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+  <script src="js/main.js"></script>
+</body>
+</html>
