@@ -492,7 +492,8 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
     <li>A snapshot name can be used once per app; reusing it is refused, because BAW would silently keep the old content.</li>
     <li>There is no delete tool. To remove a test app, ask a BAW admin to archive it.</li>
     <li>Tools only read and write files inside this folder. Bob edits only <code>work/</code>, <code>app-specs/</code>
-    and <code>coach-ui/src/screens/</code>.</li>
+    and <code>coach-ui/src/screens/</code>, plus <code>coach-ui/src/widgets/</code> and <code>coach-ui/widgets/</code>
+    when the Modernizer adds a widget.</li>
   </ul>
 
   <h3 id="toolkits">The widget toolkits</h3>
@@ -513,6 +514,19 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
   the same toolkit; an app keeps the snapshot it was built with until it is built again. Changing what a widget looks
   like or does is a code change in <code>coach-ui/</code>: ask Bob in Agent mode, then build and install a new
   toolkit snapshot.</p>
+  <p>The Modernizer can also <strong>add</strong> a widget while it modernizes an app, when no Modernizer Widget does
+  the job, for example a Yes/No Toggle for Boolean questions. It lists the new widget in the plan it shows you, and a
+  widget binds one value (a String, Integer, Decimal, Boolean or Date). It writes three files in <code>coach-ui/</code>:</p>
+  <ul>
+    <li><code>src/widgets/&lt;kind&gt;.jsx</code>, the React + Carbon component;</li>
+    <li>its entry in <code>widgets/modernizer-widgets.json</code>: palette name, binding, options, preview and tags;</li>
+    <li><code>widgets/icons/&lt;kind&gt;.svg</code>, its palette icon.</li>
+  </ul>
+  <p>It adds <code>src/widgets/&lt;kind&gt;.scss</code> too when the widget uses a Carbon component the others don't.
+  Then it checks the widget offline, builds and installs a new <code>MDW</code> snapshot and uses it in the app; the
+  widget is then in the palette for every app on that snapshot. The steps are in the skill
+  <code>.bob/skills/modernizer-widget/SKILL.md</code>. Changing or removing an existing widget stays a code change for
+  Agent mode, because other apps use it.</p>
 
   <h3 id="browser">Use another browser</h3>
   <p>The browser test tries <code>BROWSER_PATH</code> first, then Brave, Chrome and Helium. To use another Chromium browser
