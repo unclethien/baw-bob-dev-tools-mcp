@@ -59,6 +59,8 @@ Each widget shows in the palette with its icon and draws a preview on the canvas
 
 The widgets live in `coach-ui/`: `widgets/*-widgets.json` lists each widget's view name, options and icon (`widgets/icons/`, `widgets/builder/icons/`), `widgets/builder/` holds the App Builder widgets' markup and scripts, and `src/widgets/` the Modernizer widgets. `src/screens/` holds the screens hand-written for single coaches; such a coach is one block in Coach Designer. Changing a widget is a code change: ask Bob in Agent mode, then build and install a new toolkit snapshot.
 
+The Modernizer can also add a widget while it modernizes an app, when no Modernizer Widget does the job (for example a Yes/No Toggle for Boolean questions). It lists the new widget in the plan it shows you, then writes three files: the React + Carbon component `coach-ui/src/widgets/<kind>.jsx`, its entry in `coach-ui/widgets/modernizer-widgets.json` and its palette icon `coach-ui/widgets/icons/<kind>.svg`, plus `coach-ui/src/widgets/<kind>.scss` when it uses a Carbon component the other widgets don't. It checks the widget offline, builds and installs a new `MDW` snapshot, and uses it in the app; the widget is then in the palette for every app on that snapshot. A widget binds one value (a String, Integer, Decimal, Boolean or Date). The steps are in the skill [`.bob/skills/modernizer-widget/SKILL.md`](.bob/skills/modernizer-widget/SKILL.md). Changing or removing an existing widget stays a code change for Agent mode, because other apps use it.
+
 ## Requirements
 
 - An IBM BAW server on Cloud Pak for Business Automation, with an account that can install process apps. Without one, the agent still builds the `.twx` files and you import them yourself (see [Without a BAW server](#without-a-baw-server)).
@@ -92,7 +94,7 @@ Settings are read from the environment first, then `.env`:
    - **🏗️ BAW App Builder** turns a written requirement, or screenshots of the screens, into a running app.
    - **✨ BAW Coach Modernizer** gives an existing app a React + Carbon UI built from Modernizer Widgets, with a hand-written screen for any coach that needs one.
 
-   Bob switches between them in the same chat, and from Agent mode into the right one (`.bob/rules/baw-mode-routing.md`): ask for a React UI after building an app and it moves to the Modernizer; ask the Modernizer for a new app or new fields, steps or a workflow and it moves back to the App Builder. To skip the switch prompt, allow **Mode** in Bob's auto-approve settings. Both modes edit only `work/` and `app-specs/` (the Modernizer also `coach-ui/src/screens/`), and do everything else through the MCP tools.
+   Bob switches between them in the same chat, and from Agent mode into the right one (`.bob/rules/baw-mode-routing.md`): ask for a React UI after building an app and it moves to the Modernizer; ask the Modernizer for a new app or new fields, steps or a workflow and it moves back to the App Builder. To skip the switch prompt, allow **Mode** in Bob's auto-approve settings. Both modes edit only `work/` and `app-specs/` (the Modernizer also `coach-ui/src/screens/`, and `coach-ui/src/widgets/` and `coach-ui/widgets/` to add a widget), and do everything else through the MCP tools.
 2. Copy `.bob/mcp.example.json` to `.bob/mcp.json` and set the absolute path to `server/baw_mcp.py`. To switch servers without editing `.env`, add an `"env": { "BAW_URL": "..." }` block there.
 3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 15 tools.
 4. Try it in BAW App Builder mode:
