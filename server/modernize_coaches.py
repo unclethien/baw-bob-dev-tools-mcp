@@ -97,12 +97,19 @@ def view_item(p, item_id, view_id, options, binding=None, children=None, tag="la
     return xml + f"</{p}:{tag}>"
 
 
+def spec_keys():
+    """The keys a field keeps in the layout spec: those above, then every option of a field widget in the contract."""
+    options = (name for w in widget_toolkit.widgets(TOOLKIT).values() if w["binding"] for name, *_ in w["options"])
+    return SPEC_KEYS + tuple(dict.fromkeys(name for name in options if name not in SPEC_KEYS))
+
+
 def screen_spec(app, service, coach):
+    keys = spec_keys()
     return {
         "app": app, "title": coach["title"], "intro": coach.get("intro", ""),
         "steps": [c["title"] for c in service["coaches"]], "step": service["coaches"].index(coach),
         "sectionStyle": coach["sectionStyle"],
-        "sections": [{"title": s["title"], "fields": [{k: f[k] for k in SPEC_KEYS if k in f} for f in s["fields"]]} for s in coach["sections"]],
+        "sections": [{"title": s["title"], "fields": [{k: f[k] for k in keys if k in f} for f in s["fields"]]} for s in coach["sections"]],
         "buttons": [{k: b[k] for k in ("label", "viewId", "primary", "validate") if k in b} for b in coach["buttons"]],
     }
 
@@ -236,6 +243,17 @@ def owned_uuids(twx, package, service_id):
     return set(UUID_RE.findall(text)) - elsewhere
 
 
+def check_field_types(services):
+    """Every field of a coach built from widgets names a field widget of the contract (or output, shown read-only);
+    one SystemExit lists all the others, so nothing is written from a spec that cannot be built."""
+    allowed = sorted(k for k, w in widget_toolkit.widgets(TOOLKIT).items() if w["binding"]) + ["output"]
+    bad = [f'  "{f.get("label") or f.get("path")}" in coach "{c["name"]}" ({s["name"]}): type {f.get("type")!r}'
+           for s in services for c in s["coaches"] if not c.get("screen") for sec in c["sections"] for f in sec["fields"]
+           if f.get("type") not in allowed]
+    if bad:
+        raise SystemExit("Unknown field types in the coach spec:\n" + "\n".join(bad) + f"\nAllowed types: {', '.join(allowed)}")
+
+
 def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, snapshot=None, toolkit: Path | None = None):
     """theme: a theme file loaded by coach_theme.load_theme. toolkit: the Modernizer Widgets .twx (widget_toolkit.py
     build) whose snapshot the app depends on; needed when a coach has no hand-written screen."""
@@ -247,6 +265,7 @@ def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, s
     if built and not toolkit:
         raise SystemExit("Coaches without a hand-written screen are built from Modernizer Widgets: pass --toolkit, "
                          "the toolkit .twx from widget_toolkit.py build (installed on the server)")
+    check_field_types(services)
     with zipfile.ZipFile(source) as twx:
         package = twx.read("META-INF/package.xml").decode("utf-8")
         names = view_names(twx)

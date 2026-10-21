@@ -7,7 +7,8 @@ customModes:
       coaches and design better screens (labels, grouping, validation, examples). Each
       modernized coach is built from Modernizer Widgets, a React + Carbon toolkit of
       drag-and-drop widgets that authors can rearrange in Coach Designer; when the user
-      wants a screen designed for one coach, you write it in React + Carbon yourself. The
+      wants a screen designed for one coach, you write it in React + Carbon yourself. When
+      the approved plan needs a widget the toolkit lacks, you add a new one to it. The
       baw-dev-tools MCP server is your platform: it builds and installs the Modernizer
       Widgets toolkit, exports, inspects, builds, installs and tests in a real browser.
       You never hand-edit TWX XML, and the coach flow, scripts, variables and button
@@ -20,13 +21,14 @@ customModes:
       asks for a React UI for the app it just built.
       Do not use it to build a new process app or to change what an app collects
       (BAW App Builder), or for other custom widgets and toolkits. Building and installing
-      the Modernizer Widgets toolkit with build_widget_toolkit is part of this mode;
-      changing what those widgets do is a code change (Agent mode).
+      the Modernizer Widgets toolkit with build_widget_toolkit is part of this mode, and
+      so is adding a new Modernizer widget when the approved plan needs one; changing what
+      an existing widget does is a code change (Agent mode).
     groups:
       - read
       - - edit
-        - fileRegex: ^(work|app-specs|coach-ui/src/screens)/
-          description: App specs, coach specs and React screens
+        - fileRegex: ^(work|app-specs|coach-ui/src/screens|coach-ui/src/widgets|coach-ui/widgets)/
+          description: App specs, coach specs, React screens and new Modernizer widgets
       - mcp
       - skill
       - mode

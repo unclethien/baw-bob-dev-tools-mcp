@@ -32,12 +32,13 @@ The coaches these modes build come from two toolkits this repository generates: 
 | The user asks to | Where it goes |
 |---|---|
 | Build or install App Builder Widgets or Modernizer Widgets, or a new snapshot of them | The BAW mode that uses them (`baw-app-builder` for ABW, `baw-coach-modernizer` for MDW), with `build_widget_toolkit` |
-| Change what a widget in either toolkit shows or does, add a widget to them, or change their icons | `agent`: the widgets are code in `coach-ui/widgets/` and `coach-ui/src/widgets/` |
+| Add a new widget during a modernization (a new Modernizer Widget the plan needs, such as a Yes/No Toggle) | `baw-coach-modernizer`: it follows the modernizer-widget skill and builds a new `MDW` snapshot |
+| Change what an existing widget in either toolkit shows or does, add a widget to App Builder Widgets, or change their icons | `agent`: the widgets are code in `coach-ui/widgets/` and `coach-ui/src/widgets/` |
 | Rearrange the widgets on one coach | Coach Designer, by hand: drag and drop in the coach's layout |
 
 ## 4. From a BAW mode, hand other work back
 
-The BAW modes edit only `work/`, `app-specs/` and, for the Modernizer, `coach-ui/src/screens/`. When the user asks a BAW mode for something else, switch without asking, following section 1:
+The BAW modes edit only `work/`, `app-specs/` and, for the Modernizer, `coach-ui/src/screens/` and the files of a new Modernizer widget (`coach-ui/src/widgets/`, `coach-ui/widgets/`). When the user asks a BAW mode for something else, switch without asking, following section 1:
 
 | The user asks to | Mode slug |
 |---|---|

@@ -90,14 +90,15 @@ function Host({ screen: Screen, store, ctx }) {
 }
 
 // A widget takes the page's theme (published by the Theme widget) but not its width: it fills its cell.
-// Its root names its kind (pp-widget-text) and read-only state, which the page's layout rules read (styles.scss).
+// Its root names its kind (pp-widget-text), whether it is a field widget (pp-widget-field) and its read-only state,
+// which the page's layout rules read (styles.scss).
 function WidgetHost({ kind, widget: Widget, store, ctx }) {
   useSyncExternalStore(store.subscribe, store.snapshot);
   const theme = useSyncExternalStore(page.subscribe, () => page.theme);
   const props = ctx.read();
   if (props.visibility === 'HIDDEN' || props.visibility === 'NONE') return null;
   const binding = { value: ctx.binding.get(), set: (value) => { ctx.binding.set(value); store.notify(); } };
-  const className = `pp-app pp-widget pp-widget-${kind}${props.visibility === 'READONLY' ? ' pp-widget-readonly' : ''}`;
+  const className = `pp-app pp-widget pp-widget-${kind}${Widget.field ? ' pp-widget-field' : ''}${props.visibility === 'READONLY' ? ' pp-widget-readonly' : ''}`;
   return (
     <ClassPrefix prefix="pp">
       <div className={className} style={themeStyle({ ...theme, width: undefined })}>
