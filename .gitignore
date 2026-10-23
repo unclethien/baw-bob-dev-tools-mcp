@@ -20,3 +20,6 @@ plans/
 
 # Client screenshots for the demo: never commit them, the repository is public
 screenshots/Quote/
+
+# Backups of database rows, written by the database tools
+db-backups/

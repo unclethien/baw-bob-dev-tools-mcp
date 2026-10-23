@@ -10,8 +10,7 @@ A client-side human service calls it with a coach_builder service-call step (cal
 
 A service is exposed to the browser (AJAX), so for an app spec's "database" section there is one service per
 operation, "Load <BO>" (input: the key) and "Save <BO>" (input: the values), each with its statement fixed inside as a
-constant: a caller can choose values, never the statement. Only the scratch app of the CLI below uses a service that
-takes the statement as an input.
+constant: a caller can choose values, never the statement. No generated service takes a statement as an input.
 
 For the "database" section, table_plan() checks and names the table and its columns, and ddl(), load_sql() and
 save_sql() write the statements. Every name goes through quote(), and every value is typed in the statement with
@@ -142,15 +141,14 @@ def link(pid, src, dst, end_state):
             f"<fromProcessItemId>{src}</fromProcessItemId><toProcessItemId>{dst}</toProcessItemId></link>")
 
 
-def run_sql_service(name, statement=None, inputs=("sql", "values"), data_source=DATA_SOURCE, author="sql_service", sql=app_template.SYSTEM_SQL):
+def run_sql_service(name, statement, inputs=("values",), data_source=DATA_SOURCE, author="sql_service", sql=app_template.SYSTEM_SQL):
     """A heritage service that runs SQL: (id, versionId, name, type, xml, {input and "text": parameter ids}).
-    With a statement, it is fixed in the service (one ? per value) and the inputs are "key" (the one value) or
-    "values" (a JSON array of exactly as many values as the statement has ?; null stays NULL), so a caller cannot
-    change the statement. Without one (the scratch app only), the inputs are "sql" and "values".
+    The statement is fixed in the service (one ? per value) and the input is "key" (the one value) or "values" (a
+    JSON array of exactly as many values as the statement has ?; null stays NULL), so a caller cannot change it.
     Output: text, a JSON result (see the module docstring). A failing step reports {"ok": false, "error"}.
     sql: System Data's SQL IDs (app_template.SYSTEM_SQL, or the base app's)."""
-    if (statement is None) != ("sql" in inputs):
-        raise ValueError("a service takes the statement as an input exactly when it has none fixed")
+    if not statement or inputs not in (("key",), ("values",)):
+        raise ValueError("a SQL service has a fixed statement and one input, key or values")
     pid, version = "1." + uid(), uid()
     string, params_type, result_type = system(SYSTEM_TYPES["String"]), system(sql["types"]["SQLParameter"]), system(sql["types"]["SQLResult"])
     params = [parameter(pid, n, 1, i, string) for i, n in enumerate(inputs, 1)] + [parameter(pid, "text", 2, len(inputs) + 1, string)]
@@ -158,16 +156,13 @@ def run_sql_service(name, statement=None, inputs=("sql", "values"), data_source=
     variables = [variable(pid, "sqlParams", 1, params_type, True), variable(pid, "sqlResults", 2, result_type, True)]
     build, call, text, report, end = ("2025." + uid() for _ in range(5))
     exit_id, sub_id = "3008." + uid(), "3012." + uid()
-    if statement is None:
-        values_script = "var values = " + VALUES_FROM["values"] + ";"
-    else:
-        values_script = FIXED_VALUES.replace("__VALUES__", VALUES_FROM[inputs[0]]).replace("__COUNT__", str(statement.count("?")))
+    values_script = FIXED_VALUES.replace("__VALUES__", VALUES_FROM[inputs[0]]).replace("__COUNT__", str(statement.count("?")))
     build_sid, build_xml = script_component(BUILD_PARAMS.replace("__VALUES__", values_script))
     text_sid, text_xml = script_component(RESULT_JSON)
     report_sid, report_xml = script_component(REPORT_ERROR)
     sub_xml = (f'<TWComponent><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><subProcessId>{sub_id}</subProcessId>'
                f"<attachedProcessRef>{system(sql['service'])}</attachedProcessRef><guid>{uid()}</guid><versionId>{uid()}</versionId>"
-               + mapping(sub_id, "sql", sql["parameters"]["sql"], "tw.local.sql" if statement is None else json.dumps(statement), string, True)
+               + mapping(sub_id, "sql", sql["parameters"]["sql"], json.dumps(statement), string, True)
                + mapping(sub_id, "parameters", sql["parameters"]["parameters"], "tw.local.sqlParams", params_type, True, True)
                + mapping(sub_id, "maxRows", sql["parameters"]["maxRows"], str(MAX_ROWS), system(SYSTEM_TYPES["Integer"]), True)
                + mapping(sub_id, "dataSourceName", sql["parameters"]["dataSourceName"], json.dumps(data_source), string, True)
@@ -191,7 +186,7 @@ def run_sql_service(name, statement=None, inputs=("sql", "values"), data_source=
 {null("processTimingLevel", "participantRef", "exposedType")}<isTrackingEnabled>true</isTrackingEnabled>{null("xmlData")}<cachingType>false</cachingType>
 {null("itemLabel")}<cacheLength>43200</cacheLength><mobileReady>false</mobileReady><sboSyncEnabled>true</sboSyncEnabled>{null("externalId")}<isSecured>false</isSecured>
 <isAjaxExposed>true</isAjaxExposed><isInvokedAsynchronously>false</isInvokedAsynchronously><isTransactionalFlow>false</isTransactionalFlow>
-<description>{escape(f"Runs a fixed statement through {data_source}." if statement else f"Runs one SQL statement through {data_source}.")}</description><guid>{uid()}</guid><versionId>{version}</versionId>
+<description>{escape(f"Runs a fixed statement through {data_source}.")}</description><guid>{uid()}</guid><versionId>{version}</versionId>
 {null("dependencySummary", "jsonData", "businessDataAliases", "field1", "field2")}<field3>0</field3>{null("field4")}<field5>false</field5>{null("clobField1", "blobField1")}
 {"".join(params)}{"".join(variables)}{items}<startingProcessItemId>{build}</startingProcessItemId>{null("errorHandlerItemId")}
 <layoutData noConversion="true"><errorLink><controlPoints /><showEndState>false</showEndState><showName>false</showName></errorLink></layoutData>
@@ -431,14 +426,15 @@ CHECKS = [  # (BO property, label, SQL, values as JavaScript giving a JSON strin
 
 
 def spike_app(dest: Path, snapshot: str, base: Path | None = None):
-    run_sql = run_sql_service("Run SQL")
     service = {"name": "SQL Check", "description": "Runs SQL through jdbc/bawexternal and shows the results."}
     lay = Layout()
     outputs = [lay.view("Output Text", label, binding=f"tw.local.check.{prop}") for prop, label, _, _ in CHECKS]
     done_id, done = lay.button("Done", "P")
     coach = (Layout.wrap([lay.html("<h2>SQL through jdbc/bawexternal</h2>"), *outputs, done]), {"done": done_id})
     steps = [("init", "Init", "tw.local.check = {};")]
-    steps += [(prop, label, call_step(run_sql, f"tw.local.check.{prop}", sql=json.dumps(sql), values=values)) for prop, label, sql, values in CHECKS]
+    services = [run_sql_service(label, sql) for _, label, sql, _ in CHECKS]
+    steps += [(prop, label, call_step(svc, f"tw.local.check.{prop}", values=values))
+              for (prop, label, _, values), svc in zip(CHECKS, services, strict=True)]
     steps += [("results", "Results", coach)]
     keys = [k for k, _, _ in steps]
     flows = [("start", keys[0], None, "rightCenter", "leftCenter")]
@@ -448,7 +444,7 @@ def spike_app(dest: Path, snapshot: str, base: Path | None = None):
     write_twx(dest, {"name": "ZZ SQL Check", "acronym": "ZZSQL", "snapshot": snapshot},
               {"id": "12." + uid(), "version": uid(), "name": "SqlCheck", "props": props}, "check",
               [("1." + uid(), uid(), "2056." + uid(), service, lambda b, v: coachflow(service, steps, flows, b, v, "check"))],
-              "sql_service", app_template.read_base(base) if base else None, [run_sql[:5]])
+              "sql_service", app_template.read_base(base) if base else None, [s[:5] for s in services])
 
 
 def main():
