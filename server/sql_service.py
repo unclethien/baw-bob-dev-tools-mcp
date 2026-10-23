@@ -84,8 +84,16 @@ if (rs != null && rs.listLength > 0) {
 }
 tw.local.text = JSON.stringify(out);"""
 
-REPORT_ERROR = """var message = "The SQL statement failed";
-try { message = String(tw.system.error.getErrorText()); } catch (e) {}
+REPORT_ERROR = r"""var message = "";
+var read = [function () { return tw.system.error.getErrorText(); }, function () { return tw.system.error.errorText; },
+            function () { return tw.system.error.message; }, function () { return tw.system.error.toString(); }];
+for (var i = 0; i < read.length && message === ""; i++) {
+  try { var text = String(read[i]()); if (text !== "" && text !== "null" && text !== "undefined" && text.indexOf("[object") !== 0) { message = text; } } catch (e) {}
+}
+var inner = /<message[^>]*>([\s\S]*?)<\/message>/.exec(message);
+if (inner) { message = inner[1]; }
+message = message.replace(/\s+/g, " ");
+if (message === "") { message = "The SQL statement failed"; }
 tw.local.text = JSON.stringify({ok: false, error: message.substring(0, 500)});"""
 
 
@@ -233,7 +241,8 @@ def table_plan(db, fields: list) -> tuple[dict | None, list]:
     """Check a spec's "database" section against the form's fields; returns (plan, errors).
     fields: {"name", "label", "type": a BAW type name} for every field to store, in order (all are simple); a field
     with "derived" set (the reference number) is stored but cannot be the key.
-    The plan: {"schema", "table", "key", "keyLabel", "columns": [{"field", "column", "type", "pg", "key"}]}."""
+    A field with "text" set is an Integer or Decimal that the form holds as text (empty means NULL).
+    The plan: {"schema", "table", "key", "keyLabel", "columns": [{"field", "label", "column", "type", "pg", "key", "text"}]}."""
     if not isinstance(db, dict):
         return None, ['database must be an object: {"table": "public.name", "key": "<field>", "columns": {"<field>": "<column>"}}']
     errors = [f"database.{k} is not a setting (the data source is always {DATA_SOURCE}); use table, key and columns" for k in db if k not in ("table", "key", "columns")]
@@ -258,7 +267,8 @@ def table_plan(db, fields: list) -> tuple[dict | None, list]:
             errors.append(f"database: field {f['name']!r} has type {f['type']!r}; only String, Integer, Decimal, Boolean and Date fields can be stored")
         elif error := name_error(column, f"database column for field {f['name']!r} named"):
             errors.append(error)
-        columns.append({"field": f["name"], "column": column, "type": f["type"], "pg": PG_TYPES.get(f["type"]), "key": f["name"] == key})
+        columns.append({"field": f["name"], "label": f["label"], "column": column, "type": f["type"], "pg": PG_TYPES.get(f["type"]), "key": f["name"] == key,
+                        "text": bool(f.get("text"))})
     errors += [f"database.columns: {n!r} is not a field of the form" for n in renames if n not in by_name]
     names = [c["column"] for c in columns]
     errors += [f"database: column {n!r} is used for more than one field" for n in sorted({n for n in names if names.count(n) > 1})]
@@ -312,6 +322,8 @@ def database_result(plan: dict) -> dict:
 
 def cell(var: str, column: dict) -> str:
     v = f"tw.local.{var}.{column['field']}"
+    if column["text"]:  # a number typed as text: spaces around it do not count, and nothing typed is NULL
+        return f'({v} == null || String({v}).trim() === "" ? null : String({v}).trim())'
     text = f"({v}.toISOString ? {v}.toISOString() : String({v}))" if column["type"] == "Date" else f"String({v})"
     return f'({v} == null || {v} === "" ? null : {text})'
 
@@ -329,10 +341,20 @@ def failure(what: str) -> str:
     return f'"Could not {what}: " + (res != null && res.error ? res.error : "the database service did not answer")'
 
 
-def missing_key_script(var: str, plan: dict, action: str) -> str:
-    """Sets the message to ask for the key, or to nothing when the key is there."""
-    key, ask = f"tw.local.{var}.{plan['key']}", json.dumps(f"Enter {plan['keyLabel']} {action}.")
-    return f'tw.local.{var}.{MESSAGE} = ({key} == null || {key} === "") ? {ask} : "";'
+NUMBER_PATTERNS = {"Integer": (r"^-?\d+$", "a whole number"), "Decimal": (r"^-?(\d+\.?\d*|\.\d+)$", "a number, such as 1234.56")}
+
+
+def missing_key_script(var: str, plan: dict, action: str, numbers=False) -> str:
+    """Sets the message to ask for the key, or to nothing when the key is there. With numbers, a number typed as text
+    that is not a number also gets a message (the database would refuse it)."""
+    obj, key, ask = f"tw.local.{var}", f"tw.local.{var}.{plan['key']}", json.dumps(f"Enter {plan['keyLabel']} {action}.")
+    script = f'{obj}.{MESSAGE} = ({key} == null || {key} === "") ? {ask} : "";'
+    for c in plan["columns"] if numbers else []:
+        if c["text"]:
+            pattern, kind = NUMBER_PATTERNS[c["type"]]
+            v, bad = f"{obj}.{c['field']}", json.dumps(f"{c['label']} must be {kind}.")
+            script += f'\nif ({obj}.{MESSAGE} === "" && {v} != null && String({v}).trim() !== "" && !/{pattern}/.test(String({v}).trim())) {{ {obj}.{MESSAGE} = {bad}; }}'
+    return script
 
 
 def load_apply_script(var: str, plan: dict) -> str:
@@ -340,7 +362,7 @@ def load_apply_script(var: str, plan: dict) -> str:
     obj, key, ask = f"tw.local.{var}", f"tw.local.{var}.{plan['key']}", json.dumps(f"Enter {plan['keyLabel']}, then press Load.")
     parse = {"Integer": "{v} === null ? null : parseInt({v}, 10)", "Decimal": "{v} === null ? null : parseFloat({v})",
              "Boolean": '{v} === "true"', "Date": "{v} === null ? null : new Date({v})", "String": "{v}"}
-    fill = "\n".join(f"  {obj}.{c['field']} = {parse[c['type']].format(v=f'row[{i}]')};" for i, c in enumerate(plan["columns"]))
+    fill = "\n".join(f"  {obj}.{c['field']} = {parse['String' if c['text'] else c['type']].format(v=f'row[{i}]')};" for i, c in enumerate(plan["columns"]))
     return (f'{reply(var)}\nif ({key} == null || {key} === "") {{\n  {obj}.{MESSAGE} = {ask};\n}}'
             f' else if (res == null || res.ok !== true) {{\n  {obj}.{MESSAGE} = {failure("load")};\n}}'
             f' else if (res.rows.length == 0) {{\n  {obj}.{MESSAGE} = "No record found for " + {key};\n}}'
