@@ -212,6 +212,12 @@ def service_xml(pid, version, bo_id, var_id, service, flow, var, author):
     exit_id = "3008." + uid()
     items = item_xml(item_id=wrapper, pid=pid, name="CoachFlowWrapper", component="CoachFlow", component_id="3032." + uid(),
                         guid=uid(), version=uid(), x=0, component_xml="<TWComponent />")
+    for called, name, item in re.findall(r'<ns16:callActivity calledElement="([^"]+)" name="([^"]*)" id="([^"]+)"', flow):
+        # The engine looks a service call up by the node's ID among these items when the service runs as a process task.
+        sub = "3012." + uid()
+        items += item_xml(item_id=item, pid=pid, name=name, component="SubProcess", component_id=sub, guid=uid(), version=uid(), x=0,
+                          component_xml=f'<TWComponent><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><subProcessId>{sub}</subProcessId>'
+                                        f"<attachedProcessRef>/{called}</attachedProcessRef><guid>{uid()}</guid><versionId>{uid()}</versionId></TWComponent>")
     items += item_xml(item_id=end, pid=pid, name="End", component="ExitPoint", component_id=exit_id, guid=uid(), version=uid(), x=700,
                          component_xml=f'<TWComponent><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><exitPointId>{exit_id}</exitPointId>'
                                        f"<haltProcess>false</haltProcess><guid>{uid()}</guid><versionId>{uid()}</versionId></TWComponent>")

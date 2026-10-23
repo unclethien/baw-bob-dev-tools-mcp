@@ -182,6 +182,9 @@ try {
   await page.setExtraHTTPHeaders({ Authorization: `Bearer ${token}` });
   page.on('pageerror', (e) => report.errors.push(String(e).slice(0, 300)));
   page.on('console', (m) => { if (m.type() === 'error') report.errors.push(`console: ${m.text().slice(0, 300)}`); });
+  page.on('response', (r) => { // a server error says why in its body (for example a service call from the coach that BAW rejects)
+    if (r.status() >= 500) r.text().then((body) => report.errors.push(`HTTP ${r.status()} ${r.request().method()} ${new URL(r.url()).pathname}: ${body.replace(/\s+/g, ' ').slice(0, 300)}`)).catch(() => {});
+  });
   await page.goto(item.runURL, { waitUntil: 'networkidle2', timeout: 90000 });
 
   const coach = async (timeout = 30000) => {
