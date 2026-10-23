@@ -22,11 +22,16 @@ Examples:
     uv run --script server/pg_ops.py tables bawexternal
     uv run --script server/pg_ops.py describe bawexternal public.user_db
     uv run --script server/pg_ops.py sql basdb "select count(*) from lsw_bpd"
+    uv run --script server/pg_ops.py export basdb "select * from lsw_bpd limit 10" work/bpd.csv
+    uv run --script server/pg_ops.py import my_table work/rows.csv [--replace]   # CSV or JSON array, app database only
+    uv run --script server/pg_ops.py backup basdb public.some_table --where "id < 10"
+    uv run --script server/pg_ops.py restore basdb work/db-backups/basdb/public.some_table-261023-101500.csv
     uv run --script server/pg_ops.py remove-login       # drop Bob's login and its grants
 """
 
 import argparse
 import contextlib
+import csv
 import datetime
 import json
 import math
@@ -42,11 +47,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from baw_ops import ENV_FILE, load_env_file  # noqa: E402
 
 ROOT = ENV_FILE.parent
-ACL_BACKUPS = ROOT / "work" / "db-backups" / "acl-before-bob-login"
+WORK = ROOT / "work"
+BACKUPS = WORK / "db-backups"
+ACL_BACKUPS = BACKUPS / "acl-before-bob-login"
+EXPORT_MAX = 200 * 1024 * 1024
+IMPORT_MAX = 100 * 1024 * 1024
+FILE_TIMEOUT = 120
+SAFE_FILE_NAME = re.compile(r"^[A-Za-z0-9_$][A-Za-z0-9_.$-]*\Z")
 RESULT_BUDGET = 256 * 1024
 APP_CEILING = 1024**3
 LIMIT_MAX = 1000
-NAME = re.compile(r"^[a-z_][a-z0-9_$]{0,62}$")
+NAME = re.compile(r"^[a-z_][a-z0-9_$]{0,62}\Z")
 # Roles too strong to run Bob's app-database sessions as.
 STRONG_ROLES = ("pg_read_server_files", "pg_write_server_files", "pg_execute_server_program", "pg_signal_backend")
 APP_SCHEMAS = "n.nspname NOT IN ('pg_catalog', 'information_schema') AND n.nspname !~ '^pg_(toast|temp)'"
@@ -126,9 +137,10 @@ def _psycopg():
 # ---------------------------------------------------------------- connections
 
 
-def connect(database: str, admin: bool = False, timeout: int = 30):
+def connect(database: str, admin: bool = False, timeout: int = 30, options: str = ""):
     """One connection, as Bob's login (or the admin login). Keyword arguments only: no connection string ever
-    holds a password. In the app database the session starts as the app role, by startup option."""
+    holds a password. In the app database the session starts as the app role, by startup option. `options` adds
+    startup options such as "-c transaction_timeout=180000"."""
     psycopg = _psycopg()
     missing = pg_missing_settings()
     if missing:
@@ -138,7 +150,7 @@ def connect(database: str, admin: bool = False, timeout: int = 30):
         ensure_login()
     s = settings()
     user, password = (s["user"], s["password"]) if admin else (s["bob_user"], s["bob_password"])
-    options = f"-c statement_timeout={timeout * 1000} -c lock_timeout=5000 -c work_mem=16MB -c max_parallel_workers_per_gather=0"
+    options = f"-c statement_timeout={timeout * 1000} -c lock_timeout=5000 -c work_mem=16MB -c max_parallel_workers_per_gather=0 {options}"
     if not admin and database == s["app_database"]:
         options += f" -c role={_ready['app_role']}"
     try:
@@ -151,10 +163,10 @@ def connect(database: str, admin: bool = False, timeout: int = 30):
 
 
 @contextlib.contextmanager
-def session(database: str, admin: bool = False, timeout: int = 30):
+def session(database: str, admin: bool = False, timeout: int = 30, options: str = ""):
     """A connection that is always rolled back and closed at the end. Bob's sessions on any database other
     than the app database are READ ONLY."""
-    conn = connect(database, admin=admin, timeout=timeout)
+    conn = connect(database, admin=admin, timeout=timeout, options=options)
     try:
         if not admin and database != settings()["app_database"]:
             conn.read_only = True
@@ -472,6 +484,19 @@ def app_size(conn) -> int:
     return one(conn, "SELECT pg_database_size(current_database())")
 
 
+def describe_one(conn, sql: str) -> list[str]:
+    """Parse one statement without running it and return its column names. A second statement or a syntax
+    error raises a psycopg error. Call it before psycopg opens a transaction."""
+    psycopg = _psycopg()
+    from psycopg import pq
+    encoding = conn.info.encoding
+    for step in (lambda: conn.pgconn.prepare(b"", sql.encode(encoding)), lambda: conn.pgconn.describe_prepared(b"")):
+        described = step()
+        if described.status != pq.ExecStatus.COMMAND_OK:
+            raise psycopg.errors.error_from_result(described, encoding=encoding)
+    return [described.fname(i).decode(encoding) for i in range(described.nfields)]
+
+
 def execute(database: str, sql: str, limit: int = 200) -> dict:
     """Run exactly one statement as Bob. Read-only (and always rolled back) on every database except the app
     database, where a complete statement is committed."""
@@ -487,12 +512,7 @@ def execute(database: str, sql: str, limit: int = 200) -> dict:
     with session(database) as conn:
         try:
             # Parse and describe only, before psycopg opens the transaction. A second statement fails here.
-            for step in (lambda: conn.pgconn.prepare(b"", sql.encode(conn.info.encoding)),
-                         lambda: conn.pgconn.describe_prepared(b"")):
-                described = step()
-                if described.status != pq.ExecStatus.COMMAND_OK:
-                    raise psycopg.errors.error_from_result(described, encoding=conn.info.encoding)
-            columns = [described.fname(i).decode(conn.info.encoding) for i in range(described.nfields)]
+            columns = describe_one(conn, sql)
             if not app and not columns and words[0] in ("SELECT", "WITH", "TABLE", "VALUES", "EXPLAIN"):
                 raise PgError(f"Refused: SELECT ... INTO creates a table, and {database} is read-only for Bob.")
             if app and app_size(conn) > APP_CEILING and not (columns and words[0] in ("SELECT", "WITH", "TABLE", "VALUES")) \
@@ -612,6 +632,562 @@ def describe(database: str, table: str) -> dict:
             "indexes": [r[0] for r in indexes]}
 
 
+# ---------------------------------------------------------------- files and paths
+
+
+def inside(path: Path, folder: Path) -> bool:
+    """True when path is the folder or below it, even if the letter case differs on a case-insensitive disk."""
+    folder = folder.resolve()
+    if Path(str(path).casefold()).is_relative_to(Path(str(folder).casefold())):
+        return True
+    return any(folder.exists() and p.exists() and os.path.samefile(p, folder) for p in (path, *path.parents))
+
+
+def work_path(file: str, for_export: bool = False) -> Path:
+    """A path relative to the project that must stay under work/ once resolved. Exports may not land in the
+    backup folder."""
+    if not file or Path(file).is_absolute():
+        raise PgError(f"{file!r} must be a path relative to the project, under work/")
+    path = (ROOT / file).resolve()
+    if not path.is_relative_to(WORK.resolve()) or path == WORK.resolve():
+        raise PgError(f"{file!r} must be a file under work/")
+    if for_export and inside(path, BACKUPS):
+        raise PgError("Exports may not write under work/db-backups/; that folder holds backups only")
+    return path
+
+
+def rel(path: Path) -> str:
+    return os.path.relpath(path, ROOT)
+
+
+def new_file(path: Path, exclusive: bool = True):
+    """Open a file for writing, readable only by its owner, never through a symbolic link."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | (os.O_EXCL if exclusive else os.O_TRUNC)
+    return os.fdopen(os.open(path, flags, 0o600), "wb")
+
+
+def qualified(conn, table: str, kinds: str = "('r', 'p')") -> tuple[int, str, str]:
+    """The oid, schema and name of an existing table, as PostgreSQL resolves the given name."""
+    oid = one(conn, "SELECT to_regclass(%s)::oid", [table])
+    if oid is None:
+        raise PgError(f"There is no table {table!r}; list_tables shows what there is")
+    row = conn.execute(f"SELECT n.nspname, c.relname FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
+                       f"ON n.oid = c.relnamespace WHERE c.oid = %s AND c.relkind IN {kinds}", [oid]).fetchone()
+    if not row:
+        raise PgError(f"{table!r} is not a table")
+    return oid, row[0], row[1]
+
+
+def copy_out(conn, select: str, dest: Path, exclusive: bool) -> tuple[int, int]:
+    """Stream `COPY (select) TO STDOUT` as CSV with a header into a file, through a partial file that is removed on
+    any error or at the size cap. With exclusive, an existing file is never replaced. Returns (rows, bytes).
+    `select` must already be known to be one statement."""
+    partial = dest.with_name(dest.name + ".partial")
+    size = 0
+    try:
+        with new_file(partial, exclusive=False) as out, conn.cursor() as cur:
+            with cur.copy(f"COPY (\n{select}\n) TO STDOUT WITH (FORMAT csv, HEADER)") as copy:
+                for data in copy:
+                    size += len(data)
+                    if size > EXPORT_MAX:
+                        raise PgError(f"The output is over {EXPORT_MAX >> 20} MB; narrow it down (a where condition, "
+                                      "or fewer columns) and try again")
+                    out.write(data)
+            rows = cur.rowcount
+        if exclusive:
+            os.link(partial, dest)  # fails if the file appeared meanwhile
+            os.unlink(partial)
+        else:
+            os.replace(partial, dest)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            partial.unlink()
+        raise
+    return rows, size
+
+
+# ---------------------------------------------------------------- export
+
+
+def export_csv(database: str, source: str, dest: str, overwrite: bool = False) -> dict:
+    """Write a table, or the result of one SELECT, to a CSV file with a header, as Bob and read-only. `dest` is
+    relative to the project and must be under work/. An existing file is replaced only with overwrite=True.
+    At most 200 MB; the partial file is removed if the export fails or reaches the cap."""
+    psycopg = _psycopg()
+    out = work_path(dest, for_export=True)
+    if out.is_dir():
+        raise PgError(f"{dest!r} is a folder; give a file name")
+    if out.exists() and not overwrite:
+        raise PgError(f"{dest!r} already exists; choose another name or pass overwrite")
+    words = leading_words(source)
+    is_select = bool(words) and words[0] in ("SELECT", "WITH", "TABLE", "VALUES")
+    with session(database, timeout=FILE_TIMEOUT) as conn:
+        conn.read_only = True
+        try:
+            if is_select:
+                describe_one(conn, source)  # one statement, or an error
+                select = source.strip().rstrip(";")
+            else:
+                from psycopg import sql as pgsql
+                _, schema, name = qualified(conn, source, READABLE_KINDS)
+                select = pgsql.SQL("SELECT * FROM {}").format(pgsql.Identifier(schema, name)).as_string(conn)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            rows, size = copy_out(conn, select, out, exclusive=not overwrite)
+        except psycopg.Error as e:
+            raise PgError(explain(e, database)) from None
+        except FileExistsError:
+            raise PgError(f"{dest!r} already exists; choose another name or pass overwrite") from None
+    return {"database": database, "file": rel(out), "rows": rows, "bytes": size}
+
+
+# ---------------------------------------------------------------- import
+
+
+def csv_text(value) -> str:
+    """One JSON value as a CSV cell: null is empty and unquoted, every string is quoted (so "" stays an empty
+    string), numbers and booleans stay bare, objects and arrays become JSON text."""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if not isinstance(value, str):
+        value = json.dumps(value, ensure_ascii=False)
+    return '"' + value.replace('"', '""') + '"'
+
+
+def json_as_csv(rows: list, header: list[str]):
+    yield (",".join(csv_text(c) for c in header) + "\n").encode()
+    for start in range(0, len(rows), 1000):
+        yield ("\n".join(",".join(csv_text(r.get(c)) for c in header) for r in rows[start:start + 1000]) + "\n").encode()
+
+
+def file_chunks(path: Path):
+    with open(path, "rb") as f:
+        while chunk := f.read(65536):
+            yield chunk
+
+
+def read_source(path: Path) -> tuple[list[str], object]:
+    """The column names of an import file, and an iterator of the bytes to load as CSV."""
+    try:
+        path.read_bytes().decode("utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise PgError(f"{rel(path)} must be UTF-8 text ({e.reason} at byte {e.start})") from None
+    if path.suffix.lower() == ".json":
+        try:
+            rows = json.loads(path.read_bytes().decode("utf-8-sig"), parse_float=str, parse_constant=str)
+        except ValueError as e:
+            raise PgError(f"{rel(path)} is not valid JSON: {e}") from None
+        if not isinstance(rows, list) or not rows or not all(isinstance(r, dict) for r in rows):
+            raise PgError(f"{rel(path)} must be a JSON array of objects, with at least one object")
+        header = list(dict.fromkeys(k for r in rows for k in r))
+        return header, json_as_csv(rows, header)
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        header = next(csv.reader(f), None)
+    if not header or not all(header):
+        raise PgError(f"{rel(path)} needs a first line with the column names")
+    return header, file_chunks(path)
+
+
+def import_file(table: str, src: str, mode: str = "append") -> dict:
+    """Load a CSV file (a header line, then rows) or a .json file (an array of objects) into an existing table of
+    the app database, as Bob, in one transaction. The columns come from the header or the JSON keys and must exist
+    in the table. mode="append" adds the rows. mode="replace" backs the table up first, then empties it and loads the
+    file; the table is locked for the whole load, so apps using it wait. JSON values go in as text and PostgreSQL
+    converts them. At most 100 MB; a file that fails to load leaves the table as it was."""
+    psycopg = _psycopg()
+    from psycopg import sql as pgsql
+    if mode not in ("append", "replace"):
+        raise PgError("mode must be append or replace")
+    path = work_path(src)
+    if not path.is_file():
+        raise PgError(f"{src!r} is not a file")
+    if path.stat().st_size > IMPORT_MAX:
+        raise PgError(f"{src!r} is over {IMPORT_MAX >> 20} MB; split it")
+    header, chunks = read_source(path)
+    if len(set(header)) != len(header):
+        raise PgError("The column names in the file repeat: " + ", ".join(sorted({c for c in header if header.count(c) > 1})))
+    app_db = settings()["app_database"]
+    result = {"database": app_db, "mode": mode, "file": rel(path)}
+    with session(app_db, timeout=FILE_TIMEOUT) as conn:
+        try:
+            oid, schema, name = qualified(conn, table)
+            if schema == "information_schema" or schema.startswith("pg_"):
+                raise PgError(f"{table!r} is a system table")
+            result["table"] = f"{schema}.{name}"
+            columns = [r[0] for r in conn.execute("SELECT attname FROM pg_catalog.pg_attribute WHERE attrelid = %s "
+                                                  "AND attnum > 0 AND NOT attisdropped ORDER BY attnum", [oid])]
+            unknown = [c for c in header if c not in columns]
+            if unknown:
+                raise PgError(f"The file has columns that {schema}.{name} does not: {', '.join(unknown)}. "
+                              f"The table's columns: {', '.join(columns)}")
+            if app_size(conn) > APP_CEILING:
+                raise PgError(f"{app_db} is over its {APP_CEILING >> 30} GB ceiling: free space with run_sql "
+                              "(TRUNCATE or DROP TABLE) before importing")
+            into = pgsql.Identifier(schema, name)
+            if mode == "replace":
+                conn.execute(pgsql.SQL("LOCK TABLE {} IN ACCESS EXCLUSIVE MODE").format(into))
+                result["backup"] = backup(conn, app_db, [f"{schema}.{name}"])
+                conn.execute(pgsql.SQL("TRUNCATE TABLE {}").format(into))
+            query = pgsql.SQL("COPY {} ({}) FROM STDIN WITH (FORMAT csv, HEADER)").format(
+                into, pgsql.SQL(", ").join(pgsql.Identifier(c) for c in header))
+            with conn.cursor() as cur:
+                with cur.copy(query) as copy:
+                    for chunk in chunks:
+                        copy.write(chunk)
+                result["rows"] = cur.rowcount
+            if app_size(conn) > APP_CEILING:
+                raise PgError(f"Rolled back: the import took {app_db} over its {APP_CEILING >> 30} GB ceiling.")
+        except psycopg.Error as e:
+            raise PgError(explain(e, app_db) + ". Nothing was imported.") from None
+        try:
+            conn.commit()
+            result["committed"] = True
+        except psycopg.Error as e:
+            result["committed"] = "unknown"
+            result["note"] = scrub(f"The commit failed ({first_line(e)}); the rows may or may not have been loaded. "
+                                   "Check the table before importing again.")
+    return result
+
+
+# ---------------------------------------------------------------- backup
+
+
+def check_where(where: str):
+    """A row filter must stay a filter: balanced parentheses and none of the clauses that follow WHERE or
+    combine statements (UNION and the like), so the backup SELECT cannot be turned into another query."""
+    depth = 0
+    for t in tokens(where):
+        if t == "(":
+            depth += 1
+        elif t == ")":
+            depth -= 1
+            if depth < 0:
+                break
+        elif depth == 0 and t in ("UNION", "INTERSECT", "EXCEPT", "ORDER", "GROUP", "HAVING", "LIMIT", "OFFSET", "FETCH",
+                                  "FOR", "WINDOW", "INTO", ";"):
+            raise PgError(f"A where condition cannot contain {t}")
+    if depth != 0:
+        raise PgError("The parentheses in the where condition do not balance")
+
+
+def backup(conn, database: str, tables: list) -> list[dict]:
+    """Export tables (or rows of them) to work/db-backups/<database>/<schema>.<table>-<YYMMDD-HHMMSS>.csv, each
+    with a .json sidecar (columns, primary key, other indexes and constraints), through the connection it is given,
+    so a transaction that goes on to write sees the same snapshot. Each entry of `tables` is "schema.table" or
+    {"table": "schema.table", "where": "<condition>"}. Raises when a backup fails or reaches 200 MB, and removes
+    the files of this call; the caller must then not write. Files are never overwritten."""
+    from psycopg import sql as pgsql
+    if not SAFE_FILE_NAME.match(database):
+        raise PgError(f"Cannot back up database {database!r}: its name is not usable in a file name")
+    folder = BACKUPS / database
+    folder.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%y%m%d-%H%M%S")
+    done, written = [], []
+    try:
+        for entry in tables:
+            table, where = (entry, None) if isinstance(entry, str) else \
+                (entry.get("table"), entry.get("where")) if isinstance(entry, dict) else (None, None)
+            if not isinstance(table, str) or not table:
+                raise PgError('Each backup entry is "schema.table" or {"table": "schema.table", "where": "<condition>"}')
+            oid, schema, name = qualified(conn, table)
+            select = pgsql.SQL("SELECT * FROM {}").format(pgsql.Identifier(schema, name)).as_string(conn)
+            if where:
+                check_where(where)
+                denied = denied_names(where)
+                if denied:
+                    raise PgError(f"A where condition cannot name {denied}")
+                select += f" WHERE {where}"
+                describe_one(conn, select)  # one SELECT, or an error
+            base = re.sub(r"[^A-Za-z0-9_.$-]", "_", f"{schema}.{name}")
+            csv_path = None
+            for n in range(1, 100):
+                candidate = folder / f"{base}-{stamp}{'' if n == 1 else f'-{n}'}.csv"
+                if not candidate.exists() and not candidate.with_suffix(".json").exists():
+                    csv_path = candidate
+                    break
+            if not csv_path:
+                raise PgError("Too many backups of one table in one second")
+            written.append(csv_path)
+            rows, size = copy_out(conn, select, csv_path, exclusive=True)
+            sidecar = csv_path.with_suffix(".json")
+            written.append(sidecar)
+            with new_file(sidecar) as f:
+                f.write(scrub(json.dumps(sidecar_data(conn, oid, database, schema, name, where, stamp, rows), indent=1,
+                                         default=str)).encode())
+            done.append({"table": f"{schema}.{name}", "where": where, "rows": rows, "bytes": size,
+                         "file": rel(csv_path), "sidecar": rel(sidecar)})
+    except BaseException:
+        for path in written:
+            with contextlib.suppress(OSError):
+                path.unlink()
+        raise
+    return done
+
+
+def sidecar_data(conn, oid: int, database: str, schema: str, name: str, where, stamp: str, rows: int) -> dict:
+    columns = [{"name": n, "type": t, "not_null": nn, "default": d, "generated": bool(g), "identity": i or None}
+               for n, t, nn, d, g, i in conn.execute("""
+        SELECT a.attname, format_type(a.atttypid, a.atttypmod), a.attnotnull, pg_get_expr(d.adbin, d.adrelid), a.attgenerated <> '',
+               CASE a.attidentity WHEN 'a' THEN 'always' WHEN 'd' THEN 'by default' END
+        FROM pg_catalog.pg_attribute a LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+        WHERE a.attrelid = %s AND a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum""", [oid])]
+    return {"database": database, "schema": schema, "table": name, "taken": stamp, "where": where, "rows": rows,
+            "columns": columns, "primary_key": primary_key(conn, oid),
+            "constraints": [{"name": n, "definition": d} for n, d in conn.execute(
+                "SELECT conname, pg_get_constraintdef(oid) FROM pg_catalog.pg_constraint WHERE conrelid = %s "
+                "AND contype NOT IN ('p', 'n') ORDER BY conname", [oid])],
+            "indexes": [r[0] for r in conn.execute("SELECT pg_get_indexdef(indexrelid) FROM pg_catalog.pg_index "
+                                                   "WHERE indrelid = %s AND NOT indisprimary ORDER BY 1", [oid])]}
+
+
+def primary_key(conn, oid: int) -> list[str] | None:
+    return one(conn, "SELECT array_agg(a.attname ORDER BY k.ord) FROM pg_catalog.pg_constraint c "
+                     "CROSS JOIN unnest(c.conkey) WITH ORDINALITY k(attnum, ord) JOIN pg_catalog.pg_attribute a "
+                     "ON a.attrelid = c.conrelid AND a.attnum = k.attnum WHERE c.conrelid = %s AND c.contype = 'p'", [oid])
+
+
+def backup_table(database: str, table: str, where: str | None = None) -> list[dict]:
+    """Back one table (or some of its rows) up as Bob, read-only, to work/db-backups/<database>/."""
+    psycopg = _psycopg()
+    with session(database, timeout=FILE_TIMEOUT) as conn:
+        conn.read_only = True
+        conn.isolation_level = psycopg.IsolationLevel.REPEATABLE_READ
+        try:
+            return backup(conn, database, [{"table": table, "where": where}] if where else [table])
+        except psycopg.Error as e:
+            raise PgError(explain(e, database)) from None
+
+
+# ---------------------------------------------------------------- system-database changes
+
+# Names that an admin session must never reach: files, programs, signals, replication, string-executing
+# functions and the catalogs that hold password hashes. Matched anywhere in the text, comments and strings
+# included, and in decoded quoted names.
+DENIED = re.compile(r"(?<![a-z0-9_$])(?:pg_read_\w*|pg_ls_\w*|pg_stat_file|lo_\w*|dblink\w*|pg_terminate_backend|"
+                    r"pg_cancel_backend|pg_reload_conf|pg_\w*replication_slot\w*|pg_replication_origin_\w*|pg_logical_\w*|"
+                    r"pg_switch_wal|pg_backup_\w*|pg_stat_reset\w*|pg_log_\w*|set_config|\w*_to_xml\w*|ts_stat|"
+                    r"pg_authid|pg_shadow|pg_user_mappings?|pg_subscription)(?![a-z0-9_$])")
+UNICODE_NAME = re.compile(r'[Uu]&"((?:[^"]|"")*)"')
+UNICODE_ESCAPE = re.compile(r"\\(?:(\\)|([0-9A-Fa-f]{4})|\+([0-9A-Fa-f]{6}))")
+QUOTED_NAME = re.compile(r'"((?:[^"]|"")*)"')
+# Objects that hold credentials or reach outside the database.
+OUTSIDE_OBJECTS = {"SUBSCRIPTION", "SERVER", "FOREIGN", "TABLESPACE"}
+WRITE_WORDS = {"INSERT", "UPDATE", "DELETE", "MERGE"}
+
+
+def denied_names(sql: str) -> str | None:
+    """The first denied function or catalog name in a statement, or None."""
+    text = [sql.lower()]
+    for m in UNICODE_NAME.finditer(sql):
+        decoded = UNICODE_ESCAPE.sub(lambda e: "\\" if e.group(1) else chr(int(e.group(2) or e.group(3), 16)), m.group(1))
+        text.append(decoded.replace('""', '"').lower())
+    text += [m.group(1).replace('""', '"').lower() for m in QUOTED_NAME.finditer(sql)]
+    found = DENIED.search("\n".join(text))
+    return found.group() if found else None
+
+
+def admin_refusal(sql: str, toks: list[str], words: tuple) -> str | None:
+    """Why change_system_db refuses a statement beyond the refusals every database has, or None."""
+    for phrase, why in ((("CASCADE",), "CASCADE (name each dependent object instead)"),
+                        (("CREATE", "OR", "REPLACE"), "CREATE OR REPLACE"),
+                        (("SECURITY", "DEFINER"), "SECURITY DEFINER"), (("UESCAPE",), "UESCAPE")):
+        if any(tuple(toks[i:i + len(phrase)]) == phrase for i in range(len(toks))):
+            return why
+    if words[:1] in (("CREATE",), ("ALTER",)) and words[1:2] and words[1] in OUTSIDE_OBJECTS:
+        return f"{words[1].lower()}s (they reach outside the database)"
+    denied = denied_names(sql)
+    if denied:
+        return f"the name {denied} (files, programs, signals, replication, password hashes)"
+    return None
+
+
+def reads_only(words: tuple, toks: list[str], columns: list[str]) -> bool:
+    if words[0] in ("SHOW", "EXPLAIN"):
+        return True
+    if not columns or words[0] not in ("SELECT", "WITH", "TABLE", "VALUES"):
+        return False
+    return words[0] != "WITH" or not WRITE_WORDS & set(toks)
+
+
+def log_change(entry: dict):
+    """Append one line to work/db-backups/log.jsonl."""
+    BACKUPS.mkdir(parents=True, exist_ok=True)
+    fd = os.open(BACKUPS / "log.jsonl", os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    with os.fdopen(fd, "a") as f:
+        f.write(scrub(json.dumps(entry, default=str)) + "\n")
+
+
+def change_system_db(database: str, sql: str, backup_tables: list | None = None) -> dict:
+    """One write on a system database (any database but the app database), as the admin login. Name every table
+    the statement touches in backup_tables, each as "schema.table" or {"table": "schema.table", "where": "<condition>"}
+    to back up only some rows. Only CREATE TABLE, CREATE INDEX and CREATE VIEW may go without a backup. The backups
+    and the statement run in one REPEATABLE READ transaction, so the backup is the state the statement saw; a backup
+    that fails or reaches 200 MB stops the write. The whole call has a 180 s budget. One line per call goes to
+    work/db-backups/log.jsonl. Refused: statements that only read (use run_sql), what run_sql refuses on any
+    database, CASCADE, CREATE OR REPLACE, SECURITY DEFINER, and names that reach files, programs, signals,
+    replication or password hashes. Undo with `pg_ops.py restore`."""
+    psycopg = _psycopg()
+    if database == settings()["app_database"]:
+        raise PgError(f"{database} is the app database: use run_sql there.")
+    if not SAFE_FILE_NAME.match(database):
+        raise PgError(f"{database!r} is not a usable database name")
+    backup_tables = backup_tables or []
+    if not isinstance(backup_tables, list):
+        raise PgError("backup_tables must be a list")
+    toks, words = list(tokens(sql)), leading_words(sql)
+    why = refusal(words, app=True) or admin_refusal(sql, toks, words)  # app=True: CREATE is allowed here
+    if why:
+        raise PgError(f"Refused: {why} cannot run through change_system_db.")
+    creates = words[:2] in (("CREATE", "TABLE"), ("CREATE", "INDEX"), ("CREATE", "VIEW")) or words[:3] == ("CREATE", "UNIQUE", "INDEX")
+    if not backup_tables and not creates:
+        raise PgError("Name every table the statement changes in backup_tables; only CREATE TABLE, CREATE INDEX "
+                      "and CREATE VIEW run without a backup.")
+    conn = connect(database, admin=True, timeout=FILE_TIMEOUT, options="-c transaction_timeout=180000")
+    entry = {"time": datetime.datetime.now().astimezone().isoformat(timespec="seconds"), "database": database,
+             "statement": sql, "backups": [], "outcome": "rolled back"}
+    result = {"database": database, "committed": False}
+    try:
+        conn.isolation_level = psycopg.IsolationLevel.REPEATABLE_READ
+        try:
+            columns = describe_one(conn, sql)  # one statement, or an error
+        except psycopg.Error as e:
+            raise PgError(explain(e, database)) from None
+        if reads_only(words, toks, columns):
+            raise PgError(f"Refused: this statement only reads. Use run_sql; {database} is readable there.")
+        try:
+            result["backups"] = backup(conn, database, backup_tables)
+            entry["backups"] = [b["file"] for b in result["backups"]]
+            with conn.cursor() as cur:
+                cur.execute(sql, prepare=True)
+                result.update(status=cur.statusmessage, row_count=max(cur.rowcount, 0), columns=columns)
+                if columns:
+                    result["rows"] = [[jsonable(v) for v in row] for row in cur.fetchmany(200)]
+                    result["truncated"] = cur.rowcount > len(result["rows"])
+        except psycopg.Error as e:
+            raise PgError(explain(e, database) + ". Nothing was changed.") from None
+        try:
+            conn.commit()
+            entry["outcome"] = "committed"
+            result["committed"] = True
+        except psycopg.Error as e:
+            entry["outcome"] = "unknown"
+            result["committed"] = "unknown"
+            result["note"] = scrub(f"The commit failed ({first_line(e)}); the change may or may not have been applied. "
+                                   "Check the data before running it again.")
+    except PgError as e:
+        entry["error"] = str(e)
+        raise
+    finally:
+        with contextlib.suppress(Exception):
+            conn.rollback()
+        conn.close()
+        if entry["backups"] or entry["outcome"] != "rolled back" or "error" in entry:
+            log_change(entry)
+    result["log"] = rel(BACKUPS / "log.jsonl")
+    return result
+
+
+# ---------------------------------------------------------------- restore
+
+COLUMN_TYPE = re.compile(r'^[A-Za-z0-9_ ,()."\[\]]+$')
+
+
+def restore(database: str, backup_csv: str) -> dict:
+    """Put the rows of a backup file back, as the admin login, in one transaction: the rows of the table whose
+    primary key is in the backup are replaced by the backup's rows, and every other row is left alone. A table that
+    is gone is recreated first from the sidecar (columns and primary key; defaults, other indexes and constraints
+    are returned for manual repair). A table without a primary key is refused. The file must be under
+    work/db-backups/<database>/. Needs no psql."""
+    psycopg = _psycopg()
+    from psycopg import sql as pgsql
+    if not SAFE_FILE_NAME.match(database):
+        raise PgError(f"{database!r} is not a usable database name")
+    path = work_path(backup_csv)
+    if not path.is_relative_to((BACKUPS / database).resolve()) or path.suffix != ".csv" or not path.is_file():
+        raise PgError(f"{backup_csv!r} must be a .csv file under work/db-backups/{database}/")
+    sidecar = path.with_suffix(".json")
+    if not sidecar.is_file():
+        raise PgError(f"The sidecar {rel(sidecar)} is missing")
+    if path.stat().st_size > EXPORT_MAX:
+        raise PgError("The backup file is over 200 MB")
+    meta = json.loads(sidecar.read_text())
+    schema, name = meta["schema"], meta["table"]
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        header = next(csv.reader(f), None)
+    if not header:
+        raise PgError(f"{rel(path)} has no header line")
+    result = {"database": database, "table": f"{schema}.{name}", "file": rel(path), "recreated_table": False}
+    with session(database, admin=True, timeout=FILE_TIMEOUT) as conn:
+        try:
+            into = pgsql.Identifier(schema, name)
+            oid = one(conn, "SELECT to_regclass(%s)::oid", [into.as_string(conn)])
+            if oid is None:
+                oid = recreate_table(conn, meta, into, database)
+                result["recreated_table"] = True
+                result["manual_repair"] = [f"default of {c['name']}: {c['default']}" for c in meta["columns"] if c["default"]] \
+                    + [f"identity ({c['identity']}) on {c['name']}" for c in meta["columns"] if c.get("identity")] \
+                    + [f"index: {d}" for d in meta["indexes"]] \
+                    + [f"constraint {c['name']}: {c['definition']}" for c in meta["constraints"]]
+            key = primary_key(conn, oid)
+            if not key:
+                raise PgError(f"{schema}.{name} has no primary key, so a restore cannot tell which rows to replace. Load "
+                              f"{rel(path)} into a temporary table with COPY ... WITH (FORMAT csv, HEADER) and merge it by hand")
+            generated = {r[0]: r[1] for r in conn.execute(
+                "SELECT attname, attgenerated <> '' FROM pg_catalog.pg_attribute WHERE attrelid = %s AND attnum > 0 "
+                "AND NOT attisdropped", [oid])}
+            gone = [c for c in header if c not in generated]
+            if gone:
+                raise PgError(f"The backup has columns that {schema}.{name} no longer has: {', '.join(gone)}. Add them back "
+                              "(ALTER TABLE ... ADD COLUMN) or restore by hand")
+            missing_key = [c for c in key if c not in header]
+            if missing_key:
+                raise PgError(f"The backup lacks the primary key column(s) {', '.join(missing_key)}")
+            columns = pgsql.SQL(", ").join(pgsql.Identifier(c) for c in header)
+            # Generated columns come back by themselves, not from the file.
+            insert = pgsql.SQL(", ").join(pgsql.Identifier(c) for c in header if not generated[c])
+            conn.execute(pgsql.SQL("CREATE TEMP TABLE zz_restore ON COMMIT DROP AS SELECT {} FROM {} WITH NO DATA")
+                         .format(columns, into))
+            with conn.cursor() as cur:
+                with cur.copy(pgsql.SQL("COPY zz_restore ({}) FROM STDIN WITH (FORMAT csv, HEADER)").format(columns)) as copy:
+                    for chunk in file_chunks(path):
+                        copy.write(chunk)
+                loaded = cur.rowcount
+                cur.execute(pgsql.SQL("DELETE FROM {} t USING zz_restore r WHERE {}").format(
+                    into, pgsql.SQL(" AND ").join(pgsql.SQL("t.{0} = r.{0}").format(pgsql.Identifier(c)) for c in key)))
+                replaced = cur.rowcount
+                cur.execute(pgsql.SQL("INSERT INTO {} ({}) OVERRIDING SYSTEM VALUE SELECT {} FROM zz_restore")
+                            .format(into, insert, insert))
+            conn.commit()
+        except psycopg.Error as e:
+            raise PgError(explain(e, database) + ". Nothing was restored.") from None
+    result.update(rows_restored=loaded, rows_replaced=replaced)
+    return result
+
+
+def recreate_table(conn, meta: dict, into, database: str) -> int:
+    """Create a dropped table again from its sidecar: columns, NOT NULL and the primary key. Returns its oid."""
+    from psycopg import sql as pgsql
+    if not meta.get("primary_key"):
+        raise PgError(f"{meta['schema']}.{meta['table']} is gone and its backup has no primary key. Recreate the table by "
+                      "hand, then load the backup file with COPY ... WITH (FORMAT csv, HEADER)")
+    defs = []
+    for c in meta["columns"]:
+        if not COLUMN_TYPE.match(c["type"]) or "--" in c["type"] or "/*" in c["type"]:
+            raise PgError(f"Column type {c['type']!r} in the sidecar is not usable")
+        defs.append(pgsql.SQL("{} {}{}").format(pgsql.Identifier(c["name"]), pgsql.SQL(c["type"]),
+                                                pgsql.SQL(" NOT NULL" if c["not_null"] else "")))
+    defs.append(pgsql.SQL("PRIMARY KEY ({})").format(pgsql.SQL(", ").join(map(pgsql.Identifier, meta["primary_key"]))))
+    conn.execute(pgsql.SQL("CREATE TABLE {} ({})").format(into, pgsql.SQL(", ").join(defs)))
+    if database == settings()["app_database"]:  # BAW's data source must own it
+        owner = settings()["app_role"] or one(conn, "SELECT pg_get_userbyid(datdba) FROM pg_database "
+                                                    "WHERE datname = current_database()")
+        conn.execute(pgsql.SQL("ALTER TABLE {} OWNER TO {}").format(into, pgsql.Identifier(owner)))
+    return one(conn, "SELECT to_regclass(%s)::oid", [into.as_string(conn)])
+
+
 # ---------------------------------------------------------------- errors
 
 
@@ -671,6 +1247,22 @@ def main():
     p.add_argument("database")
     p.add_argument("statement")
     p.add_argument("--limit", type=int, default=200)
+    p = sub.add_parser("export")
+    p.add_argument("database")
+    p.add_argument("source", help="a table name, or one SELECT")
+    p.add_argument("file", help="relative to the project, under work/")
+    p.add_argument("--overwrite", action="store_true")
+    p = sub.add_parser("import")
+    p.add_argument("table")
+    p.add_argument("file", help="a CSV file, or a .json array of objects, under work/")
+    p.add_argument("--replace", action="store_true", help="back the table up, empty it, then load")
+    p = sub.add_parser("backup")
+    p.add_argument("database")
+    p.add_argument("table")
+    p.add_argument("--where", help="back up only the rows that match")
+    p = sub.add_parser("restore")
+    p.add_argument("database")
+    p.add_argument("backup_csv", help="a backup file under work/db-backups/<database>/")
     a = parser.parse_args()
     try:
         if a.command == "setup":
@@ -684,6 +1276,14 @@ def main():
             out = tables(a.database)
         elif a.command == "describe":
             out = describe(a.database, a.table)
+        elif a.command == "export":
+            out = export_csv(a.database, a.source, a.file, a.overwrite)
+        elif a.command == "import":
+            out = import_file(a.table, a.file, "replace" if a.replace else "append")
+        elif a.command == "backup":
+            out = backup_table(a.database, a.table, a.where)
+        elif a.command == "restore":
+            out = restore(a.database, a.backup_csv)
         else:
             out = execute(a.database, a.statement, a.limit)
     except PgError as e:
