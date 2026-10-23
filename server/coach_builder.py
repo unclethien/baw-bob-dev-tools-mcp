@@ -111,7 +111,9 @@ LINK_VISUAL = ("<ns13:linkVisualInfo><ns13:sourcePortLocation>{src}</ns13:source
 def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
     """Build the BPMN for a client-side human service.
 
-    steps: (key, name, script text | (coach layout, {event: button item id})) in diagram order.
+    steps: (key, name, script text | (coach layout, {event: button item id}) | service call) in diagram order.
+    A service call is {"call": called service id, "in": [(parameter id, expression, type id)], "out": [...]};
+    "out" assigns the called service's output parameter to the expression.
     flows: (source, target, coach event or None, source port, target port); "start" and "end" are implicit.
     io: (input id, output id) to take the business object in and hand it back (a process task's
     service); otherwise it is a private variable (var_id).
@@ -129,6 +131,17 @@ def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
         if isinstance(content, tuple):
             return (f'<ns2:formTask name="{name}" id="{ids[key]}">{head}'
                     f"<ns2:formDefinition><ns19:coachDefinition>{content[0]}</ns19:coachDefinition></ns2:formDefinition></ns2:formTask>")
+        if isinstance(content, dict):
+            return (f'<ns16:callActivity calledElement="{content["call"]}" name="{name}" id="{ids[key]}">'
+                    f"<ns16:extensionElements>{nvi(i)}</ns16:extensionElements>"
+                    f"{incoming(key)}{outgoing(key)}"
+                    + "".join(f'<ns16:dataInputAssociation><ns16:targetRef>{param}</ns16:targetRef><ns16:assignment>'
+                              f'<ns16:from xsi:type="ns16:tFormalExpression" evaluatesToTypeRef="itm.{type_id}">{escape(expr)}</ns16:from>'
+                              "</ns16:assignment></ns16:dataInputAssociation>" for param, expr, type_id in content.get("in", ()))
+                    + "".join(f'<ns16:dataOutputAssociation><ns16:sourceRef>{param}</ns16:sourceRef><ns16:assignment>'
+                              f'<ns16:to xsi:type="ns16:tFormalExpression" evaluatesToTypeRef="itm.{type_id}">{escape(expr)}</ns16:to>'
+                              "</ns16:assignment></ns16:dataOutputAssociation>" for param, expr, type_id in content.get("out", ()))
+                    + "</ns16:callActivity>")
         default = next(flow_ids[j] for j, f in enumerate(flows) if f[0] == key)
         return (f'<ns16:scriptTask scriptFormat="text/x-javascript" default="{default}" name="{name}" id="{ids[key]}">'
                 f"{head}<ns16:script>{escape(content)}</ns16:script></ns16:scriptTask>")
@@ -153,6 +166,8 @@ def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
     ns = " ".join(f'xmlns:ns{n}="{u}"' for n, u in [
         (16, "http://www.omg.org/spec/BPMN/20100524/MODEL"), (2, "http://www.ibm.com/xmlns/prod/bpm/bpmn/ext/process"),
         (13, "http://www.ibm.com/xmlns/prod/bpm/graph"), (19, "http://www.ibm.com/bpm/CoachDesignerNG")])
+    if any(isinstance(content, dict) for _, _, content in steps):  # service calls
+        ns += ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
     return (f'<coachflow><ns16:definitions {ns} id="{uid()}" targetNamespace="" expressionLanguage="http://www.ibm.com/xmlns/prod/bpm/expression-lang/javascript">'
             f'<ns16:globalUserTask name="{service["name"]}" id="1.{uid()}"><ns16:documentation>{service["description"]}</ns16:documentation>'
             f'<ns16:extensionElements><ns2:userTaskImplementation id="{uid()}">{body}</ns2:userTaskImplementation>'
