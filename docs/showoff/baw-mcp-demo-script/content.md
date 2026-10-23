@@ -26,7 +26,7 @@ A one-hour demo for managers. IBM Bob, an AI assistant, turns pictures of an old
 Thirty minutes before:
 
 1. Check the BAW login file (`.env`) is filled in. Never show it on screen.
-2. Open the project in Bob. The tools panel shows **baw-dev-tools** with 14 tools.
+2. Open the project in Bob. The tools panel shows **baw-dev-tools** with 21 tools.
 3. Put the six pictures of the old screen (`image (1).png` to `image (6).png`) and the client's newer quote screen (`generate-quote.png`) in `screenshots/Quote/`. Keep nothing else in that folder. It stays on this laptop and is never published.
 4. Do one full rehearsal, so you know how long each step takes. Keep the rehearsal apps as a backup.
 5. Open Business Automation Studio in a second browser tab.
@@ -51,16 +51,16 @@ Thirty minutes before:
 **Say.**
 - "Bob is an AI assistant. On its own, it cannot touch BAW."
 - "We gave it a connector. The connector follows an open standard called MCP, which is like a USB port for AI assistants: plug in a connector, and the assistant gets new tools."
-- "Our connector gives Bob 14 tools to build, install and test BAW apps. It holds the BAW password, so Bob never sees it."
+- "Our connector gives Bob 21 tools to build, install and test BAW apps. It holds the BAW password, so Bob never sees it."
 - "Bob never writes BAW code by hand. It writes a short description of the screen, and the connector turns that into a real BAW app."
 
-**Do.** Open Bob's tools panel and show **baw-dev-tools** with its 14 tools.
+**Do.** Open Bob's tools panel and show **baw-dev-tools** with its 21 tools.
 
 ---
 
 ## 5. What Bob can do (6 min)
 
-**Say.** "Bob's 14 tools fall into four groups."
+**Say.** "Bob's 21 tools fall into five groups."
 
 | Group | In plain words |
 |---|---|
@@ -68,6 +68,7 @@ Thirty minutes before:
 | Look at pictures | Open a screenshot, read its exact colours, cut out a part such as a logo |
 | Build | Turn a description into an app, read an app back into a description, build the modern screens |
 | Run on BAW | Install an app, and test it in a real browser by clicking through every screen |
+| Work with data | Look at the PostgreSQL databases, fill the app's own database, and save an app's form data in it |
 
 **Say.** "Bob also has two specialist roles. Each one has its own instructions and can only change its own files."
 
@@ -245,10 +246,10 @@ Agree the exact rules with the client before the session; the request above uses
 
 - *Does Bob write the BAW code itself?* No. It writes a short description; the connector builds the app from standard BAW parts.
 - *Is the workflow real?* Yes. It opens in Studio like any other BAW process, and developers can change it.
-- *Can it read from or save to a database?* Not yet. That is the next step, and it needs a database connection set up on the BAW server.
+- *Can it read from or save to a database?* Yes, in two ways, both on a test server with test data. Bob can read the platform's PostgreSQL databases, build and fill tables in the app database (`bawexternal`), and change another database only after you approve it, with the touched rows backed up first. And an app built from a spec with a `database` section loads a row by key and saves the form on Submit, through the BAW data source `jdbc/bawexternal`. The connection is not encrypted, so use test data only. The details are in the README, under Database access.
 - *What can it not build from a picture yet?* Tables, file uploads, links and extra buttons. Bob lists them and offers to add them in the modern screen.
 - *Does it work with our existing apps?* It can read any app and describe it. It only installs into test copies.
-- *Can other AI assistants use it?* Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 14 tools.[^mcp]
+- *Can other AI assistants use it?* Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 21 tools.[^mcp]
 - *What happens when something goes wrong?* Bob gets a plain error message, fixes its description, and tries again.
 
 **If something breaks on stage**

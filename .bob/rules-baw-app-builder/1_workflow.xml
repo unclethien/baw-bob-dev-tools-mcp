@@ -6,7 +6,10 @@
     with "layout": "tabs", one coach with a tab per step, then an optional read-only review
     coach and an optional confirmation coach with a generated reference number. With a
     "process" section the form becomes the first task of a workflow with lanes, and an
-    optional approval task (Approve / Send Back) follows in a second lane. The
+    optional approval task (Approve / Send Back) follows in a second lane. With a
+    "database" section the form task also loads and saves a row of a PostgreSQL table in bawexternal (a Load
+    button, and a save on Submit); the database tools (list_tables, describe_table, run_sql, export_table,
+    import_table, change_system_db) let you look at the data and build the table. The
     baw-dev-tools MCP server builds its coaches from App Builder Widgets (the ABW toolkit:
     Theme, App Header, Section, Review List, Button Bar), so authors can rearrange them by drag
     and drop in Coach Designer, then installs and tests it. When the user asks for a React +
@@ -53,12 +56,15 @@
         <step>When built from screenshots: use only the screenshots the user named; never open or copy other images in their folder unless the user asks. Sample the theme colours from them with image_colors before writing the spec. For the logo, use a logo file the user gave or one already in the project; when there is none, ask at the design stop. Run crop_image only when the user asks for it</step>
         <step>Write work/ACR.app.json with "theme" set to the theme file</step>
         <step>Find information that repeats: at least three fields on two or more screens, or groups the user named, become reusable groups (coach-groups skill)</step>
-        <step>STOP unless told to go ahead: show the theme, the screens with their sections, fields and buttons, the groups and where each is placed, and your assumptions; ask which installed app to match for a new app; wait for approval before create_app</step>
+        <step>When the app stores its form in a table: add a "database" section to the spec ({"table": "public.name", "key": "<field>", "columns": {"<field>": "<column>"}}, see the baw-app-builder skill). Call list_tables("bawexternal") and describe_table first to see which tables exist, and never use a table name that already holds data of another shape. The data source is always jdbc/bawexternal</step>
+        <step>STOP unless told to go ahead: show the theme, the screens with their sections, fields and buttons, the groups and where each is placed, the database table, key and columns when there is one, and your assumptions; ask which installed app to match for a new app; wait for approval before create_app</step>
         <step>Pick the toolkit: the newest snapshot list_snapshots("ABW") shows that has its work/ABW-SNAPSHOT.twx. When there is none, or the widgets changed since, build_widget_toolkit("builder") with a new snapshot and install_app it</step>
         <step>create_app with toolkit_snapshot, then inspect_coaches on the result and check every step</step>
         <step>When create_app returns changedInBaw: list the groups someone changed in BAW, ask per group whether to keep BAW's version or replace it with the spec's, and create_app again with replace_groups for the ones to replace (same snapshot)</step>
+        <step>With a "database" section, create_app returns database.ddl and database.columns. Run the ddl with run_sql on bawexternal, then describe_table the table and compare it with database.columns (names, types, primary key). When the table already exists with another shape, do not drop or alter it: ask the user whether to use another table name or to change the table. Tell the user that an optional Integer or Decimal field is a text field that accepts only numbers (a blank saves as NULL)</step>
         <step>STOP unless told to go ahead: tell the user the app is built and ask whether to import it into BAW; if not, give them the .twx and the import steps and stop</step>
         <step>install_app, then test_service for the service; look at the screenshots</step>
+        <step>With a "database" section: test_service with values (a made-up key, e.g. {"Request Number": "R-1"}) fills and submits the form, which saves a row; check the row with run_sql. Then test_service again with the same key in values and press ["Load"]: the form shows the stored row, and an unknown key shows "No record found". Drop only tables you created for the check, and say so</step>
         <step>With a "process": test_process with its name and press set to the approval's Send Back label, so the work goes back once before it is approved; look at each task's screenshots</step>
         <step>When built from screenshots: view_image each test screenshot, compare it with its original, show the differences and fixes, and after approval fix the spec or the theme file and rebuild and import with a new snapshot until the header, tabs, sections, column placement and widths, fields, controls, required markers, colours and buttons (labels, colours, position) match</step>
       </steps>
@@ -76,6 +82,7 @@
 
   <completion_criteria>
     <criterion>The user approved the design before create_app and was asked before install_app</criterion>
+    <criterion>With a "database" section: the table exists with the shape of database.columns, test_service typed the key and pressed Load, and run_sql shows the saved row</criterion>
     <criterion>The app is installed and test_service reports "ok": true for its service, and test_process reports "ok": true for its workflow when the spec has one; when the user chose not to import it, or without a BAW server, the .twx is built, inspect_coaches shows every step, and the user has the import steps</criterion>
     <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built, and the theme file holds the screenshot's colours, header product name and the logo the user chose</criterion>
     <criterion>When a React UI was requested, you switched to BAW Coach Modernizer with the app's details</criterion>

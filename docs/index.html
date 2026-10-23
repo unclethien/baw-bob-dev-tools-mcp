@@ -245,7 +245,7 @@ h3[id]{scroll-margin-top:var(--s06)}
       groups of fields, installs and tests them on BAW. Start here.</p>
     <div class="tags">
       <span class="tag tag-blue">CP4BA · BAW 26.0.0</span>
-      <span class="tag tag-gray">15 MCP tools</span>
+      <span class="tag tag-gray">21 MCP tools</span>
       <span class="tag tag-gray">2 Bob modes · 8 skills</span>
       <span class="tag tag-gray">2 widget toolkits</span>
       <span class="tag tag-gray">Reusable groups</span>
@@ -389,6 +389,10 @@ h3[id]{scroll-margin-top:var(--s06)}
       <h3>Install and test</h3>
       <p><code>install_app</code>, <code>test_service</code>, <code>test_process</code></p>
     </div>
+    <div class="card">
+      <h3>PostgreSQL data</h3>
+      <p><code>list_tables</code>, <code>describe_table</code>, <code>run_sql</code>, <code>export_table</code>, <code>import_table</code>, <code>change_system_db</code></p>
+    </div>
   </div>
 
   <h3>Bob modes and skills</h3>
@@ -414,6 +418,7 @@ h3[id]{scroll-margin-top:var(--s06)}
     <li>A snapshot name can be used once per app; BAW would otherwise keep the old content silently.</li>
     <li>A group someone changed in BAW is kept on Bob's next rebuild until you say to replace it.</li>
     <li>There is no delete tool.</li>
+    <li>Bob writes freely only in the app database, <code>bawexternal</code>. A change to any other PostgreSQL database goes through <code>change_system_db</code>, which asks first and backs up the rows it touches.</li>
     <li>Credentials stay in the server process and are never returned to the agent.</li>
   </ul>
 </section>
@@ -429,7 +434,7 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td class="mono"><a href="api-specs/baw-ops-rest-swagger-2.0.json">api-specs/baw-ops-rest-swagger-2.0.json</a></td><td>BAW Operations REST API, as served by the server (<code>/bas/ops</code>, 156 operations)</td></tr>
         <tr><td class="mono"><a href="api-specs/baw-bpm-rest-swagger-2.0.json">api-specs/baw-bpm-rest-swagger-2.0.json</a></td><td>BAW BPM REST API (<code>/bas/bpm</code>, 11 operations)</td></tr>
         <tr><td class="mono"><a href="api-specs/baw-case-rest-swagger-2.0.json">api-specs/baw-case-rest-swagger-2.0.json</a></td><td>BAW Case REST API (<code>/bas/CaseManager/CASEREST/v2</code>, 33 operations)</td></tr>
-        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/tree/main/app-specs">app-specs/</a></td><td>Four example app specs and three theme files</td></tr>
+        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/tree/main/app-specs">app-specs/</a></td><td>Five example app specs (<code>example-equipment-request-db.json</code> has a database section) and three theme files</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp#readme">README.md</a></td><td>Project overview, setup and tool list</td></tr>
       </tbody>
     </table>

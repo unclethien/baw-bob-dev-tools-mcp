@@ -273,6 +273,7 @@ h3[id]{scroll-margin-top:var(--s06)}
     <li><a href="#theme">theme</a></li>
     <li><a href="#banner">banner</a></li>
     <li><a href="#process">process</a></li>
+    <li><a href="#database">database</a></li>
     <li><a href="#errors">Validation errors</a></li>
     <li><a href="#limits">What a spec cannot express</a></li>
     <li><a href="#examples">Example specs</a></li>
@@ -371,6 +372,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono"><a href="#banner">banner</a></td><td>No</td><td>off</td><td>The header strip's title and text</td></tr>
         <tr><td class="mono"><a href="#process">process</a></td><td>No</td><td>off</td><td>A workflow on top of the form: lanes, an optional approval task, and Send Back to the form</td></tr>
         <tr><td class="mono"><a href="#groups">groups</a></td><td>No</td><td>none</td><td>Reusable groups of fields, each a View in the app that sections place</td></tr>
+        <tr><td class="mono"><a href="#database">database</a></td><td>No</td><td>off</td><td>Stores the form in a PostgreSQL table: a Load button fills the form from a row, Submit saves it</td></tr>
       </tbody>
     </table>
   </div>
@@ -792,6 +794,93 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
 
 <hr class="rule" aria-hidden="true">
 
+<section id="database">
+  <h2>database</h2>
+  <p>Optional. Stores the form in a table of <code>bawexternal</code>, the PostgreSQL database set aside for app
+  data, through the data source <code>jdbc/bawexternal</code>. The data source is fixed: the spec cannot name another,
+  and <code>create_app</code> refuses any other key. A <strong>Load</strong> button next to the key field fills the
+  form from the row with that key, and Submit saves the form: a new key adds a row, an existing key updates it. The
+  approval task of a <a href="#process"><code>process</code></a> makes no database call; the form task loads and saves,
+  and the process carries the data on.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="database keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">table</td><td>required</td><td>The table, as <code>"schema.name"</code>, e.g. <code>"public.equipment_request"</code></td></tr>
+        <tr><td class="mono">key</td><td>required</td><td>The name of the field that identifies a row. It becomes a required field and the table's primary key, and it is the field Load reads</td></tr>
+        <tr><td class="mono">columns</td><td>none</td><td>Renames: <code>{ "estimatedCost": "estimated_cost_usd" }</code> maps a field to a column. Every other simple field is stored in a column named by its field name in snake_case (<code>employeeName</code> &rarr; <code>employee_name</code>). With a <code>confirmation</code>, the reference number is stored too, in <code>reference_number</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Schema, table and column names use lower case letters, digits and underscores, start with a letter or an
+  underscore, and have at most 63 characters. The schema may not be <code>pg_catalog</code>,
+  <code>information_schema</code> or start with <code>pg_</code>. A name that is a reserved word in SQL
+  (<code>order</code>, <code>user</code>) works, because every name is quoted. A list or nested field, a column used
+  twice and the field name <code>dbMessage</code> are refused.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="Type mapping, scrollable">
+    <table>
+      <thead><tr><th scope="col">Field type</th><th scope="col">Column type</th></tr></thead>
+      <tbody>
+        <tr><td>String, Text Area, Select, Radio</td><td class="mono">text</td></tr>
+        <tr><td>Integer</td><td class="mono">integer</td></tr>
+        <tr><td>Decimal</td><td class="mono">numeric</td></tr>
+        <tr><td>Boolean</td><td class="mono">boolean</td></tr>
+        <tr><td>Date</td><td class="mono">timestamptz</td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>"database": {
+  "table": "public.equipment_request",
+  "key": "requestId",
+  "columns": { "estimatedCost": "estimated_cost_usd" }
+}</code></pre>
+  <p>The full spec is <code>app-specs/example-equipment-request-db.json</code>. With it, <code>create_app</code> returns
+  a <code>database</code> result next to the <code>.twx</code>:</p>
+<pre><code>"database": {
+  "table": "public.equipment_request",
+  "ddl": "CREATE TABLE IF NOT EXISTS \"public\".\"equipment_request\" (\"request_id\" text PRIMARY KEY, \"employee_name\" text, ... \"reference_number\" text)",
+  "columns": [ { "name": "request_id", "type": "text", "primaryKey": true }, ... ]
+}</code></pre>
+  <h3>Before the app is used</h3>
+  <ol>
+    <li>Bob runs the <code>ddl</code> with <code>run_sql</code> on <code>bawexternal</code>.</li>
+    <li>Bob compares <code>describe_table</code> of the table with <code>columns</code>. <code>CREATE TABLE IF NOT EXISTS</code> does
+    nothing when the table exists, so a table of another shape (other columns, types or key) only shows up here. The
+    generated Load and Save fit <code>columns</code> only, so Bob does not drop or alter such a table on its own: it asks you
+    whether to use another table name or to change the table.</li>
+    <li>Bob installs the app, then runs <code>test_service</code> with <code>values</code> to type the key (and any field to
+    save) and <code>press: ["Load"]</code> to press Load, and checks the saved row with <code>run_sql</code>.</li>
+  </ol>
+  <h3>How it behaves</h3>
+  <ul>
+    <li><strong>Optional numbers are text.</strong> BAW's number controls turn an empty value into 0. So an Integer or Decimal
+    field that is not <code>required</code> (and is not the key) is a text field that accepts only numbers, held as a
+    String in the business object; its column stays <code>integer</code> or <code>numeric</code>. A blank, or only spaces,
+    is saved as NULL, and a NULL loads as an empty box. Submit refuses text that is not a whole number (Integer) or a
+    number such as <code>1234.56</code> (Decimal) with a message such as "Quantity must be a whole number." before any row
+    is written. A process or caller that reads the business object sees a String where the spec says Integer. A
+    <code>required</code> number keeps the number control and saves 0 when left empty.</li>
+    <li><strong>The key is required.</strong> Load with no key, and Submit with no key, stay on the screen with a message and
+    write nothing. Load of an unknown key says "No record found for &hellip;" and keeps what was typed. A row that was loaded
+    keeps its reference number when it is saved again.</li>
+    <li><strong>Values are never SQL.</strong> Every value is a parameter with an explicit cast, and every name is quoted, so text
+    such as <code>O'Brien'); DROP TABLE x; --</code> is stored as text. The two generated services each hold one fixed
+    statement; a caller can choose a key or values, never a statement. They are as reachable as any exposed service of the
+    app.</li>
+    <li><strong>A failed call shows PostgreSQL's message</strong> on the coach (for example <code>relation "public.x" does not
+    exist</code>), and the flow goes back to the screen. Each Load or Save call commits on its own.</li>
+    <li><strong>Dates</strong> are stored as instants (<code>timestamptz</code>) and come back in UTC; the date picker shows them in the
+    browser's time zone.</li>
+    <li><strong>The data source exists on the BAWAUT server only.</strong> After a column's type changes under an installed app, BAW's
+    pooled connections may fail with "cached plan must not change result type" until the app or server restarts (not
+    tried).</li>
+  </ul>
+  <p>The tools Bob uses, their limits, the backups and the remaining risks are in the
+  <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp#database-access">README</a>.</p>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
 <section id="errors">
   <h2>Validation errors</h2>
   <p>The generator checks the whole spec and its theme file and lists every problem before it builds anything. A
@@ -824,6 +913,9 @@ Invalid app spec:
         <tr><td class="mono">--replace-group names no group</td><td>From <code>create_app</code>'s <code>replace_groups</code>: use a group's <code>name</code> as the spec has it</td></tr>
         <tr><td class="mono">process.name is required</td><td>Give the workflow a name: <code>"process": { "name": "Quote Workflow" }</code></td></tr>
         <tr><td class="mono">process.approval must be an object</td><td>Use <code>{}</code> for the default approval task, or an object with your names and labels</td></tr>
+        <tr><td class="mono">database.key must name one of the form's fields</td><td>Set <code>database.key</code> to a field name from the steps</td></tr>
+        <tr><td class="mono">is not a setting (the data source is always jdbc/bawexternal)</td><td>Use only <code>table</code>, <code>key</code> and <code>columns</code> in <code>database</code></td></tr>
+        <tr><td class="mono">is not allowed: use lower case letters, digits and underscores</td><td>Rename the schema, table or column in <code>database</code></td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>From <code>create_app</code> or <code>install_app</code>: bump <code>app.snapshot</code></td></tr>
         <tr><td class="mono">pass toolkit_snapshot</td><td>From <code>create_app</code>: name an installed App Builder Widgets snapshot; build one with <code>build_widget_toolkit("builder", ...)</code> and install it first</td></tr>
         <tr><td class="mono">is not installed on the server</td><td>From <code>create_app</code>: <code>install_app</code> the toolkit <code>.twx</code> it names, then build again</td></tr>
@@ -841,7 +933,9 @@ Invalid app spec:
     <li><strong>Tables, file uploads, links and menus.</strong> Add them in a hand-written React screen for that coach
     in the BAW Coach Modernizer (the react-coach-screen skill).</li>
     <li><strong>Validation and rules.</strong> No required-field blocking, no field-to-field rules, no show/hide logic.</li>
-    <li><strong>Lookups and integrations.</strong> Dropdown options are fixed in the spec; nothing calls another system.</li>
+    <li><strong>Lookups and integrations.</strong> Dropdown options are fixed in the spec, and nothing calls another system.
+    The one exception is the <a href="#database"><code>database</code></a> section, which loads and saves one table. It
+    has no list or search screen, no joins and no tables of rows inside a form.</li>
     <li><strong>Workflows beyond one approval.</strong> <a href="#process"><code>process</code></a> builds a form task
     and an optional approval with Send Back. More steps, timers, parallel paths and per-lane teams are added in the
     process editor.</li>
@@ -857,6 +951,7 @@ Invalid app spec:
       <thead><tr><th scope="col">File</th><th scope="col">Shows</th></tr></thead>
       <tbody>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-equipment-request.json">example-equipment-request.json</a></td><td>A simple multi-step form, every basic field type, review and confirmation</td></tr>
+        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-equipment-request-db.json">example-equipment-request-db.json</a></td><td>The equipment request with a <code>database</code> section: a table in <code>bawexternal</code>, a key field, a renamed column, Load and save</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-supplier-registration.json">example-supplier-registration.json</a></td><td>Written from <code>screenshots/example-supplier-registration.png</code>: sections, two columns, wide fields, dropdowns, radio groups, required fields</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-themed-quote.json">example-themed-quote.json</a></td><td>Tabs, a banner, placed columns with widths, field icons, help text, Cancel and no review</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-grouped-quote.json">example-grouped-quote.json</a></td><td>Two reusable groups, one placed again read-only with a field hidden, and a review that shows each group once</td></tr>

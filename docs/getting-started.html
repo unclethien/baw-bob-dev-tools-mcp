@@ -260,7 +260,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <h2>Where you will end up</h2>
   <ul>
     <li>The project on your laptop, connected to a BAW test server.</li>
-    <li>IBM Bob showing the <code>baw-dev-tools</code> MCP server with 15 tools and two modes:
+    <li>IBM Bob showing the <code>baw-dev-tools</code> MCP server with 21 tools and two modes:
     🏗️ BAW App Builder and ✨ BAW Coach Modernizer.</li>
     <li>A small ZZ app you asked Bob for, installed on the server, tested in a browser, with a link you can open.</li>
   </ul>
@@ -276,7 +276,7 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td><a href="#step-5">5</a></td><td>Install the screen tools</td><td><code>npm install</code> finishes</td></tr>
         <tr><td><a href="#step-6">6</a></td><td>Check the connection</td><td>Your server's apps are listed</td></tr>
         <tr><td><a href="#step-7">7</a></td><td>Build a package</td><td>Two <code>.twx</code> files are written to <code>work/</code></td></tr>
-        <tr><td><a href="#step-8">8</a></td><td>Connect Bob</td><td>15 tools in Bob's MCP panel</td></tr>
+        <tr><td><a href="#step-8">8</a></td><td>Connect Bob</td><td>21 tools in Bob's MCP panel</td></tr>
         <tr><td><a href="#step-9">9</a></td><td>Build your first app</td><td>Bob reports a run URL</td></tr>
         <tr><td><a href="#step-10">10</a></td><td>Look at the result and change it</td><td>The app opens in your browser</td></tr>
       </tbody>
@@ -357,6 +357,7 @@ chmod 600 .env</code></pre>
         <tr><td class="mono">BAW_USER</td><td>Your user name</td></tr>
         <tr><td class="mono">BAW_PASSWORD</td><td>Your password, <em>or</em> leave it empty and set:</td></tr>
         <tr><td class="mono">BAW_APIKEY</td><td>Your Platform API key. Used only when <code>BAW_PASSWORD</code> is empty</td></tr>
+        <tr><td class="mono">POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD</td><td>Optional: the PostgreSQL admin login, for Bob's database tools. See <a href="#database">use the database tools</a></td></tr>
       </tbody>
     </table>
   </div>
@@ -414,8 +415,8 @@ grep baw_mcp.py .bob/mcp.json</code></pre>
   hand; the first run downloads its packages, so Bob does not time out waiting for them later:</p>
 <pre><code>uv run --quiet --script server/baw_mcp.py &lt; /dev/null &amp;&amp; echo "Server starts"</code></pre>
   <p>Now open this folder as the workspace in Bob and open Bob's MCP panel.</p>
-  <p><strong>Check:</strong> <code>baw-dev-tools</code> shows as connected with <strong>15 tools</strong>:</p>
-  <div class="tablewrap" role="region" tabindex="0" aria-label="The 15 tools, scrollable">
+  <p><strong>Check:</strong> <code>baw-dev-tools</code> shows as connected with <strong>21 tools</strong>:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="The 21 tools, scrollable">
     <table>
       <thead><tr><th scope="col">Group</th><th scope="col">Tools</th><th scope="col">Bob asks first?</th></tr></thead>
       <tbody>
@@ -423,6 +424,7 @@ grep baw_mcp.py .bob/mcp.json</code></pre>
         <tr><td>Read screenshots</td><td class="mono">view_image, image_colors, crop_image</td><td>Only <code>crop_image</code>, which writes a file</td></tr>
         <tr><td>Build</td><td class="mono">build_widget_toolkit, inspect_coaches, create_app, build_screens, modernize_app</td><td><code>create_app</code> and <code>modernize_app</code></td></tr>
         <tr><td>Install and test</td><td class="mono">install_app, test_service, test_process</td><td><code>install_app</code></td></tr>
+        <tr><td>PostgreSQL data</td><td class="mono">list_tables, describe_table, run_sql, export_table, import_table, change_system_db</td><td>Only <code>change_system_db</code>, which writes to a system database</td></tr>
       </tbody>
     </table>
   </div>
@@ -495,6 +497,25 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
     and <code>coach-ui/src/screens/</code>, plus <code>coach-ui/src/widgets/</code> and <code>coach-ui/widgets/</code>
     when the Modernizer adds a widget.</li>
   </ul>
+
+  <h3 id="database">Use the database tools (optional)</h3>
+  <p>Six tools let Bob read the platform's PostgreSQL server, and build and fill tables in <code>bawexternal</code>, the
+  database set aside for app data. Apps built from a spec with a <code>database</code> section load and save rows there.
+  The tools need the admin login of the server in <code>.env</code>; use a test server and test data, because the
+  connection is not encrypted.</p>
+  <ol>
+    <li>Fill in <code>POSTGRES_PORT</code>, <code>POSTGRES_USER</code> and <code>POSTGRES_PASSWORD</code> in
+    <code>.env</code>. <code>POSTGRES_HOST</code> is optional: the host of <code>BAW_URL</code> is used without it.</li>
+    <li>In Bob's MCP panel, restart <code>baw-dev-tools</code>. You set up nothing else: the first database call creates
+    Bob's limited login <code>bob_mcp</code> (about 14 s on a start after the first; once, about 36 s) and writes its
+    password to <code>.env</code> itself. Set Bob's tool timeout above 180 s.</li>
+    <li>Ask Bob, e.g. <em>"List the tables in bawexternal"</em>, or <em>"Build an equipment request app that stores its
+    rows in a table"</em> (the <a href="app-spec-reference.html#database">database section</a>).</li>
+  </ol>
+  <p>Bob reads every database and writes freely only in <code>bawexternal</code>. A change to any other database goes
+  through <code>change_system_db</code>: Bob asks first, names every table it touches, and the rows are backed up to
+  <code>db-backups/</code> before the change. The limits, the restore steps and the remaining risks are in the
+  <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp#database-access">README</a>.</p>
 
   <h3 id="toolkits">The widget toolkits</h3>
   <p>The coaches the tools build are layouts of small widgets that ship as two BAW toolkits. Each widget has a palette
@@ -612,7 +633,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
       <thead><tr><th scope="col">You see</th><th scope="col">Why</th><th scope="col">Fix</th></tr></thead>
       <tbody>
         <tr><td><code>baw-dev-tools</code> is not connected in Bob</td><td>Wrong path in <code>.bob/mcp.json</code>, or uv not on Bob's path</td><td>Redo step 8; run the <code>uv run</code> line and read its error</td></tr>
-        <tr><td>Fewer than 15 tools</td><td>An old copy of the project</td><td><code>git pull</code>, then restart the server from Bob's MCP panel</td></tr>
+        <tr><td>Fewer than 21 tools</td><td>An old copy of the project</td><td><code>git pull</code>, then restart the server from Bob's MCP panel</td></tr>
         <tr><td class="mono">Login to BAW_URL &hellip; failed with HTTP 401</td><td>Wrong credentials</td><td>Fix <code>.env</code>; check with step 6</td></tr>
         <tr><td class="mono">Cannot reach BAW_URL</td><td>Wrong host, or no VPN</td><td>Fix <code>BAW_URL</code>; check with step 6</td></tr>
         <tr><td class="mono">Invalid app spec</td><td>The spec breaks a rule</td><td>Each line names the problem; see <a href="app-spec-reference.html#errors">validation errors</a></td></tr>
@@ -620,6 +641,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
         <tr><td>Install ends in <code>failure</code></td><td>Often an acronym already used by another app</td><td>Pick another acronym; read <code>details</code> in the result</td></tr>
         <tr><td class="mono">pass toolkit_snapshot</td><td>The app's coaches need a widget toolkit and none was named</td><td>Ask Bob to build and install the toolkit; see <a href="#toolkits">the widget toolkits</a></td></tr>
         <tr><td class="mono">&hellip; is not installed on the server</td><td>The toolkit <code>.twx</code> was built but not installed</td><td><code>install_app</code> it first</td></tr>
+        <tr><td class="mono">PostgreSQL is not configured (missing &hellip;)</td><td><code>.env</code> has no <code>POSTGRES_*</code> admin settings</td><td>Fill them in, or skip the database tools: the other tools work without them</td></tr>
         <tr><td class="mono">No BAW server is configured</td><td><code>.env</code> is missing a setting</td><td>Fix step 4, or <a href="#no-server">import the app yourself</a></td></tr>
         <tr><td><code>test_service</code> cannot start a browser</td><td>No Chrome, Brave or Helium in the usual place</td><td>Install one, or set <a href="#browser"><code>BROWSER_PATH</code></a></td></tr>
       </tbody>

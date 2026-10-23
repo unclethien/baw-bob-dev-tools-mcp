@@ -29,7 +29,7 @@ Every screen stays editable by drag and drop in Coach Designer.
 Thirty minutes before:
 
 1. Check the BAW login file (`.env`) is filled in. Never show it on screen.
-2. Get the latest project (`git switch main && git pull`). Open it in Bob; the tools panel shows **baw-dev-tools** with **15 tools**. If it shows fewer, restart baw-dev-tools in that panel.
+2. Get the latest project (`git switch main && git pull`). Open it in Bob; the tools panel shows **baw-dev-tools** with **21 tools**. If it shows fewer, restart baw-dev-tools in that panel.
 3. **Make sure the Toggle does not exist yet**, so Bob creates it live. Run `git status` and check that these are absent:
    - `coach-ui/src/widgets/toggle.jsx`, `coach-ui/src/widgets/toggle.scss`, `coach-ui/widgets/icons/toggle.svg`
    - a `"kind": "toggle"` entry in `coach-ui/widgets/modernizer-widgets.json`
@@ -78,7 +78,7 @@ Thirty minutes before:
 - "Each widget has a palette icon and a live preview on the Designer canvas, so a developer can drag it, drop it and see it change."[^preview]
 - "An app depends on one version of a toolkit. A new widget means a new toolkit version. Apps that already use an older version keep it until someone moves them."[^toolkits]
 
-**Say.** "Bob has 15 tools and two roles. The ones that change something ask first."
+**Say.** "Bob has 21 tools and two roles. The ones that install something, or change a system database, ask first."
 
 | Role | What it does today |
 |---|---|
@@ -90,7 +90,7 @@ Thirty minutes before:
 - "Bob can add widgets, but it may not change an existing one. Other apps depend on those, so changing one is a developer's job, done on purpose."
 - "Bob stops twice by itself: it shows us the plan before building, and it asks before installing anything on BAW."
 
-**Do.** Open Bob's tools panel and show **baw-dev-tools** with its 15 tools, including **build_widget_toolkit**.
+**Do.** Open Bob's tools panel and show **baw-dev-tools** with its 21 tools, including **build_widget_toolkit**.
 
 ---
 
@@ -222,7 +222,7 @@ Thirty minutes before:
 - *Why is the Toggle green?* That is Carbon's standard colour for "on".
 - *Which widgets can Bob create?* Any widget that saves one value: text, number, date or yes/no. Widgets that save several values at once, such as a drop-down with its own "Other" box, are the next step.
 - *Does the modern screen still use BAW data and rules?* Yes. Every widget is bound to the app's own variables, and BAW's required, read-only and hidden settings apply.[^visibility]
-- *Can other AI assistants do this?* Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 15 tools.[^mcp]
+- *Can other AI assistants do this?* Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 21 tools.[^mcp]
 
 **If something breaks on stage**
 
