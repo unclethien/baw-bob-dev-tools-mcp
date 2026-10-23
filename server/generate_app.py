@@ -29,6 +29,9 @@ BAW apps may use: {"table": "public.name", "key": "<field>", "columns": {"<field
 (required) becomes the primary key; a Load button next to it fills the form from the row, and Submit upserts the form
 (a heritage "Load <BO>" and "Save <BO>" service each runs one fixed statement, sql_service.py). The CREATE TABLE statement is printed; run it
 before testing the app. Every simple field is stored, in a column named by its snake_case name unless "columns" says otherwise.
+An Integer or Decimal field that is not "required" (and is not the key) is a text field in the app, a String in the business object, because
+BAW's number controls turn an empty value into 0: nothing typed is saved as NULL, a number is checked on Submit, and its column is still
+integer or numeric. A required number keeps its number control and saves 0 when left empty.
 
 "theme" names the app's theme file (colours, font, shapes, field icons, banner product and logo), and
 "banner" adds the app's own banner title and text; see coach_theme.py.
@@ -76,6 +79,7 @@ FIELD_TYPES = {  # spec type -> (business object type, input view)
     "Radio": ("String", "Radio Button Group"),
 }
 CHOICES = {"Select", "Radio"}
+NUMBER_TYPES = ("Integer", "Decimal")
 MAX_COLUMNS = 6
 PROJECT = Path(__file__).resolve().parent.parent
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -266,13 +270,16 @@ def fields(spec):
 
 def database_errors(spec) -> list:
     """Check the "database" section, and keep its table plan in spec["_database"] (sql_service.table_plan).
-    The key field becomes required."""
+    The key field becomes required, and every other optional Integer or Decimal field becomes a text field (field_type)
+    whose column keeps the number type."""
     stored, errors = [], []
+    key = spec["database"].get("key") if isinstance(spec["database"], dict) else None
     for f in fields(spec):
         if any(f.get(k) for k in ("list", "items", "fields", "properties")):
             errors.append(f"database: field {f.get('name')!r} is a list or a nested field; only simple fields (String, Integer, Decimal, Boolean, Date) can be stored")
         elif f.get("type", "String") in FIELD_TYPES:
-            stored.append({"name": f.get("name", ""), "label": f.get("label", ""), "type": FIELD_TYPES[f.get("type", "String")][0]})
+            f["numberText"] = f.get("type") in NUMBER_TYPES and not f.get("required") and f.get("name") != key
+            stored.append({"name": f.get("name", ""), "label": f.get("label", ""), "type": FIELD_TYPES[f.get("type", "String")][0], "text": f["numberText"]})
     if spec.get("confirmation"):
         stored.append({"name": REFERENCE, "label": "Reference Number", "type": "String", "derived": True})
     bo_name, process = spec.get("businessObject", {}).get("name"), spec.get("process")
@@ -351,8 +358,14 @@ def choices(f):
     return [("itemLookupMode", "L"), ("staticList", json.dumps(items))]
 
 
+def field_type(f):
+    """(business object type, input view) of a field. With a database, an optional number is held as text: BAW's number
+    controls turn an empty value into 0, so only a text field can tell "not given" (stored as NULL) from 0."""
+    return ("String", "Text") if f.get("numberText") else FIELD_TYPES[f.get("type", "String")]
+
+
 def input_view(lay, var, f, root="tw.local", item_id=None):
-    kind = FIELD_TYPES[f.get("type", "String")][1]
+    kind = field_type(f)[1]
     return lay.view(kind, f["label"], binding=f"{root}.{var}.{f['name']}", options=(REQUIRED if f.get("required") else []) + choices(f),
                     help=f.get("help", ""), item_id=item_id)
 
@@ -366,7 +379,7 @@ def group_field(lay, var, f):
 
 def group_fields(g):
     """(path, view kind, label, hideable) of a group's fields, as group_views takes them."""
-    return [(f["name"], FIELD_TYPES[f.get("type", "String")][1], f["label"], not f.get("required")) for f in g["fields"]]
+    return [(f["name"], field_type(f)[1], f["label"], not f.get("required")) for f in g["fields"]]
 
 
 def place_group(lay, var, s, readonly=False):
@@ -460,7 +473,7 @@ def form_coach(spec):
 
 
 def output(lay, var, f):
-    kind = FIELD_TYPES[f.get("type", "String")][1]
+    kind = field_type(f)[1]
     binding = f"tw.local.{var}.{f['name']}"
     if kind in ("Text", "Text Area"):
         return lay.view("Output Text", f["label"], binding=binding)
@@ -563,6 +576,7 @@ def flow(spec, run_sql=None):
     if plan:
         steps += load_steps(spec, run_sql)
         flows += load_flows(spec)
+        steps, flows = clear_message_steps(spec, steps, flows)
     return steps, flows
 
 
@@ -578,15 +592,15 @@ def message_set(spec):
 
 
 def save_check_steps(spec):
-    """Submit asks for the key first: without it the form goes back to the coach it was submitted from, with a message."""
+    """Submit checks the form first: without the key, or with a number that is not one, it goes back to the coach it was submitted from, with a message."""
     var, plan = spec["businessObject"]["variable"], spec["_database"]
-    return [("save_key", "Check key", sql_service.missing_key_script(var, plan, "before you submit")), ("save_key_ok", "Key given?", {"gateway": True})]
+    return [("save_key", "Check form", sql_service.missing_key_script(var, plan, "before you submit", numbers=True)), ("save_key_ok", "Form ready?", {"gateway": True})]
 
 
 def save_check_flows(spec, next_step):
     return [("save_key", "save_key_ok", None, "rightCenter", "leftCenter"),
-            ("save_key_ok", submit_coach(spec), None, "topCenter", "topCenter", ("No key", message_set(spec))),
-            ("save_key_ok", next_step, None, "rightCenter", "leftCenter", ("Key given", None))]
+            ("save_key_ok", submit_coach(spec), None, "topCenter", "topCenter", ("Fix first", message_set(spec))),
+            ("save_key_ok", next_step, None, "rightCenter", "leftCenter", ("Ready", None))]
 
 
 def save_steps(spec, run_sql):
@@ -602,6 +616,19 @@ def save_flows(spec, next_step):
     return [("save", "save_done", None, "rightCenter", "leftCenter"), ("save_done", "save_ok", None, "rightCenter", "leftCenter"),
             ("save_ok", submit_coach(spec), None, "topCenter", "topCenter", ("Failed", message_set(spec))),
             ("save_ok", next_step, None, "rightCenter", "leftCenter", ("Saved", None))]
+
+
+def clear_message_steps(spec, steps, flows):
+    """A database message belongs to the coach it was raised on: moving to another coach (Next or Back) from the coaches that
+    show it clears it first, so a failed Load does not follow the user to the review."""
+    shown, var = {f"s{key_step(spec)}", submit_coach(spec)}, spec["businessObject"]["variable"]
+    moving = lambda f: f[0] in shown and f[2] and f[2].startswith(("next", "back")) and f[1] != "save_key"
+    cleared = [f for f in flows if moving(f)]
+    steps = steps + [(f"clear_{f[2]}", "Clear message", f'tw.local.{var}.{MESSAGE} = "";') for f in cleared]
+    flows = [f for f in flows if not moving(f)]
+    for f in cleared:
+        flows += [(f[0], f"clear_{f[2]}", f[2], f[3], f[4]), (f"clear_{f[2]}", f[1], None, "rightCenter", "leftCenter")]
+    return steps, flows
 
 
 def load_steps(spec, run_sql):
@@ -737,7 +764,7 @@ def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None, re
     WIDGETS.clear()
     WIDGETS.update(widget_toolkit.view_ids(TOOLKIT, toolkit))
     bo, svc, app = spec["businessObject"], spec["service"], spec["app"]
-    props = [(f["name"], FIELD_TYPES[f.get("type", "String")][0]) for f in fields(spec)]
+    props = [(f["name"], field_type(f)[0]) for f in fields(spec)]
     if spec.get("confirmation"):
         props.append((REFERENCE, "String"))
     proc = spec.get("process")
