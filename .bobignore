@@ -1,0 +1,5 @@
+# Files Bob must not read or edit: the credentials of the BAW and PostgreSQL servers and Bob's own server config
+.env
+.env.*
+!.env.example
+.bob/mcp.json
