@@ -89,7 +89,7 @@
       </header>
       <ol class="checklist">
         <li>Check the BAW login file (<code>.env</code>) is filled in. Never show it on screen.</li>
-        <li>Open the project in Bob. The tools panel shows <b>baw-dev-tools</b> with 14 tools.</li>
+        <li>Open the project in Bob. The tools panel shows <b>baw-dev-tools</b> with 21 tools.</li>
         <li>Put the six pictures of the old screen and the client's newer quote screen <code>generate-quote.png</code> in <code>screenshots/Quote/</code>, and nothing else. It stays on this laptop.</li>
         <li>Do one full rehearsal. Open Business Automation Studio in a second tab.</li>
         <li>In Bob, pick the <b>BAW App Builder</b> role and allow mode switches in Bob's auto-approve settings. Make the font bigger.</li>
@@ -101,7 +101,7 @@
       <header class="sec-head">
         <p class="timecode">02:00 <span aria-hidden="true">/</span> 06:00</p>
         <h2 id="mcp-title" class="h2">How it works.</h2>
-        <p class="lead">Bob is an AI assistant. On its own it cannot touch BAW, so we gave it a connector with 14 tools.<sup><a href="#ref-1">1</a></sup></p>
+        <p class="lead">Bob is an AI assistant. On its own it cannot touch BAW, so we gave it a connector with 21 tools.<sup><a href="#ref-1">1</a></sup></p>
       </header>
 
       <figure class="diagram" aria-labelledby="diagram-cap">
@@ -131,7 +131,7 @@
           </g>
           <g class="nodes">
             <g class="node node-accent"><rect x="5" y="38" width="170" height="64"/><text x="90" y="66" class="n-title">IBM Bob</text><text x="90" y="86" class="n-sub">AI assistant</text></g>
-            <g class="node"><rect x="245" y="38" width="170" height="64"/><text x="330" y="66" class="n-title">Connector</text><text x="330" y="86" class="n-sub">MCP, 14 tools</text></g>
+            <g class="node"><rect x="245" y="38" width="170" height="64"/><text x="330" y="66" class="n-title">Connector</text><text x="330" y="86" class="n-sub">MCP, 21 tools</text></g>
             <g class="node"><rect x="485" y="38" width="170" height="64"/><text x="570" y="66" class="n-title">Builder</text><text x="570" y="86" class="n-sub">description to app</text></g>
             <g class="node"><rect x="485" y="198" width="170" height="64"/><text x="570" y="226" class="n-title">BAW server</text><text x="570" y="246" class="n-sub">real apps, real data</text></g>
             <g class="node"><rect x="245" y="198" width="170" height="64"/><text x="330" y="226" class="n-title">Test browser</text><text x="330" y="246" class="n-sub">clicks every screen</text></g>
@@ -161,7 +161,7 @@
           </g>
           <g class="nodes">
             <g class="node node-accent"><rect x="8" y="8" width="144" height="64"/><text x="80" y="36" class="n-title">IBM Bob</text><text x="80" y="56" class="n-sub">AI assistant</text></g>
-            <g class="node"><rect x="8" y="128" width="144" height="64"/><text x="80" y="156" class="n-title">Connector</text><text x="80" y="176" class="n-sub">MCP, 14 tools</text></g>
+            <g class="node"><rect x="8" y="128" width="144" height="64"/><text x="80" y="156" class="n-title">Connector</text><text x="80" y="176" class="n-sub">MCP, 21 tools</text></g>
             <g class="node"><rect x="8" y="248" width="144" height="64"/><text x="80" y="276" class="n-title">Builder</text><text x="80" y="296" class="n-sub">description to app</text></g>
             <g class="node"><rect x="178" y="128" width="144" height="64"/><text x="250" y="156" class="n-title">Test browser</text><text x="250" y="176" class="n-sub">clicks every screen</text></g>
             <g class="node"><rect x="178" y="248" width="144" height="64"/><text x="250" y="276" class="n-title">BAW server</text><text x="250" y="296" class="n-sub">real apps, real data</text></g>
@@ -171,14 +171,14 @@
       </figure>
 
       <dl class="figures">
-        <div><dt>14</dt><dd>tools</dd></div>
+        <div><dt>21</dt><dd>tools</dd></div>
         <div><dt>2</dt><dd>specialist roles</dd></div>
         <div><dt>2</dt><dd>stops for your approval</dd></div>
         <div><dt>0</dt><dd>lines of BAW code by hand</dd></div>
       </dl>
 
       <div class="talk">
-        <p class="cue-do"><b>Do</b> <span>Show this diagram, then open Bob's tools panel: <b>baw-dev-tools</b>, 14 tools.</span></p>
+        <p class="cue-do"><b>Do</b> <span>Show this diagram, then open Bob's tools panel: <b>baw-dev-tools</b>, 21 tools.</span></p>
         <blockquote class="cue-say">“The connector follows an open standard called MCP. It is like a USB port for AI assistants: plug in a connector, and the assistant gets new tools.”</blockquote>
         <blockquote class="cue-say">“The connector holds the BAW password, so Bob never sees it.”</blockquote>
         <blockquote class="cue-say">“Bob never writes BAW code by hand. It writes a short description of the screen, and the connector builds the real app.”</blockquote>
@@ -190,7 +190,7 @@
       <header class="sec-head">
         <p class="timecode">06:00 <span aria-hidden="true">/</span> 12:00</p>
         <h2 id="tools-title" class="h2">What Bob can do.</h2>
-        <p class="lead">Fourteen tools in four groups, and two specialist roles.<sup><a href="#ref-2">2</a></sup></p>
+        <p class="lead">Twenty-one tools in five groups, and two specialist roles.<sup><a href="#ref-2">2</a></sup></p>
       </header>
 
       <div class="ledger">
@@ -201,6 +201,7 @@
             <tr><th>Look at pictures</th><td>Open a screenshot, read its exact colours, cut out a part such as a logo.</td></tr>
             <tr><th>Build</th><td>Turn a description into an app, read an app back into a description, build the modern screens.</td></tr>
             <tr><th>Run on BAW</th><td>Install an app, and test it in a real browser by clicking through every screen.</td></tr>
+            <tr><th>Work with data</th><td>Look at the PostgreSQL databases, fill the app's own database, and save an app's form data in it.</td></tr>
           </tbody>
         </table>
       </div>
@@ -364,10 +365,10 @@ Build, install and test it.</code></pre>
         <div class="ledger-panel qa" role="tabpanel" id="g-p2" aria-labelledby="g-t2" hidden>
           <details open><summary>Does Bob write the BAW code itself?</summary><p>No. It writes a short description; the connector builds the app from standard BAW parts.</p></details>
           <details><summary>Is the workflow real?</summary><p>Yes. It opens in Studio like any other BAW process, and developers can change it.</p></details>
-          <details><summary>Can it read from or save to a database?</summary><p>Not yet. That is the next step, and it needs a database connection set up on the BAW server.</p></details>
+          <details><summary>Can it read from or save to a database?</summary><p>Yes, in two ways, both on a test server with test data. Bob can read the platform's PostgreSQL databases, build and fill tables in the app database (<code>bawexternal</code>), and change another database only after you approve it, with the touched rows backed up first. And an app built from a spec with a <code>database</code> section loads a row by key and saves the form on Submit, through the BAW data source <code>jdbc/bawexternal</code>. The connection is not encrypted, so use test data only. The details are in the README, under Database access.</p></details>
           <details><summary>What can it not build from a picture yet?</summary><p>Tables, file uploads, links and extra buttons. Bob lists them and offers to add them in the modern screen.</p></details>
           <details><summary>Does it work with our existing apps?</summary><p>It can read any app and describe it. It only installs into test copies.</p></details>
-          <details><summary>Can other AI assistants use it?</summary><p>Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 14 tools.<sup><a href="#ref-1">1</a></sup></p></details>
+          <details><summary>Can other AI assistants use it?</summary><p>Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 21 tools.<sup><a href="#ref-1">1</a></sup></p></details>
           <details><summary>What happens when something goes wrong?</summary><p>Bob gets a plain error message, fixes its description, and tries again.</p></details>
         </div>
 

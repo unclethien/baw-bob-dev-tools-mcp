@@ -17,7 +17,10 @@ In Agent, Plan, Ask or any other mode, switch without asking (the request is the
 | The user asks to | Mode slug |
 |---|---|
 | Build a new BAW app, form, workflow or approval process, from a written requirement or from screenshots; change an app's fields, steps or workflow | `baw-app-builder` |
+| Look at, query, import, export or change data in the platform's PostgreSQL databases (the `list_tables`, `describe_table`, `run_sql`, `export_table`, `import_table` and `change_system_db` tools), or build an app that loads and saves a table (the spec's `database` section) | `baw-app-builder` |
 | Give an existing app a React or modern UI, modernize, restyle or re-theme its screens, or verify modernized services | `baw-coach-modernizer` |
+
+Database requests go to `baw-app-builder`, even when they have no app: that mode owns the database tools and their rules (read any database, write freely only in `bawexternal`, system databases only through `change_system_db`, which asks first). The Modernizer may read a table to understand an app's data, but it hands any write, and any app that stores data, to the App Builder. The `database` section's Load button and save are built by `create_app`, so the Modernizer's copies of an app's services do not change them.
 
 Ask mode has no `switch_mode`: there, answer in one line which mode to pick (🏗️ BAW App Builder or ✨ BAW Coach Modernizer) and ask the user to switch, instead of doing the work.
 
