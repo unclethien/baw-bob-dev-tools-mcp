@@ -3,12 +3,16 @@
 // Usage:
 //   node scripts/verify-service.mjs --app ZZEQ --service "Equipment Request (Modernized)" [--snapshot 1.1.0] [--out shots] [--fill]
 //   node scripts/verify-service.mjs --url <a task's coach URL> [--press "Send Back"] ...
+//   node scripts/verify-service.mjs --app ZZEQ --service "Equipment Request" --value "Request ID=R-1" --press Load
 //
 // --url opens a process task instead of an exposed service. --press (repeatable) presses the named
 // buttons in order, each on the first coach that shows it, instead of the forward button.
+// --value "Label=text" (repeatable) types the text into the field with that label, on the first coach
+// that has such a field, before any button of that coach is pressed. It works in classic UI Toolkit
+// coaches and in React ones. Buttons never pressed and values never typed are listed in the report.
 //
 // Logs in with BAW_URL, BAW_USER and BAW_PASSWORD or BAW_APIKEY from the environment, else from the
-// repository's .env (token kept in memory, never printed), opens the service's run URL,
+// BAW_* keys of the repository's .env (other keys are never read; token kept in memory, never printed), opens the service's run URL,
 // then on every coach takes a screenshot and presses the forward button: the primary React
 // button, or the native primary / last non-Back button. It stops when no coach is left.
 // Fails (exit 1) on page errors, a screen that does not change after a press, duplicate
@@ -25,6 +29,7 @@ const { values: args } = parseArgs({
     app: { type: 'string' }, service: { type: 'string' }, snapshot: { type: 'string' },
     out: { type: 'string', default: 'verify-shots' }, 'max-steps': { type: 'string', default: '12' },
     fill: { type: 'boolean', default: false }, url: { type: 'string' }, press: { type: 'string', multiple: true, default: [] },
+    value: { type: 'string', multiple: true, default: [] },
   },
 });
 if (!args.url && (!args.app || !args.service)) {
@@ -35,7 +40,7 @@ if (!args.url && (!args.app || !args.service)) {
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Test clusters often use self-signed certificates
 const envFile = new URL('../../.env', import.meta.url);
 const fileEnv = fs.existsSync(envFile) ? Object.fromEntries(fs.readFileSync(envFile, 'utf8').split('\n')
-  .filter((l) => l.includes('=') && !l.trimStart().startsWith('#'))
+  .filter((l) => /^\s*BAW_[A-Z_]*\s*=/.test(l))
   .map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim().replace(/^["']|["']$/g, '')])) : {};
 const setting = (key) => process.env[key] || fileEnv[key];
 const BASE = setting('BAW_URL')?.replace(/\/+$/, '');
@@ -64,6 +69,11 @@ if (!args.url) {
   if (!item) throw new Error(`No exposed service "${args.service}" in ${args.app} ${args.snapshot || '(tip)'}`);
 }
 const presses = [...args.press];
+const typing = args.value.map((v) => {
+  const at = v.indexOf('=');
+  if (at < 1) { console.error(`--value needs "Label=text", got "${v}"`); process.exit(2); }
+  return { label: v.slice(0, at).trim(), text: v.slice(at + 1) };
+});
 
 // Runs inside each frame: describe the coach and pick the forward button.
 function inspectCoach() {
@@ -79,8 +89,50 @@ function inspectCoach() {
   return {
     react: !!react, title: title || document.title, button: forward?.textContent.trim(), buttons: buttons.map((b) => b.textContent.trim()),
     alert: document.querySelector('.pp--inline-notification--error')?.textContent.trim(),
-    signature: document.body.innerText.length + ':' + document.body.innerText.slice(0, 2000),
+    signature: document.body.innerText.length + ':' + document.body.innerText.slice(0, 2000) + '|' + fieldValues(),
   };
+  // What the user has typed or ticked, so a Load that refills the same coach counts as a change.
+  function fieldValues() {
+    return [...document.querySelectorAll('input:not([type=hidden]), textarea, select')].filter(visible)
+      .map((el) => (el.type === 'checkbox' || el.type === 'radio' ? (el.checked ? '1' : '0') : el.value)).join('\u0001');
+  }
+}
+
+// Runs inside each frame: the visible field whose label reads `label` (UI Toolkit labels are not always
+// tied to the input, so fall back to the nearest label around a field that has no sibling field).
+function findField(label) {
+  const norm = (s) => (s || '').replace(/\s+/g, ' ').replace(/[\s*:]+$/, '').trim().toLowerCase();
+  const fields = [...document.querySelectorAll('input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio]), textarea, select')]
+    .filter((el) => !!el.offsetParent);
+  const labelsOf = (el) => {
+    const found = [el.getAttribute('aria-label')];
+    for (const id of (el.getAttribute('aria-labelledby') || '').split(/\s+/)) found.push(document.getElementById(id)?.textContent);
+    if (el.id) found.push(...[...document.querySelectorAll('label')].filter((l) => l.htmlFor === el.id).map((l) => l.textContent));
+    found.push(el.closest('label')?.textContent);
+    for (let box = el.parentElement, up = 0; box && up < 5 && box.querySelectorAll('input:not([type=hidden]), textarea, select').length === 1; box = box.parentElement, up++) {
+      found.push(box.querySelector('label, .control-label, legend')?.textContent);
+    }
+    return found.map(norm).filter(Boolean);
+  };
+  const want = norm(label);
+  return fields.find((el) => labelsOf(el).includes(want)) || fields.find((el) => labelsOf(el).some((t) => t.includes(want))) || null;
+}
+
+// Type text into the field labelled `label`, replacing what is there. Returns false when the coach has no such field.
+async function typeInto(frame, label, text) {
+  const field = (await frame.evaluateHandle(findField, label)).asElement();
+  if (!field) return false;
+  if (await field.evaluate((el) => el.tagName === 'SELECT')) {
+    const choice = await field.evaluate((el, want) => [...el.options].find((o) => o.value === want || o.textContent.trim() === want)?.value, text);
+    if (choice === undefined) throw new Error(`"${label}" has no option "${text}"`);
+    await field.select(choice);
+    return true;
+  }
+  await field.evaluate((el) => { el.focus(); try { el.select(); } catch { /* types without a selection */ } });
+  await field.press('Backspace');
+  if (text) await field.type(text);
+  await field.evaluate((el) => el.blur()); // leaving the field makes the coach take the value
+  return true;
 }
 
 // --fill: type into the React form's empty editable fields (the field's example placeholder,
@@ -150,6 +202,11 @@ try {
   for (let step = 1; current && step <= Number(args['max-steps']); step++) {
     await sleep(1500); // let React and BAW finish rendering
     current = (await coach()) || current;
+    const typed = [];
+    for (const field of typing.filter((t) => !t.done)) {
+      if (await typeInto(current.frame, field.label, field.text)) { field.done = true; typed.push(field.label); }
+    }
+    if (typed.length) await sleep(500);
     const file = path.join(args.out, `${String(step).padStart(2, '0')}-${current.info.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40)}.png`);
     // The coach scrolls inside a frame as tall as the window, so grow the window to the whole coach first.
     const top = (await (await current.frame.frameElement())?.boundingBox())?.y || 0;
@@ -161,10 +218,13 @@ try {
     const hash = crypto.createHash('md5').update(shot).digest('hex');
     const { signature, buttons, ...info } = current.info;
     if (presses.length && buttons.includes(presses[0])) info.button = presses.shift();
-    report.steps.push({ step, ...info, screenshot: file, duplicate: hashes.has(hash) || undefined });
+    report.steps.push({ step, ...info, typed: typed.length ? typed : undefined, screenshot: file, duplicate: hashes.has(hash) || undefined });
     hashes.add(hash);
     if (!info.button) { report.failure = 'no forward button'; break; }
     if (args.fill && info.react) report.steps.at(-1).filled = await fill(current.frame);
+    // Compare against the screen as it is now (typed and filled), not as it was when first inspected.
+    const now = await current.frame.evaluate(inspectCoach).catch(() => null);
+    const before = now ? now.signature : signature;
     await current.frame.evaluate((label) => {
       const react = document.querySelector('.pp-app');
       [...document.querySelectorAll(react ? '.pp-app .pp-actions button' : 'button')]
@@ -173,14 +233,17 @@ try {
     let next = null;
     for (const end = Date.now() + 30000; Date.now() < end; await sleep(1000)) {
       next = await coach(3000);
-      if (!next || next.info.signature !== signature) break;
+      if (!next || next.info.signature !== before) break;
     }
-    if (next && next.info.signature === signature) {
+    if (next && next.info.signature === before) {
       report.failure = `stuck on "${info.title}" after pressing "${info.button}"${next.info.alert ? `: ${next.info.alert}` : ''}`;
       break;
     }
     current = next;
   }
+  const unpressed = presses, untyped = typing.filter((t) => !t.done).map((t) => t.label);
+  if (unpressed.length) report.unpressed = unpressed;
+  if (untyped.length) report.untyped = untyped;
   if (!report.failure && current) report.failure = `still on a coach after ${args['max-steps']} steps`;
   if (!report.failure && report.steps.some((s) => s.duplicate)) report.failure = 'duplicate screenshots';
   report.ok = !report.failure && report.errors.length === 0;
