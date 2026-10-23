@@ -34,14 +34,23 @@ class ConfigError(Exception):
     pass
 
 
-def missing_settings():
-    """Environment first, then .env for anything not set. Returns the settings still missing."""
+def load_env_file() -> dict:
+    """The KEY=value lines of .env, unquoted."""
+    values = {}
     if ENV_FILE.exists():
         for line in ENV_FILE.read_text().splitlines():
             if "=" in line and not line.lstrip().startswith("#"):
                 key, value = line.split("=", 1)
-                if not os.environ.get(key.strip()):
-                    os.environ[key.strip()] = value.strip().strip("\"'")
+                values[key.strip()] = value.strip().strip("\"'")
+    return values
+
+
+def missing_settings():
+    """Environment first, then .env for anything not set. Returns the settings still missing.
+    POSTGRES_* stays out of os.environ, so child processes never see the database passwords (pg_ops reads them)."""
+    for key, value in load_env_file().items():
+        if not key.startswith("POSTGRES_") and not os.environ.get(key):
+            os.environ[key] = value
     missing = [k for k in ("BAW_URL", "BAW_USER") if not os.environ.get(k)]
     if not (os.environ.get("BAW_PASSWORD") or os.environ.get("BAW_APIKEY")):
         missing.append("BAW_PASSWORD or BAW_APIKEY")
