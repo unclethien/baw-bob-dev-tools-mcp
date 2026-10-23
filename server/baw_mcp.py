@@ -332,7 +332,7 @@ def change_system_db(database: str, sql: str, backup_tables: list[str | dict] | 
     one transaction, and a backup that fails or is cut at 200 MB stops the write. Only CREATE TABLE, CREATE INDEX and
     CREATE VIEW may go without a backup. Refused: DO, CALL, CASCADE, CREATE OR REPLACE, SECURITY DEFINER, triggers, rules
     and functions that reach files, programs, signals or replication. The call has a 180 s budget; if you give up
-    waiting it still finishes, so check the data before you try again. The outcome goes to work/db-backups/log.jsonl;
+    waiting it still finishes, so check the data before you try again. The outcome goes to db-backups/log.jsonl;
     "committed": "unknown" means check the data. Undo a change with pg_ops.py restore on the backup file."""
     return db("change_system_db", database, sql, backup_tables)
 
