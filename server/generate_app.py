@@ -24,6 +24,12 @@ to right, row by row; give every field a "column" (1, 2, ...) to place it, top t
 and "widths": [1, 1.6, 1] to make some columns wider. Fields of type Select (dropdown) and Radio take a
 list of "options". "cancelLabel" on a step or on "form" adds a button that ends the service.
 
+"database" stores the form in a PostgreSQL table of the bawexternal database (the data source jdbc/bawexternal), which
+BAW apps may use: {"table": "public.name", "key": "<field>", "columns": {"<field>": "<column>"}}. The key field
+(required) becomes the primary key; a Load button next to it fills the form from the row, and Submit upserts the form
+(a heritage "Load <BO>" and "Save <BO>" service each runs one fixed statement, sql_service.py). The CREATE TABLE statement is printed; run it
+before testing the app. Every simple field is stored, in a column named by its snake_case name unless "columns" says otherwise.
+
 "theme" names the app's theme file (colours, font, shapes, field icons, banner product and logo), and
 "banner" adds the app's own banner title and text; see coach_theme.py.
 
@@ -54,6 +60,7 @@ from pathlib import Path
 import app_template
 import coach_theme
 import group_views
+import sql_service
 import widget_toolkit
 from coach_builder import Layout, coachflow, uid, write_twx
 from process_builder import process_xml
@@ -74,6 +81,7 @@ PROJECT = Path(__file__).resolve().parent.parent
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 REFERENCE = "referenceNumber"
 DECISION, COMMENTS = "decision", "reviewComments"  # set by the approval task
+MESSAGE = sql_service.MESSAGE  # the database message a coach shows
 APPROVED, SENT_BACK = "Approved", "Sent back"
 TOOLKIT = "builder"
 WIDGETS = {}  # App Builder Widgets view ID by kind, from the toolkit generate() builds against
@@ -130,6 +138,8 @@ def load_spec(path: Path) -> dict:
     if not steps:
         errors.append("steps must list at least one step")
     seen = {REFERENCE} if spec.get("confirmation") else set()
+    if "database" in spec:
+        seen.add(MESSAGE)
     process = spec.get("process")
     if process is not None:
         if not isinstance(process, dict) or not process.get("name"):
@@ -196,6 +206,8 @@ def load_spec(path: Path) -> dict:
         if name not in used:
             errors.append(f"group {name!r} is not placed in any step; place it in a section ({{\"group\": \"{name}\"}}) or remove it")
     errors += coach_theme.validate(spec, PROJECT)
+    if "database" in spec:
+        errors += database_errors(spec)
     for name in (spec.get("confirmation") or {}).get("showFields", []):
         if name not in seen:
             errors.append(f"confirmation.showFields: unknown field {name!r}")
@@ -250,6 +262,53 @@ def fields(spec):
             seen.add(f["name"])
             out.append(f)
     return out
+
+
+def database_errors(spec) -> list:
+    """Check the "database" section, and keep its table plan in spec["_database"] (sql_service.table_plan).
+    The key field becomes required."""
+    stored, errors = [], []
+    for f in fields(spec):
+        if any(f.get(k) for k in ("list", "items", "fields", "properties")):
+            errors.append(f"database: field {f.get('name')!r} is a list or a nested field; only simple fields (String, Integer, Decimal, Boolean, Date) can be stored")
+        elif f.get("type", "String") in FIELD_TYPES:
+            stored.append({"name": f.get("name", ""), "label": f.get("label", ""), "type": FIELD_TYPES[f.get("type", "String")][0]})
+    if spec.get("confirmation"):
+        stored.append({"name": REFERENCE, "label": "Reference Number", "type": "String", "derived": True})
+    bo_name, process = spec.get("businessObject", {}).get("name"), spec.get("process")
+    approval = process.get("approval") if isinstance(process, dict) else None
+    taken = {spec.get("service", {}).get("name"), approval.get("name") if isinstance(approval, dict) else None}
+    errors += [f"database: the service name {n!r} is taken by a generated database service; use another name" for n in (f"Load {bo_name}", f"Save {bo_name}") if n in taken]
+    plan, plan_errors = sql_service.table_plan(spec["database"], stored)
+    if plan:
+        spec["_database"] = plan
+        for f in fields(spec):
+            if f.get("name") == plan["key"]:
+                f["required"] = True
+    return errors + plan_errors
+
+
+def database_result(spec):
+    """What create_app reports about the table: {"table", "ddl", "columns": [{"name", "type", "primaryKey"}]}, or None."""
+    return sql_service.database_result(spec["_database"]) if spec.get("_database") else None
+
+
+def key_step(spec):
+    """Index of the coach that holds the key field (every field of the tabs layout is on coach 0)."""
+    key = spec["_database"]["key"]
+    return 0 if spec.get("layout") == "tabs" else next(i for i, s in enumerate(spec["steps"]) if any(f["name"] == key for f in s["fields"]))
+
+
+def submit_coach(spec):
+    """Key (as in flow()) of the coach whose Submit ends the form: the review, or else the last step."""
+    return "review" if spec.get("review", True) else f"s{0 if spec.get('layout') == 'tabs' else len(spec['steps']) - 1}"
+
+
+def message_view(spec, lay, coach):
+    """The database message (a failed Load or Save, or no record) on the coaches that start them."""
+    if not spec.get("_database") or coach not in (f"s{key_step(spec)}", submit_coach(spec)):
+        return []
+    return [lay.view("Output Text", "", binding=f"tw.local.{spec['businessObject']['variable']}.{MESSAGE}", show_label=False)]
 
 
 # ---------------------------------------------------------------- coaches
@@ -378,9 +437,10 @@ def step_coach(spec, i):
     var, step, last = spec["businessObject"]["variable"], spec["steps"][i], i == len(spec["steps"]) - 1
     lay = Layout()
     forward = step.get("nextLabel") or ("Submit" if last and not spec.get("review", True) else "Next")
-    buttons = ([(f"back{i}", step.get("backLabel") or "Back", "D")] if i else []) + [(f"next{i}", forward, "P")]
+    load = [(f"load{i}", "Load", "D")] if spec.get("_database") and i == key_step(spec) else []
+    buttons = ([(f"back{i}", step.get("backLabel") or "Back", "D")] if i else []) + load + [(f"next{i}", forward, "P")]
     buttons += [(f"cancel{i}", step["cancelLabel"], "W")] if step.get("cancelLabel") else []
-    body = sections(lay, var, step)
+    body = [*message_view(spec, lay, f"s{i}"), *sections(lay, var, step)]
     bar, events = actions(lay, buttons)
     count = f"Step {i + 1} of {len(spec['steps'])}: " if len(spec["steps"]) > 1 else ""
     return Layout.wrap([*header(spec, lay, count + step["title"], step.get("intro", "")), *body, bar]), events
@@ -392,10 +452,11 @@ def form_coach(spec):
     lay = Layout()
     tabs = [lay.view("Vertical Layout", s["title"], children=tab_content(lay, var, s)) for s in spec["steps"]]
     body = lay.view("Tab Section", "Steps", children=tabs, show_label=False)
-    buttons = [("next0", form.get("nextLabel") or ("Next" if spec.get("review", True) else "Submit"), "P")]
+    buttons = [("load0", "Load", "D")] if spec.get("_database") else []
+    buttons += [("next0", form.get("nextLabel") or ("Next" if spec.get("review", True) else "Submit"), "P")]
     buttons += [("cancel0", form["cancelLabel"], "W")] if form.get("cancelLabel") else []
     bar, events = actions(lay, buttons)
-    return Layout.wrap([*header(spec, lay, form.get("title", spec["service"]["name"]), form.get("intro", "")), body, bar]), events
+    return Layout.wrap([*header(spec, lay, form.get("title", spec["service"]["name"]), form.get("intro", "")), *message_view(spec, lay, "s0"), body, bar]), events
 
 
 def output(lay, var, f):
@@ -428,7 +489,7 @@ def review_coach(spec):
         panels += [widget(lay, "review", step["title"], children=children)] if children else []
     bar, events = actions(lay, [("backReview", "Back", "D"), ("submit", review.get("submitLabel") or "Submit", "P")])
     intro = review.get("intro", "Check your answers. Press Back to change them or Submit to send them.")
-    return Layout.wrap([*header(spec, lay, review.get("title", "Review and Submit"), intro, editable=False), *panels, bar]), events
+    return Layout.wrap([*header(spec, lay, review.get("title", "Review and Submit"), intro, editable=False), *message_view(spec, lay, "review"), *panels, bar]), events
 
 
 def confirmation_coach(spec):
@@ -451,19 +512,22 @@ def init_script(spec):
     lines += [f"tw.local.{var}.{f['name']} = false;" for f in fields(spec) if f.get("type") == "Boolean"]
     if spec.get("confirmation"):
         lines.append(f'tw.local.{var}.{REFERENCE} = "";')
+    if spec.get("_database"):
+        lines.append(f'tw.local.{var}.{MESSAGE} = "";')
     if spec.get("process"):  # a process task gets the object from the process; start fresh only the first time
         return f"if (!tw.local.{var}) {{\n  " + "\n  ".join(lines) + "\n}"
     return "\n".join(lines)
 
 
 def assign_script(spec):
-    prefix = json.dumps(spec["confirmation"].get("referencePrefix", "REF-"))
-    return f"tw.local.{spec['businessObject']['variable']}.{REFERENCE} = {prefix} + new Date().getTime().toString().slice(-8);"
+    prefix, ref = json.dumps(spec["confirmation"].get("referencePrefix", "REF-")), f"tw.local.{spec['businessObject']['variable']}.{REFERENCE}"
+    assign = f"{ref} = {prefix} + new Date().getTime().toString().slice(-8);"
+    return f'if (!{ref}) {{ {assign} }}' if spec.get("_database") else assign  # a loaded record keeps its stored reference
 
 
-def flow(spec):
-    """Steps and sequence flows for coach_builder.coachflow."""
-    review, confirm = spec.get("review", True), spec.get("confirmation")
+def flow(spec, run_sql=None):
+    """Steps and sequence flows for coach_builder.coachflow. run_sql: sql_service.database_services(), when the spec has a database."""
+    review, confirm, plan = spec.get("review", True), spec.get("confirmation"), spec.get("_database")
     tabs = spec.get("layout") == "tabs"
     count = 1 if tabs else len(spec["steps"])  # coaches before the review
     steps = [("init", "Initialize", init_script(spec))]
@@ -472,9 +536,10 @@ def flow(spec):
     else:
         steps += [(f"s{i}", s["title"], step_coach(spec, i)) for i, s in enumerate(spec["steps"])]
     finish = "assign" if confirm else "end"
+    submit = "save_key" if plan else finish  # where Submit leads
     flows = [("start", "init", None, "rightCenter", "leftCenter"), ("init", "s0", None, "rightCenter", "leftCenter")]
     for i in range(count):
-        target = f"s{i + 1}" if i < count - 1 else ("review" if review else finish)
+        target = f"s{i + 1}" if i < count - 1 else ("review" if review else submit)
         flows.append((f"s{i}", target, f"next{i}", "rightCenter", "leftCenter"))
         if i:
             flows.append((f"s{i}", f"s{i - 1}", f"back{i}", "topCenter", "topCenter"))
@@ -482,11 +547,75 @@ def flow(spec):
     flows += [(f"s{i}", "end", f"cancel{i}", "bottomCenter", "bottomCenter") for i in cancels]
     if review:
         steps.append(("review", (review if isinstance(review, dict) else {}).get("title", "Review and Submit"), review_coach(spec)))
-        flows += [("review", f"s{count - 1}", "backReview", "topCenter", "topCenter"), ("review", finish, "submit", "rightCenter", "leftCenter")]
+        flows += [("review", f"s{count - 1}", "backReview", "topCenter", "topCenter"), ("review", submit, "submit", "rightCenter", "leftCenter")]
+    if plan:
+        steps += save_check_steps(spec)
+        flows += save_check_flows(spec, "assign" if confirm else "save")
     if confirm:
-        steps += [("assign", "Assign reference", assign_script(spec)), ("confirm", confirm.get("title", "Submitted"), confirmation_coach(spec))]
-        flows += [("assign", "confirm", None, "rightCenter", "leftCenter"), ("confirm", "end", "done", "rightCenter", "leftCenter")]
+        steps.append(("assign", "Assign reference", assign_script(spec)))
+        flows.append(("assign", "save" if plan else "confirm", None, "rightCenter", "leftCenter"))
+    if plan:
+        steps += save_steps(spec, run_sql)
+        flows += save_flows(spec, "confirm" if confirm else "end")
+    if confirm:
+        steps.append(("confirm", confirm.get("title", "Submitted"), confirmation_coach(spec)))
+        flows.append(("confirm", "end", "done", "rightCenter", "leftCenter"))
+    if plan:
+        steps += load_steps(spec, run_sql)
+        flows += load_flows(spec)
     return steps, flows
+
+
+# ---------------------------------------------------------------- database: Load and Save
+
+
+def database_call(spec, service, **inputs):
+    return sql_service.call_step(service, f"tw.local.{spec['businessObject']['variable']}.{MESSAGE}", **inputs)
+
+
+def message_set(spec):
+    return f'tw.local.{spec["businessObject"]["variable"]}.{MESSAGE} != ""'
+
+
+def save_check_steps(spec):
+    """Submit asks for the key first: without it the form goes back to the coach it was submitted from, with a message."""
+    var, plan = spec["businessObject"]["variable"], spec["_database"]
+    return [("save_key", "Check key", sql_service.missing_key_script(var, plan, "before you submit")), ("save_key_ok", "Key given?", {"gateway": True})]
+
+
+def save_check_flows(spec, next_step):
+    return [("save_key", "save_key_ok", None, "rightCenter", "leftCenter"),
+            ("save_key_ok", submit_coach(spec), None, "topCenter", "topCenter", ("No key", message_set(spec))),
+            ("save_key_ok", next_step, None, "rightCenter", "leftCenter", ("Key given", None))]
+
+
+def save_steps(spec, run_sql):
+    """Save <BO> (after "Assign reference", so the reference is stored too), then a check of what the service answered."""
+    var, plan, name = spec["businessObject"]["variable"], spec["_database"], spec["businessObject"]["name"]
+    values = sql_service.values_expression(var, plan["columns"])
+    return [("save", f"Save {name}", database_call(spec, run_sql["save"], values=values)),
+            ("save_done", "Check save", sql_service.save_apply_script(var)), ("save_ok", "Saved?", {"gateway": True})]
+
+
+def save_flows(spec, next_step):
+    """A failed Save returns to the coach where the user pressed Submit, with the message; otherwise on."""
+    return [("save", "save_done", None, "rightCenter", "leftCenter"), ("save_done", "save_ok", None, "rightCenter", "leftCenter"),
+            ("save_ok", submit_coach(spec), None, "topCenter", "topCenter", ("Failed", message_set(spec))),
+            ("save_ok", next_step, None, "rightCenter", "leftCenter", ("Saved", None))]
+
+
+def load_steps(spec, run_sql):
+    """Load <BO>: look the row up by the key typed on the coach, then fill the form (or set a message)."""
+    var, plan, name = spec["businessObject"]["variable"], spec["_database"], spec["businessObject"]["name"]
+    key = sql_service.cell(var, sql_service.key_column(plan))
+    return [("load", f"Load {name}", database_call(spec, run_sql["load"], key=key)),
+            ("load_done", "Fill form", sql_service.load_apply_script(var, plan))]
+
+
+def load_flows(spec):
+    coach = f"s{key_step(spec)}"
+    return [(coach, "load", f"load{key_step(spec)}", "bottomCenter", "bottomCenter"), ("load", "load_done", None, "rightCenter", "leftCenter"),
+            ("load_done", coach, None, "bottomCenter", "bottomCenter")]
 
 
 # ---------------------------------------------------------------- process
@@ -615,14 +744,20 @@ def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None, re
     approval = proc and proc.get("approval") is not None
     if approval:
         props += [(DECISION, "String"), (COMMENTS, "String")]
+    if spec.get("_database"):
+        props.append((MESSAGE, "String"))
     bo_id = "12." + uid()
     extra = group_objects(spec, bo_id, base, replace_groups)
-    steps, flows = flow(spec)
+    target = app_template.read_base(base) if base else app_template.builtin()
+    run_sql = sql_service.database_services(spec["_database"], bo["name"], target["sql"]) if spec.get("_database") else None
+    steps, flows = flow(spec, run_sql)
     service = {"name": svc["name"], "description": svc.get("description", svc["name"])}
     io = lambda: ("2055." + uid(), "2055." + uid()) if proc else None
     form_io = io()
     services = [("1." + uid(), uid(), form_io or "2056." + uid(), service,
                  lambda b, v: coachflow(service, steps, flows, b, v, bo["variable"], io=form_io))]
+    if run_sql:
+        extra += [service[:5] for service in run_sql.values()]
     if proc:
         approval_ids = None
         if approval:
@@ -634,7 +769,7 @@ def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None, re
         extra.append(process_definition(spec, (services[0][0], form_io), approval_ids, bo_id))
     write_twx(dest, {"name": app["name"], "acronym": app["acronym"], "snapshot": app.get("snapshot", "1.0.0")},
               {"id": bo_id, "version": uid(), "name": bo["name"], "props": props}, bo["variable"], services, "generate_app",
-              app_template.read_base(base) if base else None, extra)
+              target, extra)
     with zipfile.ZipFile(dest) as twx:
         entries = {i.filename: twx.read(i) for i in twx.infolist()}
     package, _, add, drop = widget_toolkit.embed(entries["META-INF/package.xml"].decode("utf-8"), toolkit)
@@ -642,6 +777,12 @@ def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None, re
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
         for name, data in {**{n: d for n, d in entries.items() if n not in drop}, **add}.items():
             out.writestr(name, data)
+    if spec.get("_database"):
+        try:
+            sql_service.check_data_source(dest, target["sql"])
+        except ValueError as e:
+            dest.unlink()
+            raise SystemExit(str(e)) from e
 
 
 def main():
@@ -649,6 +790,7 @@ def main():
     parser.add_argument("spec", type=Path, help="App spec JSON (see app-specs/example-equipment-request.json)")
     parser.add_argument("dest", type=Path, help="Output .twx")
     parser.add_argument("--base", type=Path, help="An app exported from the target server, to match its BAW build; the app itself to add a snapshot to it")
+    parser.add_argument("--database-json", type=Path, help='Write the spec\'s database result ({"table", "ddl", "columns"}) here, when the spec has a database')
     parser.add_argument("--toolkit", type=Path, required=True, help="App Builder Widgets .twx (widget_toolkit.py build builder), installed on the server")
     parser.add_argument("--replace-group", action="append", default=[], metavar="NAME",
                         help="Rebuild this group from the spec even if it was changed in BAW (repeatable)")
@@ -666,6 +808,13 @@ def main():
         for name, missing in KEPT.items():
             if missing:
                 print(f"Group {name} uses fields the app spec does not have: {', '.join(missing)}; add them to the spec, or rebuild the group from the spec (replace_groups)")
+    result = database_result(spec)
+    if result:
+        print(f"Database: table {result['table']} in bawexternal (data source {sql_service.DATA_SOURCE}), key {spec['_database']['key']}; Load button, save on Submit")
+        print("Run this once before the app is used (run_sql on bawexternal), then compare describe_table with the columns:")
+        print(f"  {result['ddl']}")
+        if args.database_json:
+            args.database_json.write_text(json.dumps(result, indent=2) + "\n")
     if spec.get("process"):
         proc = spec["process"]
         print(f"Process: {proc['name']}, task {(proc.get('formTask') or {}).get('name') or spec['service']['name']}"
