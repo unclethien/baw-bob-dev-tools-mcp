@@ -1,0 +1,43 @@
+{
+  "app": { "name": "ZZ Equipment Request DB", "acronym": "ZZEQD", "snapshot": "1.0.0" },
+  "businessObject": { "name": "EquipmentRequestDb", "variable": "request" },
+  "service": { "name": "Equipment Request DB", "description": "Employees request equipment. Type a request number and press Load to open a saved request; Submit saves it to PostgreSQL (bawexternal)." },
+  "theme": "app-specs/example-it-services.theme.json",
+  "database": { "table": "public.equipment_request", "key": "requestId", "columns": { "estimatedCost": "estimated_cost_usd" } },
+  "steps": [
+    {
+      "title": "Requester",
+      "intro": "Enter the request number first. Press Load to open a request that was saved before.",
+      "fields": [
+        { "name": "requestId", "label": "Request Number", "type": "String", "help": "The key of the saved row. Required." },
+        { "name": "employeeName", "label": "Employee Name", "type": "String" },
+        { "name": "employeeEmail", "label": "Work Email", "type": "String" },
+        { "name": "department", "label": "Department", "type": "String" },
+        { "name": "startDate", "label": "Needed By", "type": "Date" }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "fields": [
+        { "name": "itemType", "label": "Item Type", "type": "String" },
+        { "name": "quantity", "label": "Quantity", "type": "Integer" },
+        { "name": "estimatedCost", "label": "Estimated Cost (USD)", "type": "Decimal" },
+        { "name": "replacement", "label": "This replaces existing equipment", "type": "Boolean" },
+        { "name": "justification", "label": "Business Justification", "type": "Text Area" }
+      ]
+    }
+  ],
+  "review": { "title": "Review and Submit" },
+  "confirmation": {
+    "title": "Request Submitted",
+    "message": "Your request was saved and sent for approval. Keep the reference number for follow-up.",
+    "referencePrefix": "EQ-",
+    "showFields": ["requestId", "employeeName", "itemType"]
+  },
+  "process": {
+    "name": "Equipment Request DB Approval",
+    "description": "Request equipment, then a manager approves it. The request is saved to PostgreSQL when it is submitted.",
+    "formTask": { "name": "Request equipment", "lane": "Requester" },
+    "approval": { "name": "Approve equipment", "lane": "IT Manager" }
+  }
+}

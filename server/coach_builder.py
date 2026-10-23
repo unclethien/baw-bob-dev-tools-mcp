@@ -111,10 +111,12 @@ LINK_VISUAL = ("<ns13:linkVisualInfo><ns13:sourcePortLocation>{src}</ns13:source
 def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
     """Build the BPMN for a client-side human service.
 
-    steps: (key, name, script text | (coach layout, {event: button item id}) | service call) in diagram order.
+    steps: (key, name, script text | (coach layout, {event: button item id}) | service call | gateway) in diagram order.
     A service call is {"call": called service id, "in": [(parameter id, expression, type id)], "out": [...]};
-    "out" assigns the called service's output parameter to the expression.
-    flows: (source, target, coach event or None, source port, target port); "start" and "end" are implicit.
+    "out" assigns the called service's output parameter to the expression. A gateway is {"gateway": True}: it takes
+    the first flow out of it whose condition is true, else its default flow.
+    flows: (source, target, coach event or None, source port, target port[, (label, condition or None)]);
+    "start" and "end" are implicit. The last item names a flow out of a gateway and gives its condition (None: the default).
     io: (input id, output id) to take the business object in and hand it back (a process task's
     service); otherwise it is a private variable (var_id).
     """
@@ -131,7 +133,7 @@ def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
         if isinstance(content, tuple):
             return (f'<ns2:formTask name="{name}" id="{ids[key]}">{head}'
                     f"<ns2:formDefinition><ns19:coachDefinition>{content[0]}</ns19:coachDefinition></ns2:formDefinition></ns2:formTask>")
-        if isinstance(content, dict):
+        if isinstance(content, dict) and "call" in content:
             return (f'<ns16:callActivity calledElement="{content["call"]}" name="{name}" id="{ids[key]}">'
                     f"<ns16:extensionElements>{nvi(i)}</ns16:extensionElements>"
                     f"{incoming(key)}{outgoing(key)}"
@@ -142,15 +144,22 @@ def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
                               f'<ns16:to xsi:type="ns16:tFormalExpression" evaluatesToTypeRef="itm.{type_id}">{escape(expr)}</ns16:to>'
                               "</ns16:assignment></ns16:dataOutputAssociation>" for param, expr, type_id in content.get("out", ()))
                     + "</ns16:callActivity>")
+        if isinstance(content, dict) and content.get("gateway"):
+            default = next(flow_ids[j] for j, f in enumerate(flows) if f[0] == key and f[5][1] is None)
+            return (f'<ns16:exclusiveGateway default="{default}" name="{name}" id="{ids[key]}">'
+                    f'<ns16:extensionElements><ns13:nodeVisualInfo x="{110 + 150 * i + 30}" y="197" width="32" height="32" /></ns16:extensionElements>'
+                    f"{incoming(key)}{outgoing(key)}</ns16:exclusiveGateway>")
         default = next(flow_ids[j] for j, f in enumerate(flows) if f[0] == key)
         return (f'<ns16:scriptTask scriptFormat="text/x-javascript" default="{default}" name="{name}" id="{ids[key]}">'
                 f"{head}<ns16:script>{escape(content)}</ns16:script></ns16:scriptTask>")
 
-    def sequence_flow(i, src, dst, event, sp, tp):
+    def sequence_flow(i, src, dst, event, sp, tp, branch=(None, None)):
+        label, condition = branch
         binding = f"<ns2:coachEventBinding id=\"{uid()}\"><ns2:coachEventPath>{buttons[event]}</ns2:coachEventPath></ns2:coachEventBinding>" if event else ""
         visual = LINK_VISUAL.format(src=sp, dst=tp, ctl="true" if event else "false")
-        return (f'<ns16:sequenceFlow sourceRef="{ids[src]}" targetRef="{ids[dst]}" name="{event or ""}" id="{flow_ids[i]}">'
-                f"<ns16:extensionElements>{visual}{binding}</ns16:extensionElements></ns16:sequenceFlow>")
+        test = f'<ns16:conditionExpression xsi:type="ns16:tFormalExpression">{escape(condition)}</ns16:conditionExpression>' if condition else ""
+        return (f'<ns16:sequenceFlow sourceRef="{ids[src]}" targetRef="{ids[dst]}" name="{label or event or ""}" id="{flow_ids[i]}">'
+                f"<ns16:extensionElements>{visual}{binding}</ns16:extensionElements>{test}</ns16:sequenceFlow>")
 
     body = (
         f'<ns16:startEvent name="Start" id="{ids["start"]}"><ns16:extensionElements><ns13:nodeVisualInfo x="40" y="205" width="24" height="24" color="#F8F8F8" /></ns16:extensionElements>{outgoing("start")}</ns16:startEvent>'
@@ -180,9 +189,15 @@ def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
 ITEM = """<item><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><processItemId>{item_id}</processItemId><processId>{pid}</processId>
 <name>{name}</name><tWComponentName>{component}</tWComponentName><tWComponentId>{component_id}</tWComponentId><isLogEnabled>false</isLogEnabled><isTraceEnabled>false</isTraceEnabled>
 <traceCategory isNull="true" /><traceLevel isNull="true" /><traceMessage isNull="true" /><traceSymbolTable isNull="true" /><isExecutionContextTraced>false</isExecutionContextTraced>
-<saveExecutionContext>true</saveExecutionContext><documentation isNull="true" /><isErrorHandlerEnabled>false</isErrorHandlerEnabled><errorHandlerItemId isNull="true" />
+<saveExecutionContext>true</saveExecutionContext><documentation isNull="true" /><isErrorHandlerEnabled>{handled}</isErrorHandlerEnabled>{handler}
 <guid>{guid}</guid><versionId>{version}</versionId><externalServiceRef isNull="true" /><externalServiceOp isNull="true" /><nodeColor isNull="true" />
 <layoutData x="{x}" y="100"><errorLink><controlPoints /><showEndState>false</showEndState><showName>false</showName></errorLink></layoutData>{component_xml}</item>"""
+
+def item_xml(error_handler=None, **fields):
+    """ITEM filled in; error_handler is the process item ID that takes over when this item fails."""
+    handler = f"<errorHandlerItemId>{error_handler}</errorHandlerItemId>" if error_handler else '<errorHandlerItemId isNull="true" />'
+    return ITEM.format(handled=str(bool(error_handler)).lower(), handler=handler, **fields)
+
 
 NO_LINK_LAYOUT = "<layoutData><controlPoints /><showEndState>false</showEndState><showName>false</showName></layoutData>"
 
@@ -195,9 +210,9 @@ def exposed(service):
 def service_xml(pid, version, bo_id, var_id, service, flow, var, author):
     wrapper, end = "2025." + uid(), "2025." + uid()
     exit_id = "3008." + uid()
-    items = ITEM.format(item_id=wrapper, pid=pid, name="CoachFlowWrapper", component="CoachFlow", component_id="3032." + uid(),
+    items = item_xml(item_id=wrapper, pid=pid, name="CoachFlowWrapper", component="CoachFlow", component_id="3032." + uid(),
                         guid=uid(), version=uid(), x=0, component_xml="<TWComponent />")
-    items += ITEM.format(item_id=end, pid=pid, name="End", component="ExitPoint", component_id=exit_id, guid=uid(), version=uid(), x=700,
+    items += item_xml(item_id=end, pid=pid, name="End", component="ExitPoint", component_id=exit_id, guid=uid(), version=uid(), x=700,
                          component_xml=f'<TWComponent><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><exitPointId>{exit_id}</exitPointId>'
                                        f"<haltProcess>false</haltProcess><guid>{uid()}</guid><versionId>{uid()}</versionId></TWComponent>")
     if isinstance(var_id, tuple):  # (input id, output id): the object comes in and goes back out

@@ -14,8 +14,9 @@ server exactly, read them from any app exported from that server with read_base(
 
 import re
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from xml.etree import ElementTree
 from xml.sax.saxutils import escape, unescape
 
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
@@ -32,6 +33,17 @@ SYSTEM_TOOLKITS = {
                  "2063.83ee2bb2-72b4-4a4d-b8ae-37ecd983c05e", "2064.304ac881-16c3-47d2-97d5-6e4c4a893177", "8.6.0.0", "2017-05-24T23:23:53.574Z"),
     "TWSYS": ("2069.7692552a-ea18-49ce-bd93-a1dd62100cd9", 0, "2066.1b351583-e5cb-43b7-baee-340a63130ea7", "System Data",
               "2063.0798815e-0346-4ef4-8946-ab4301c9f340", "2064.1080ded6-d153-4654-947c-2d16fce170db", "8.6.0.0_TC", "2015-08-25T00:00:00.000Z"),
+}
+# System Data's "SQL Execute Statement (SQLResult)" (8.6.0.0_TC): the service, its parameters (by name), its exit point's
+# guid (the end state of a link that leaves the call) and the two types it uses. They hold for every server that has
+# this System Data; read_base() takes them from the base when the base already calls the service.
+SYSTEM_SQL = {
+    "service": "1.4e480adb-5741-4f5e-aead-27b3654e9cd2",
+    "parameters": {"sql": "2055.25f5990f-9abf-4cf6-9101-497d43dee141", "parameters": "2055.8b844f2a-0a1f-4f12-b34b-e9fd5191dc43",
+                   "maxRows": "2055.53ee0328-837f-427d-b0a1-0255f36f7e0c", "dataSourceName": "2055.81a41d09-a504-4a63-bdaa-a92bac26ad7e",
+                   "results": "2055.976cdc78-9d8d-41d4-ae85-f6c9a50c6764"},
+    "exit": "guid:d7766b7587753602:16bdf27c:11586c10093:-7fe7",
+    "types": {"SQLParameter": "12.f453f500-ca4e-4264-a371-72c1892e8b7c", "SQLResult": "12.3b1e3757-a1f4-4c3f-bbb8-16fecd4d65c1"},
 }
 TARGET_ENVIRONMENT = "BAW_CP4A"
 DEFAULT_THEME = "7692552a-ea18-49ce-bd93-a1dd62100cd9/72.993e03e9-2574-40fc-807c-65b06be378fd"  # System Data's theme
@@ -223,14 +235,39 @@ def read_base(path: Path) -> dict:
             toolkits[project.group(3)] = (dep_id, rank, project.group(1), project.group(2), branch, *snap.groups())
     t = target(package)
     environment = re.search(r"<targetEnvironment>([^<]+)</targetEnvironment>", defaults)
-    return {"header": header.group(0), "toolkits": {**SYSTEM_TOOLKITS, **toolkits},
+    return {"header": header.group(0), "toolkits": {**SYSTEM_TOOLKITS, **toolkits}, "sql": sql_ids(path),
             "environment": environment.group(1) if environment else TARGET_ENVIRONMENT,
             "acronym": t["acronym"], "name": t["name"], "projectId": t["projectId"], "branchId": t["branchId"],
             "branchName": t["branchName"], "snapshot": t["snapshot"], "dependencies": toolkit_dependencies(package)}
 
 
+def sql_ids(path: Path) -> dict:
+    """SYSTEM_SQL as the base app calls it, when one of its services already runs System Data's SQL Execute Statement
+    (an app generated with a database section does); otherwise the built-in IDs. A call names the service, maps every
+    parameter by name and leaves through the called service's exit point."""
+    with zipfile.ZipFile(path) as z:
+        for name in z.namelist():
+            text = z.read(name).decode("utf-8", "replace") if name.startswith("objects/1.") else ""
+            if "<attachedProcessRef>" not in text:
+                continue
+            root = ElementTree.fromstring(text.encode("utf-8"))
+            for item in root.iter("item"):
+                call = item.find("TWComponent")
+                ref = call.findtext("attachedProcessRef") if call is not None else None
+                maps = {m.get("name"): m for m in call.iter("parameterMapping")} if ref else {}
+                if set(maps) != set(SYSTEM_SQL["parameters"]):
+                    continue
+                exits = [link.findtext("endStateId") for link in root.iter("link")
+                         if link.findtext("fromProcessItemId") == item.findtext("processItemId") and link.findtext("endStateId", "").startswith("guid:")]
+                if exits:
+                    return {"service": ref.rsplit("/", 1)[-1], "parameters": {n: m.findtext("processParameterId") for n, m in maps.items()}, "exit": exits[0],
+                            "types": {"SQLParameter": maps["parameters"].findtext("classRef").rsplit("/", 1)[-1],
+                                      "SQLResult": maps["results"].findtext("classRef").rsplit("/", 1)[-1]}}
+    return SYSTEM_SQL
+
+
 def builtin() -> dict:
-    return {"header": HEADER, "toolkits": SYSTEM_TOOLKITS, "environment": TARGET_ENVIRONMENT}
+    return {"header": HEADER, "toolkits": SYSTEM_TOOLKITS, "sql": SYSTEM_SQL, "environment": TARGET_ENVIRONMENT}
 
 
 def dependency_xml(d: dict) -> str:
@@ -250,7 +287,7 @@ def package_xml(base: dict, app: dict, ids: dict, objects: list, toolkit=False, 
     dependencies: toolkits of our own, beyond the system ones (see dependency_xml).
     files: (asset uuid, managed file id) of the managed files' content."""
     name, acronym, snapshot = (escape(app[k], {'"': "&quot;"}) for k in ("name", "acronym", "snapshot"))
-    created = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     deps = "".join(
         f'\n        <dependency rank="{rank}" isManaged="false" id="{dep_id}">'
         f'\n            <project id="{project_id}" name="{project}" shortName="{short}" isToolkit="true" isHidden="false" isSystem="true"/>'
