@@ -406,15 +406,28 @@ def install_app(twx: str) -> dict:
 
 
 @mcp.tool()
-def test_service(acronym: str, service: str, snapshot: str | None = None, fill: bool = True) -> dict:
+def test_service(acronym: str, service: str, snapshot: str | None = None, fill: bool = True,
+                 press: list[str] | None = None, values: dict[str, str] | None = None) -> dict:
     """Run a service in a real browser: screenshot every screen, fill empty fields with sample
     values (fill), press the forward button, and report each step. "ok": true means every screen
-    rendered and every button moved on. Look at the screenshots before calling the work done."""
+    rendered and every button moved on. Look at the screenshots before calling the work done.
+    values: field label -> text to type, on the first screen that has that field, before any button
+    of that screen is pressed (it replaces what the field holds and beats fill), e.g. {"Request ID": "R-1"}.
+    press: button labels to press instead of the forward button, in order, each on the first screen
+    that shows it, e.g. ["Load"]; the run then goes on with the forward button. A value never typed
+    or a button never pressed makes "ok" false and is listed under "untyped" and "unpressed"."""
     if not configured():
         raise offline()
     out = WORK / ("shots-" + re.sub(r"[^A-Za-z0-9]+", "-", f"{acronym}-{snapshot or 'tip'}-{service}").strip("-"))
     args = ["--app", acronym, "--service", service] + (["--snapshot", snapshot] if snapshot else []) + (["--fill"] if fill else [])
-    return run_browser(args, out)
+    args += [a for label in press or [] for a in ("--press", label)]
+    args += [a for label, text in (values or {}).items() for a in ("--value", f"{label}={text}")]
+    report = run_browser(args, out)
+    if report.get("unpressed") or report.get("untyped"):
+        report["ok"] = False
+        left = [f"{what}: {', '.join(report[key])}" for what, key in (("never pressed", "unpressed"), ("never typed", "untyped")) if report.get(key)]
+        report.setdefault("failure", "; ".join(left))
+    return report
 
 
 def run_browser(args: list, out: Path) -> dict:
