@@ -4,7 +4,8 @@
       "type": "stdio",
       "command": "uv",
       "args": ["run", "--quiet", "--script", "/ABSOLUTE/PATH/TO/baw-bob-dev-tools-mcp/server/baw_mcp.py"],
-      "alwaysAllow": ["list_apps", "list_snapshots", "list_services", "export_app", "view_image", "image_colors", "inspect_coaches", "build_screens", "build_widget_toolkit", "test_service", "test_process"],
+      "alwaysAllow": ["list_apps", "list_snapshots", "list_services", "export_app", "view_image", "image_colors", "inspect_coaches", "build_screens", "build_widget_toolkit", "test_service", "test_process",
+                      "list_tables", "describe_table", "run_sql", "export_table", "import_table"],
       "disabled": false
     }
   }
