@@ -80,6 +80,11 @@ REFUSED = {
     ("CLUSTER",): "server commands", ("REINDEX",): "server commands", ("LISTEN",): "server commands",
     ("NOTIFY",): "server commands", ("UNLISTEN",): "server commands",
 }
+# In the app database Bob's session runs as the same role as BAW's pooled connections, which PostgreSQL lets it
+# signal. Matched on the raw text, so the names are also caught inside strings handed to a function that runs them.
+SIGNALS = re.compile(r"pg_(?:terminate|cancel)_backend", re.IGNORECASE)
+RUNS_TEXT = re.compile(r"\b(?:query_to_xml\w*|cursor_to_xml\w*|table_to_xml\w*|schema_to_xml\w*|database_to_xml\w*|ts_stat)\b|U&['\"]",
+                       re.IGNORECASE)
 CODE_OBJECTS = {"FUNCTION", "PROCEDURE", "TRIGGER", "EVENT", "RULE", "AGGREGATE", "OPERATOR", "CAST", "LANGUAGE",
                 "ROUTINE", "CONSTRAINT"}  # CONSTRAINT: CREATE CONSTRAINT TRIGGER
 ROLE_OBJECTS = {"ROLE", "USER", "GROUP", "DATABASE"}
@@ -506,7 +511,8 @@ def execute(database: str, sql: str, limit: int = 200) -> dict:
         raise PgError(f"limit must be between 1 and {LIMIT_MAX}")
     app = database == settings()["app_database"]
     words = leading_words(sql)
-    why = refusal(words, app)
+    why = refusal(words, app) or (SIGNALS.search(sql) and "signalling other sessions") \
+        or (RUNS_TEXT.search(sql) and "functions that run SQL given as text")
     if why:
         raise PgError(f"Refused: {why} cannot run through run_sql" + ("" if app else f" on {database}") + ".")
     with session(database) as conn:
