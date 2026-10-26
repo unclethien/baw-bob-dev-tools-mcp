@@ -299,6 +299,9 @@ def group_objects(spec, package, owners, views, theme, twx, replace=()):
         name = g["name"] + SUFFIX
         items = [field_widget("ns2", None, views, variable, f, root="tw.businessData", item_id=control_id(f["path"])) for f in g["fields"]]
         items = [group_views.bind_visibility(item, path) if hideable else item for item, (path, _, _, hideable) in zip(items, group_fields(g))]
+        # One layout container holds the fields, so they lay out in the widgets' responsive columns, as in a section.
+        items = [view_item("ns2", "Fields", VIEWS["Vertical Layout"], [("@label", ""), ("@helpText", ""), ("@labelVisibility", "HIDE")],
+                           children=items, tag="contributions")]
         view_id, version, xml = group_views.group_view(acronym, name, variable, class_ref, f"/{type_id}", group_fields(g), items, "modernize_coaches")
         GROUP_VIEWS[g["name"]] = (view_id, group_fields(g))
         current = f"objects/{view_id}.xml"
