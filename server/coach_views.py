@@ -77,11 +77,13 @@ def managed_asset_xml(asset_id, version, name, asset_uuid, mime, length, guid=No
 
 
 def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=(), load="", change="", unload="",
-             description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True, new_id=None, layout=""):
+             description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True, new_id=None, layout="",
+             binding_name="data"):
     """Coach View object XML. options: (name, label, class ref) or (name, label, class ref, is list) config options.
     palette_icon, preview_html and preview_js are managed file IDs (61.*) for Coach Designer.
     layout: the view's own layout items (CoachDesignerNG XML with the ns2 prefix), e.g. Custom HTML around a content box.
-    new_id makes the IDs and guids inside the view (a toolkit keeps them across builds); versionIds are always new."""
+    new_id makes the IDs and guids inside the view (a toolkit keeps them across builds); versionIds are always new.
+    binding_name names the business data binding: views in the layout bind to tw.businessData.<binding_name>.<field>."""
     new_id = new_id or uid
     def config_option(opt, label, class_ref, seq, is_list=False):
         return (f'<configOption name="{opt}">{BOOKKEEPING}<coachViewConfigOptionId>66.{new_id()}</coachViewConfigOptionId><coachViewId>{view_id}</coachViewId>'
@@ -104,7 +106,7 @@ def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=
     def script(tag, js):
         return f"<{tag}>{escape(js)}</{tag}>" if js else f'<{tag} isNull="true" />'
 
-    binding = (f'<bindingType name="data">{BOOKKEEPING}<coachViewBindingTypeId>65.{new_id()}</coachViewBindingTypeId><coachViewId>{view_id}</coachViewId><isList>false</isList>\n'
+    binding = (f'<bindingType name="{binding_name}">{BOOKKEEPING}<coachViewBindingTypeId>65.{new_id()}</coachViewBindingTypeId><coachViewId>{view_id}</coachViewId><isList>false</isList>\n'
                f'<classId>{binding_ref}</classId><seq>0</seq><description isNull="true" /><guid>{new_id()}</guid><versionId>{uid()}</versionId></bindingType>') if binding_ref else ""
     head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ns2:layout xmlns:ns2="http://www.ibm.com/bpm/CoachDesignerNG" xmlns:ns3="http://www.ibm.com/bpm/coachview"'
     view_layout = escape(f"{head}>{layout}</ns2:layout>" if layout else f"{head}/>")

@@ -13,6 +13,11 @@ Button widgets as buttons. Such a service is not offered for modernizing again. 
 App Builder Widgets (generate_app.py), Sections and Review Lists are sections, the App Header gives the
 coach's intro, and the Button Bar holds the buttons.
 
+Reusable groups that Bob built (group_views.py: Views carrying its fingerprint) are read back too; other composite
+Views stay native, as before. The spec lists the groups the services to modernize place ("groups", each with its fields), and a coach's
+placement of a group becomes a section {"title", "group", "readonly", "hide", "fields"}. "groupCandidates" lists
+the sections whose fields (at least three) appear again on another coach: groups Bob can propose.
+
 Review the spec before running modernize_coaches.py. Fix labels, mark fields
 "required" or give them a "pattern" (a regular expression), a "message" and an
 "example" (shown as the placeholder, and typed by verify-service.mjs --fill), set
@@ -24,6 +29,7 @@ Example:
 """
 
 import argparse
+import html
 import json
 import re
 import zipfile
@@ -31,6 +37,7 @@ from collections import Counter
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+import group_views
 from app_template import SYSTEM_VIEWS
 from widget_toolkit import widget_kinds, widgets
 
@@ -53,6 +60,8 @@ SPEC_RESERVED = {"path", "label", "type", "readonly", "required", "help", "optio
 SCREEN_VIEWS = ("Coach Screen (", "PP React ")  # the screen view, and its name in apps modernized before the rename
 CONTAINERS = {"Panel", "Tab Section", "Vertical Layout", "Horizontal Layout", "Collapsible Panel", "Well"}
 BACKWARD = re.compile(r"\b(back|previous|prev|cancel|close)\b", re.I)
+SUFFIX = " (Modernized)"
+MIN_CANDIDATE_FIELDS = 3
 
 
 def local(tag):
@@ -95,8 +104,9 @@ def humanize(path):
 class CoachReader:
     """Turns one coach layout into sections, buttons, native and dropped items."""
 
-    def __init__(self, names):
+    def __init__(self, names, groups=None):
         self.names = names
+        self.groups = groups or {}  # group View ID -> group (read_groups)
 
     def item(self, el):
         config = {}
@@ -109,6 +119,7 @@ class CoachReader:
         kids = [k for box in children(el, "contentBoxContrib") for k in children(box, "contributions")]
         return {
             "viewId": next((v.text for v in children(el, "layoutItemId")), ""),
+            "viewUUID": view_id,
             "view": view or "unknown view",
             "widget": WIDGETS.get(view_id),
             "builder": BUILDER.get(view_id),
@@ -125,6 +136,7 @@ class CoachReader:
         self.sections = [{"title": "", "fields": []}]
         self.buttons, self.native, self.dropped, self.leaves = [], [], [], []
         self.tabs, self.header, self.widgets = False, {}, False
+        self.hint = None  # title of the Panel or Section that wraps what is being read, for a group placed in it
         for el in [c for c in layout if local(c.tag) == "layoutItem"]:
             self.walk(el, top=True)
         return self
@@ -148,8 +160,32 @@ class CoachReader:
             rows = [run[i] for i in range(max(map(len, runs))) for run in runs if i < len(run)]
             section["fields"][len(section["fields"]) - len(flat):] = rows
 
+    def place(self, it):
+        """A placement of a group: its own section, holding the group's fields bound under the placement's variable."""
+        g = self.groups[it["viewUUID"]]
+        variable = it["binding"][len("tw.local."):]
+        section, title = self.sections[-1], self.hint or it["label"] or g["base"]
+        if section["fields"] or section.get("group"):
+            self.sections.append({"title": title, "fields": []})
+            section = self.sections[-1]
+        else:  # the title of its own Section or Panel, not of a tab or Review panel around several groups
+            section["title"] = title
+        section["group"] = g["base"]
+        if "READONLY" in it["visibility"]:
+            section["readonly"] = True
+        hide = [g["optionPaths"][k] for k, v in it["config"].items() if v == "NONE" and k in g["optionPaths"]]
+        if hide:
+            section["hide"] = hide
+        for f in g["items"]:
+            leaf = dict(f, binding=f"tw.local.{variable}.{f['path']}")
+            self.leaves.append(leaf)
+            section["fields"].append(leaf)
+        self.sections.append({"title": "", "fields": []})  # what follows the group is not part of it
+
     def walk(self, el, top=False, in_tabs=False):
         it = self.item(el)
+        if it["viewUUID"] in self.groups and it["binding"].startswith("tw.local.") and it["binding"].count(".") == 2:
+            return self.place(it)
         view = it["view"]
         self.widgets = self.widgets or bool(it["widget"])
         if it["widget"] in ("theme", "errors") or it["builder"] == "theme":
@@ -163,6 +199,11 @@ class CoachReader:
         elif view == "Custom HTML":
             self.dropped.append(f'{it["viewId"]} (Custom HTML)')
         elif view in CONTAINERS or it["children"]:
+            outer = self.hint
+            if (view in ("Panel", "Collapsible Panel", "Well") or it["builder"] == "section") and it["label"]:
+                self.hint = it["label"]
+            elif view == "Tab Section" or it["builder"] == "review":
+                self.hint = None
             if view == "Tab Section":
                 self.tabs = True
                 for kid in it["children"]:
@@ -181,6 +222,7 @@ class CoachReader:
             else:
                 for kid in it["children"]:
                     self.walk(kid, in_tabs=in_tabs)
+            self.hint = outer
         elif it["binding"].startswith("tw.local."):
             self.leaves.append(it)
             self.sections[-1]["fields"].append(it)
@@ -252,7 +294,7 @@ def flow_order(task):
     return order
 
 
-def inventory_service(root, names):
+def inventory_service(root, names, groups=None):
     process = root.find("process")
     task = first(process, "userTaskImplementation")
     if task is None:
@@ -267,7 +309,7 @@ def inventory_service(root, names):
 
     readers = []
     for form in forms:
-        reader = CoachReader(names).read(first(form, "layout"))
+        reader = CoachReader(names, groups).read(first(form, "layout"))
         readers.append((form, reader))
     react = [r for _, r in readers for leaf in r.leaves + r.native if leaf["view"].startswith(SCREEN_VIEWS)]
     react += [b for _, r in readers for b in r.dropped if any(name in b for name in SCREEN_VIEWS)]
@@ -282,6 +324,9 @@ def inventory_service(root, names):
     service["variable"], service["classRef"] = variable, variables.get(variable, "")
     if variable and not service["classRef"]:
         service["modernize"], service["reason"] = False, f"no declared type for tw.local.{variable}"
+    previews = {f"{g['base']} Preview" for g in (groups or {}).values()} | {f"{g['base']}{SUFFIX} Preview" for g in (groups or {}).values()}
+    if service["name"] in previews:
+        service["modernize"], service["reason"] = False, "the Preview service of a reusable group"
 
     for form, reader in readers:
         native = []
@@ -318,22 +363,64 @@ def inventory_service(root, names):
     return service
 
 
+def read_groups(twx, package, names):
+    """The group Views Bob built in the app (they carry its fingerprint): View ID -> {"name", "base" (without
+    " (Modernized)"), "items" (its fields as coach items, in reading order, path relative to the View's data),
+    "optionPaths" (visibility option -> path), "changedInBaw"}. Other composite Views are not groups."""
+    groups = {}
+    for oid, name in re.findall(r'<object id="(64\.[^"]+)" versionId="[^"]+" name="([^"]+)" type="coachView"/>', package):
+        text = twx.read(f"objects/{oid}.xml").decode("utf-8")
+        binding = group_views.binding_name(text)
+        if group_views.read_fingerprint(text) is None or not binding or not group_views.layout_fields(text):
+            continue
+        # Read the View's layout as a coach whose object is its data, so columns come back row by row.
+        layout = html.unescape(re.search(r"<layout>(.*?)</layout>", text, re.S).group(1))
+        reader = CoachReader(names).read(ET.fromstring(layout.replace(f"tw.businessData.{binding}.", f"tw.local.{binding}.").encode()))
+        items = [dict(it, path=it["binding"][len(f"tw.local.{binding}."):]) for s in reader.sections for it in s["fields"]]
+        option_paths = {it["visibility"][len("tw.options."):]: it["path"] for it in items if it["visibility"].startswith("tw.options.")}
+        groups[oid] = {"name": html.unescape(name), "base": html.unescape(name).removesuffix(SUFFIX), "items": items,
+                       "optionPaths": option_paths, "changedInBaw": group_views.changed_in_baw(text)}
+    return groups
+
+
+def group_candidates(services):
+    """Sections of the services to modernize, not yet groups, with at least MIN_CANDIDATE_FIELDS fields that all appear
+    on another coach of the same service (a form section and the Review that repeats it)."""
+    found = []
+    for s in (s for s in services if s["modernize"]):
+        for c in s["coaches"]:
+            for sec in c["sections"]:
+                paths = [f["path"] for f in sec["fields"]]
+                if "group" in sec or len(paths) < MIN_CANDIDATE_FIELDS or any(paths == f["fields"] for f in found):
+                    continue
+                again = [o["name"] for o in s["coaches"] if o is not c
+                         and any(set(paths) <= {f["path"] for f in other["fields"]} for other in o["sections"])]
+                if again:
+                    found.append({"title": sec["title"] or c["name"], "service": s["name"], "fields": paths, "coaches": [c["name"], *again]})
+    return found
+
+
 def inventory(twx_path: Path):
     with zipfile.ZipFile(twx_path) as twx:
         package = twx.read("META-INF/package.xml").decode("utf-8")
         project = re.search(r'<project id="[^"]+" name="([^"]+)"[^>]* shortName="([^"]*)"', package)
         snapshot = re.search(r'<target>.*?<snapshot id="[^"]+" name="([^"]+)"', package, re.S)
         names = view_names(twx)
+        groups = read_groups(twx, package, names)
         services = []
         for oid, typ in re.findall(r'<object id="(1\.[^"]+)" versionId="[^"]+" name="[^"]*" type="([^"]+)"/>', package):
             root = ET.fromstring(twx.read(f"objects/{oid}.xml"))
             if root.findtext("process/processType") == "10":
-                service = inventory_service(root, names)
+                service = inventory_service(root, names, groups)
                 if service:
                     services.append(service)
+    placed = {sec["group"]: sec["fields"] for s in services if s["modernize"] for c in s["coaches"] for sec in c["sections"] if sec.get("group")}
     return {
         "source": twx_path.name, "app": project.group(1), "acronym": project.group(2), "snapshot": snapshot.group(1),
         "theme": None, "services": services,
+        "groups": [{"name": name, "fields": fields} for name, fields in placed.items()],
+        "groupViews": [{"name": g["name"], "changedInBaw": g["changedInBaw"]} for g in groups.values()],
+        "groupCandidates": group_candidates(services),
     }
 
 
@@ -346,7 +433,13 @@ def summary(spec):
             fields = sum(len(sec["fields"]) for sec in c["sections"])
             buttons = ", ".join(f'{b["label"]} -> {b["to"]}' for b in c["buttons"])
             extra = f', {len(c["native"])} kept native' if c["native"] else ""
+            groups = [sec["group"] + (" (read-only)" if sec.get("readonly") else "") for sec in c["sections"] if sec.get("group")]
+            extra += f', groups: {", ".join(groups)}' if groups else ""
             lines.append(f'    {c["name"]}: {len(c["sections"])} section(s), {fields} field(s){extra}; buttons: {buttons or "none"}')
+    for g in spec.get("groupViews", []):
+        lines.append(f'  Group View {g["name"]}' + (" (changed in BAW since Bob built it)" if g["changedInBaw"] else ""))
+    for c in spec.get("groupCandidates", []):
+        lines.append(f'  Candidate group "{c["title"]}": {len(c["fields"])} fields on {", ".join(c["coaches"])}')
     return "\n".join(lines)
 
 

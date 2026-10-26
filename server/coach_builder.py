@@ -53,40 +53,42 @@ def uid():
 
 
 class Layout:
-    """Builds CoachDesignerNG layout XML with unique, readable layout item IDs."""
+    """Builds CoachDesignerNG layout XML with unique, readable layout item IDs. prefix is the CoachDesignerNG
+    namespace prefix: ns19 in a coach, ns2 in a view's own layout."""
 
-    def __init__(self):
+    def __init__(self, prefix="ns19"):
+        self.p = prefix
         self.counts = {}
         self.bound = []  # (layout item id, binding) of every bound view, for styling them later
+        self.group_fields = []  # fields of the editable groups placed on the coach, for styling them too
 
     def _item_id(self, kind):
         self.counts[kind] = self.counts.get(kind, 0) + 1
         return f"{kind.replace(' ', '_')}{self.counts[kind]}"
 
-    @staticmethod
-    def _config(options):
+    def _config(self, options):
         out = []
         for name, value in options:
-            val = "<ns19:value />" if value in (None, "") else f"<ns19:value>{escape(value)}</ns19:value>"
-            out.append(f"<ns19:configData><ns19:id>{uid()}</ns19:id><ns19:optionName>{name}</ns19:optionName>{val}</ns19:configData>")
+            val = f"<{self.p}:value />" if value in (None, "") else f"<{self.p}:value>{escape(value)}</{self.p}:value>"
+            out.append(f"<{self.p}:configData><{self.p}:id>{uid()}</{self.p}:id><{self.p}:optionName>{name}</{self.p}:optionName>{val}</{self.p}:configData>")
         return "".join(out)
 
     def view(self, kind, label="", binding=None, children=None, options=(), show_label=True, item_id=None, tag="contributions", view_uuid=None, help=""):
         item_id = item_id or self._item_id(kind)
         config = [("@label", label), ("@helpText", help), ("@labelVisibility", "SHOW" if show_label else "HIDE"), *options]
-        xml = f'<ns19:{tag} xsi:type="ns19:ViewRef" version="8550"><ns19:id>{uid()}</ns19:id><ns19:layoutItemId>{item_id}</ns19:layoutItemId>'
-        xml += self._config(config) + f"<ns19:viewUUID>{view_uuid or VIEWS[kind]}</ns19:viewUUID>"
+        xml = f'<{self.p}:{tag} xsi:type="{self.p}:ViewRef" version="8550"><{self.p}:id>{uid()}</{self.p}:id><{self.p}:layoutItemId>{item_id}</{self.p}:layoutItemId>'
+        xml += self._config(config) + f"<{self.p}:viewUUID>{view_uuid or VIEWS[kind]}</{self.p}:viewUUID>"
         if binding:
-            xml += f"<ns19:binding>{binding}</ns19:binding>"
+            xml += f"<{self.p}:binding>{binding}</{self.p}:binding>"
             self.bound.append((item_id, binding))
         if children is not None:
-            xml += f"<ns19:contentBoxContrib><ns19:id>{uid()}</ns19:id><ns19:contentBoxId>ContentBox1</ns19:contentBoxId>{''.join(children)}</ns19:contentBoxContrib>"
-        return xml + f"</ns19:{tag}>"
+            xml += f"<{self.p}:contentBoxContrib><{self.p}:id>{uid()}</{self.p}:id><{self.p}:contentBoxId>ContentBox1</{self.p}:contentBoxId>{''.join(children)}</{self.p}:contentBoxContrib>"
+        return xml + f"</{self.p}:{tag}>"
 
     def html(self, content, tag="contributions"):
         item_id = self._item_id("CustomHTML")
-        return (f'<ns19:{tag} xsi:type="ns19:CustomHTML" version="8550"><ns19:id>{uid()}</ns19:id><ns19:layoutItemId>{item_id}</ns19:layoutItemId>'
-                + self._config([("@customHTML.contentType", "TEXT"), ("@customHTML.textContent", content)]) + f"</ns19:{tag}>")
+        return (f'<{self.p}:{tag} xsi:type="{self.p}:CustomHTML" version="8550"><{self.p}:id>{uid()}</{self.p}:id><{self.p}:layoutItemId>{item_id}</{self.p}:layoutItemId>'
+                + self._config([("@customHTML.contentType", "TEXT"), ("@customHTML.textContent", content)]) + f"</{self.p}:{tag}>")
 
     def button(self, label, style="D"):
         """style: the UI Toolkit colour style, P (primary), D (default) or W (warning)."""

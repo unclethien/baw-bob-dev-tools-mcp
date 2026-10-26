@@ -53,6 +53,7 @@ from pathlib import Path
 
 import app_template
 import coach_theme
+import group_views
 import widget_toolkit
 from coach_builder import SYSTEM_TYPES, Layout, coachflow, uid, write_twx
 from process_builder import process_xml
@@ -76,6 +77,8 @@ DECISION, COMMENTS = "decision", "reviewComments"  # set by the approval task
 APPROVED, SENT_BACK = "Approved", "Sent back"
 TOOLKIT = "builder"
 WIDGETS = {}  # App Builder Widgets view ID by kind, from the toolkit generate() builds against
+GROUPS = {}  # group name -> (View ID, group_views fields), from generate()
+KEPT = {}  # group changed in BAW that the last generate() kept -> its fields the spec does not have
 
 
 def visibility(value):
@@ -97,6 +100,10 @@ div.body { max-width: 960px; margin: 0 auto !important; padding: 16px 24px !impo
   .layoutSec.hChild { flex-wrap: wrap; }
   .layoutSec.hChild > .Vertical_Layout { width: 100% !important; }
 }
+"""
+# A read-only field in a group (Review, a reference copy) keeps its input box; this makes it read as text.
+GROUP_CSS = """
+.form-control[readonly], .form-control[disabled] { background: #eef1f4 !important; border-color: transparent !important; box-shadow: none !important; cursor: default; }
 """
 
 
@@ -131,47 +138,63 @@ def load_spec(path: Path) -> dict:
             errors.append('process.approval must be an object, e.g. {"name": "Review", "lane": "Underwriting"}')
         elif process.get("approval") is not None:
             seen |= {DECISION, COMMENTS}
+    groups = {}
+    for k, g in enumerate(spec.get("groups") or [], 1):
+        if not isinstance(g, dict) or not isinstance(g.get("name"), str) or not g["name"].strip():
+            errors.append(f"group {k}: must be an object with a name (text)")
+            continue
+        where = f"group {g['name']}"
+        if g["name"] in groups or g["name"] + " Preview" == spec.get("service", {}).get("name"):
+            errors.append(f"{where}: the name is used twice")
+        if not g.get("fields"):
+            errors.append(f"{where}: fields must list at least one field")
+        errors += layout_errors(where, g)
+        for f in g.get("fields", []):
+            errors += field_errors(where, f, seen)
+        groups[g.get("name")] = g
+    used = set()
     for i, step in enumerate(steps, 1):
         if not step.get("title"):
             errors.append(f"step {i}: title is required")
+        for j, s in enumerate(step.get("sections") or [], 1):
+            if "group" not in s:
+                continue
+            g = groups.get(s["group"])
+            if not g:
+                errors.append(f"step {i} section {j}: unknown group {s['group']!r}; groups: {', '.join(groups) or 'none'}")
+                s["fields"] = []
+                continue
+            used.add(s["group"])
+            names = {f.get("name"): f for f in g.get("fields", [])}
+            if not isinstance(s.get("hide", []), list):
+                errors.append(f"step {i} section {j}: hide must be a list of field names")
+                s["hide"] = []
+            for name in s.get("hide", []):
+                if name not in names:
+                    errors.append(f"step {i} section {j}: hide names {name!r}, which is not a field of group {s['group']!r}")
+                elif names[name].get("required"):
+                    errors.append(f"step {i} section {j}: {name!r} is required, so group {s['group']!r} cannot hide it")
+            s.setdefault("title", g["name"])
+            s.update(fields=g.get("fields", []), columns=g.get("columns", 1), widths=g.get("widths"))
         if step.get("sections"):
             step["fields"] = [f for s in step["sections"] for f in s.get("fields", [])]
             for j, s in enumerate(step["sections"], 1):
-                if not s.get("fields"):
+                if not s.get("fields") and "group" not in s:  # a group's own check covers its fields
                     errors.append(f"step {i} section {j}: fields must list at least one field")
         else:
             step["sections"] = [{"title": step.get("title", ""), "columns": step.get("columns", 1), "widths": step.get("widths"), "fields": step.get("fields", []), "implicit": True}]
         for s in step["sections"]:
-            count = s.get("columns", 1)
-            if count not in range(1, MAX_COLUMNS + 1):
-                errors.append(f"step {i}: columns must be 1 to {MAX_COLUMNS}")
-                continue
-            widths = s.get("widths")
-            if widths is not None and (len(widths) != count or not all(isinstance(w, (int, float)) and w > 0 for w in widths)):
-                errors.append(f"step {i}: widths must list {count} positive numbers, one per column")
-            placed = [f for f in s.get("fields", []) if not f.get("wide")]
-            if any("column" in f for f in placed):
-                for f in placed:
-                    if f.get("column") not in range(1, count + 1):
-                        errors.append(f"step {i}: field {f.get('name')!r} needs a column from 1 to {count} (every field in a section that places fields)")
+            if "group" not in s:
+                errors += layout_errors(f"step {i}", s)
         if not step.get("fields"):
             errors.append(f"step {i}: fields (or sections) must list at least one field")
+        grouped = [f for s in step["sections"] if "group" in s for f in s["fields"]]
         for f in step.get("fields", []):
-            name = f.get("name", "")
-            if not IDENTIFIER.match(name):
-                errors.append(f"step {i}: field name {name!r} must be an identifier")
-            elif name in seen:
-                errors.append(f"step {i}: field name {name!r} is used twice (or is reserved)")
-            seen.add(name)
-            if f.get("type", "String") not in FIELD_TYPES:
-                errors.append(f"step {i}: field {name!r} has unknown type {f.get('type')!r}; use one of {', '.join(FIELD_TYPES)}")
-            if not f.get("label"):
-                errors.append(f"step {i}: field {name!r} needs a label")
-            errors += [f"step {i}: {e}" for e in coach_theme.field_errors(f)]
-            if f.get("type") in CHOICES:
-                f["options"] = [o if isinstance(o, dict) else {"value": str(o), "label": str(o)} for o in f.get("options") or []]
-                if not f["options"] or not all(o.get("value") for o in f["options"]):
-                    errors.append(f"step {i}: field {name!r} ({f['type']}) needs options: a list of strings or {{\"value\", \"label\"}}")
+            if not any(f is g for g in grouped):  # a group's fields are checked once, with the group
+                errors += field_errors(f"step {i}", f, seen)
+    for name in groups:
+        if name not in used:
+            errors.append(f"group {name!r} is not placed in any step; place it in a section ({{\"group\": \"{name}\"}}) or remove it")
     errors += coach_theme.validate(spec, PROJECT)
     for name in (spec.get("confirmation") or {}).get("showFields", []):
         if name not in seen:
@@ -181,8 +204,52 @@ def load_spec(path: Path) -> dict:
     return spec
 
 
+def layout_errors(where, s):
+    """Columns and widths of a section or a group."""
+    errors = []
+    count = s.get("columns", 1)
+    if count not in range(1, MAX_COLUMNS + 1):
+        return [f"{where}: columns must be 1 to {MAX_COLUMNS}"]
+    widths = s.get("widths")
+    if widths is not None and (len(widths) != count or not all(isinstance(w, (int, float)) and w > 0 for w in widths)):
+        errors.append(f"{where}: widths must list {count} positive numbers, one per column")
+    placed = [f for f in s.get("fields", []) if not f.get("wide")]
+    if any("column" in f for f in placed):
+        for f in placed:
+            if f.get("column") not in range(1, count + 1):
+                errors.append(f"{where}: field {f.get('name')!r} needs a column from 1 to {count} (every field in a section that places fields)")
+    return errors
+
+
+def field_errors(where, f, seen):
+    """One field's errors; adds its name to seen. Choice options are normalized to {"value", "label"}."""
+    errors = []
+    name = f.get("name", "")
+    if not IDENTIFIER.match(name):
+        errors.append(f"{where}: field name {name!r} must be an identifier")
+    elif name in seen:
+        errors.append(f"{where}: field name {name!r} is used twice (or is reserved)")
+    seen.add(name)
+    if f.get("type", "String") not in FIELD_TYPES:
+        errors.append(f"{where}: field {name!r} has unknown type {f.get('type')!r}; use one of {', '.join(FIELD_TYPES)}")
+    if not f.get("label"):
+        errors.append(f"{where}: field {name!r} needs a label")
+    errors += [f"{where}: {e}" for e in coach_theme.field_errors(f)]
+    if f.get("type") in CHOICES:
+        f["options"] = [o if isinstance(o, dict) else {"value": str(o), "label": str(o)} for o in f.get("options") or []]
+        if not f["options"] or not all(o.get("value") for o in f["options"]):
+            errors.append(f"{where}: field {name!r} ({f['type']}) needs options: a list of strings or {{\"value\", \"label\"}}")
+    return errors
+
+
 def fields(spec):
-    return [f for step in spec["steps"] for f in step["fields"]]
+    """Every field once, in order; a group placed in several steps has its fields once."""
+    out, seen = [], set()
+    for f in (f for step in spec["steps"] for f in step["fields"]):
+        if f["name"] not in seen:
+            seen.add(f["name"])
+            out.append(f)
+    return out
 
 
 # ---------------------------------------------------------------- coaches
@@ -197,12 +264,13 @@ def header(spec, lay, title, intro, editable=True):
     """The coach's Theme (its CSS) and App Header (the banner or a plain title, then the intro) widgets.
     Built after the rest of the coach, so the theme can style every input on it; read-only coaches
     (editable=False) get no field icons."""
-    style = CSS
+    style = CSS + (GROUP_CSS if spec.get("groups") else "")
     if spec.get("theme"):
         by_name = {f["name"]: f for f in fields(spec)}
         prefix = f"tw.local.{spec['businessObject']['variable']}."
         inputs = [(vid, by_name[b[len(prefix):]].get("type", "String"), by_name[b[len(prefix):]].get("icon"))
                   for vid, b in (lay.bound if editable else []) if b.startswith(prefix) and b[len(prefix):] in by_name and not vid.startswith("Output_Text")]
+        inputs += [(f["name"], f.get("type", "String"), f.get("icon")) for f in lay.group_fields] if editable else []
         widest = max((s.get("columns", 1) for step in spec["steps"] for s in step["sections"]), default=1)
         style += coach_theme.css(spec["theme"], inputs, 1400 if widest > 3 else 960)
     banner = json.dumps(spec["banner"]) if spec.get("banner") else ""
@@ -224,9 +292,32 @@ def choices(f):
     return [("itemLookupMode", "L"), ("staticList", json.dumps(items))]
 
 
-def input_view(lay, var, f):
+def input_view(lay, var, f, root="tw.local", item_id=None):
     kind = FIELD_TYPES[f.get("type", "String")][1]
-    return lay.view(kind, f["label"], binding=f"tw.local.{var}.{f['name']}", options=(REQUIRED if f.get("required") else []) + choices(f), help=f.get("help", ""))
+    return lay.view(kind, f["label"], binding=f"{root}.{var}.{f['name']}", options=(REQUIRED if f.get("required") else []) + choices(f),
+                    help=f.get("help", ""), item_id=item_id)
+
+
+def group_field(lay, var, f):
+    """A field inside a group View: bound through the group's data, its control ID is the field's name (field icons
+    and Coach Designer use it), and unless it is required its visibility follows the group's option for it."""
+    item = input_view(lay, var, f, root="tw.businessData", item_id=f["name"])
+    return item if f.get("required") else group_views.bind_visibility(item, f["name"])
+
+
+def group_fields(g):
+    """(path, view kind, label, hideable) of a group's fields, as group_views takes them."""
+    return [(f["name"], FIELD_TYPES[f.get("type", "String")][1], f["label"], not f.get("required")) for f in g["fields"]]
+
+
+def place_group(lay, var, s, readonly=False):
+    """A coach's placement of a group View: bound to the coach's object, with the section's hidden fields and,
+    for read-only coaches, a read-only visibility that every field in the group follows."""
+    view_id, gfields = GROUPS[s["group"]]
+    if not (readonly or s.get("readonly")):
+        lay.group_fields += [f for f in s["fields"] if f["name"] not in s.get("hide", [])]
+    options = group_views.placement_options(gfields, s.get("hide", []), readonly or s.get("readonly", False))
+    return lay.view("Group", s["group"], binding=f"tw.local.{var}", view_uuid=view_id, options=options, show_label=False)
 
 
 def column_widths(count, weights=None):
@@ -267,8 +358,8 @@ def columns(lay, var, fields, count, weights=None, make=input_view):
 
 
 def section(lay, var, s):
-    return widget(lay, "section", s["title"], children=columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths")),
-                  options=[("intro", s.get("intro", ""))])
+    content = [place_group(lay, var, s)] if "group" in s else columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"))
+    return widget(lay, "section", s["title"], children=content, options=[("intro", s.get("intro", ""))])
 
 
 def sections(lay, var, step):
@@ -315,11 +406,26 @@ def output(lay, var, f):
     return lay.view(kind, f["label"], binding=binding, options=READ_ONLY + choices(f))
 
 
+def read_only(lay, var, s, shown, spec):
+    """A section on the Review coach: its group placed read-only, once (a group a step shows again for reference is
+    skipped), hiding only the fields every placement hides; or an output per field."""
+    if "group" not in s:
+        return [output(lay, var, f) for f in s["fields"]]
+    if s["group"] in shown:
+        return []
+    shown.add(s["group"])
+    hides = [set(p.get("hide", [])) for step in spec["steps"] for p in step["sections"] if p.get("group") == s["group"]]
+    return [place_group(lay, var, dict(s, hide=sorted(set.intersection(*hides))), readonly=True)]
+
+
 def review_coach(spec):
     var, review = spec["businessObject"]["variable"], spec.get("review")
     review = review if isinstance(review, dict) else {}
     lay = Layout()
-    panels = [widget(lay, "review", s["title"], children=[output(lay, var, f) for f in s["fields"]]) for s in spec["steps"]]
+    shown, panels = set(), []
+    for step in spec["steps"]:
+        children = [item for s in step["sections"] for item in read_only(lay, var, s, shown, spec)]
+        panels += [widget(lay, "review", step["title"], children=children)] if children else []
     bar, events = actions(lay, [("backReview", "Back", "D"), ("submit", review.get("submitLabel") or "Submit", "P")])
     intro = review.get("intro", "Check your answers. Press Back to change them or Submit to send them.")
     return Layout.wrap([*header(spec, lay, review.get("title", "Review and Submit"), intro, editable=False), *panels, bar]), events
@@ -390,8 +496,10 @@ def approval_coach(spec):
     """Every field read-only, section by section, then a comments box and Approve / Send back."""
     var, appr = spec["businessObject"]["variable"], spec["process"]["approval"]
     lay = Layout()
-    panels = [widget(lay, "review", s["title"], children=columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"), make=output))
-              for step in spec["steps"] for s in step["sections"]]
+    shown = set()
+    panels = [widget(lay, "review", s["title"], children=read_only(lay, var, s, shown, spec) if "group" in s
+                     else columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"), make=output))
+              for step in spec["steps"] for s in step["sections"] if s.get("group") not in shown]
     comments = widget(lay, "section", "Decision", children=[lay.view("Text Area", appr.get("commentsLabel") or "Comments", binding=f"tw.local.{var}.{COMMENTS}")])
     bar, events = actions(lay, [("approve", appr.get("approveLabel") or "Approve", "P"), ("sendBack", appr.get("returnLabel") or "Send Back", "W")])
     title = appr.get("name") or "Review"
@@ -442,7 +550,60 @@ def process_definition(spec, form, approval, bo_id):
 # ---------------------------------------------------------------- package
 
 
-def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None):
+def kept_view(base_twx, view_id, bo_id, names):
+    """A group View from the app on the server that someone changed in BAW, ready to go into this build: pointed at
+    this build's business object, with a new version. None when there is none to keep."""
+    if not base_twx:
+        return None
+    with zipfile.ZipFile(base_twx) as z:
+        if f"objects/{view_id}.xml" not in z.namelist():
+            return None
+        text = z.read(f"objects/{view_id}.xml").decode("utf-8")
+    if not group_views.changed_in_baw(text):
+        return None
+    old = re.search(r'<bindingType name="[^"]+">.*?<classId>([^<]+)</classId>', text, re.S)
+    if old:  # a group whose data binding someone removed is kept as it is
+        text = text.replace(f"<classId>{old.group(1)}</classId>", f"<classId>/{bo_id}</classId>")
+    text = re.sub(r"(<coachView id=\"[^\"]+\" name=\"[^\"]+\">.*?<versionId>)[^<]+", lambda m: m.group(1) + uid(), text, count=1, flags=re.S)
+    version = re.search(r"<coachView .*?<versionId>([^<]+)</versionId>", text, re.S).group(1)
+    return version, text, [f["path"] for f in group_views.layout_fields(text) if f["path"] not in names]
+
+
+def group_objects(spec, bo_id, base=None, replace=()):
+    """The app's group Views, their Preview services and the visibility type their options use, as package objects;
+    fills GROUPS for the coaches that place them. A group View the app on the server (base) has and someone changed
+    in BAW stays as it is (listed in KEPT), unless its group is in replace."""
+    GROUPS.clear()
+    KEPT.clear()
+    unknown = [n for n in replace if n not in {g["name"] for g in spec.get("groups") or []}]
+    if unknown:
+        raise SystemExit(f"--replace-group names no group of the app spec: {', '.join(unknown)}; groups: "
+                         + (", ".join(g["name"] for g in spec.get("groups") or []) or "none"))
+    if not spec.get("groups"):
+        return []
+    acronym, var = spec["app"]["acronym"], spec["businessObject"]["variable"]
+    type_id, type_version, type_xml = group_views.visibility_type(acronym)
+    objects = [(type_id, type_version, group_views.VISIBILITY_TYPE, "twClass", type_xml)]
+    for g in spec["groups"]:
+        lay = Layout("ns2")
+        items = columns(lay, var, g["fields"], g.get("columns", 1), g.get("widths"), make=group_field)
+        view_id, version, xml = group_views.group_view(acronym, g["name"], var, f"/{bo_id}", f"/{type_id}", group_fields(g), items, "generate_app")
+        GROUPS[g["name"]] = (view_id, group_fields(g))
+        kept = None if g["name"] in replace else kept_view(base, view_id, bo_id, {f["name"] for f in fields(spec)})
+        if kept:
+            version, xml, missing = kept
+            KEPT[g["name"]] = missing
+        objects.append((view_id, version, g["name"], "coachView", xml))
+    for g in spec["groups"]:
+        lay = Layout()
+        body = widget(lay, "section", g["name"], children=[place_group(lay, var, {"group": g["name"], "fields": g["fields"]})])
+        bar, events = actions(lay, [("ok", "OK", "P")])
+        layout = Layout.wrap([*header(spec, lay, f"{g['name']} Preview", "The reusable group on its own."), body, bar])
+        objects.append(group_views.preview_service(acronym, f"{g['name']} Preview", var, bo_id, layout, events["ok"], init_script(spec), "generate_app"))
+    return objects
+
+
+def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None, replace_groups=()):
     """toolkit: the App Builder Widgets .twx (widget_toolkit.py build builder) the app is to depend on."""
     WIDGETS.clear()
     WIDGETS.update(widget_toolkit.view_ids(TOOLKIT, toolkit))
@@ -455,13 +616,13 @@ def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None):
     if approval:
         props += [(DECISION, "String"), (COMMENTS, "String")]
     bo_id = "12." + uid()
+    extra = group_objects(spec, bo_id, base, replace_groups)
     steps, flows = flow(spec)
     service = {"name": svc["name"], "description": svc.get("description", svc["name"])}
     io = lambda: ("2055." + uid(), "2055." + uid()) if proc else None
     form_io = io()
     services = [("1." + uid(), uid(), form_io or "2056." + uid(), service,
                  lambda b, v: coachflow(service, steps, flows, b, v, bo["variable"], io=form_io))]
-    extra = []
     if proc:
         approval_ids = None
         if approval:
@@ -489,13 +650,22 @@ def main():
     parser.add_argument("dest", type=Path, help="Output .twx")
     parser.add_argument("--base", type=Path, help="An app exported from the target server, to match its BAW build; the app itself to add a snapshot to it")
     parser.add_argument("--toolkit", type=Path, required=True, help="App Builder Widgets .twx (widget_toolkit.py build builder), installed on the server")
+    parser.add_argument("--replace-group", action="append", default=[], metavar="NAME",
+                        help="Rebuild this group from the spec even if it was changed in BAW (repeatable)")
     args = parser.parse_args()
     spec = load_spec(args.spec)
-    generate(spec, args.dest, args.toolkit, args.base)
+    generate(spec, args.dest, args.toolkit, args.base, args.replace_group)
     app = spec["app"]
     print(f"Wrote {args.dest}: app {app['name']} ({app['acronym']}), snapshot {app.get('snapshot', '1.0.0')}")
     print(f"Service: {spec['service']['name']}, {len(spec['steps'])} step(s) as {'tabs' if spec.get('layout') == 'tabs' else 'screens'}, {len(fields(spec))} field(s)"
           + (", review" if spec.get("review", True) else "") + (", confirmation" if spec.get("confirmation") else ""))
+    if spec.get("groups"):
+        print("Groups: " + ", ".join(f"{g['name']} (View, and service {g['name']} Preview)" for g in spec["groups"]))
+    if KEPT:
+        print(f"Changed in BAW, kept: {json.dumps(list(KEPT))}")
+        for name, missing in KEPT.items():
+            if missing:
+                print(f"Group {name} uses fields the app spec does not have: {', '.join(missing)}; add them to the spec, or rebuild the group from the spec (replace_groups)")
     if spec.get("process"):
         proc = spec["process"]
         print(f"Process: {proc['name']}, task {(proc.get('formTask') or {}).get('name') or spec['service']['name']}"
