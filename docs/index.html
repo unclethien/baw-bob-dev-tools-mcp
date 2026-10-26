@@ -241,15 +241,16 @@ h3[id]{scroll-margin-top:var(--s06)}
   <div class="shell">
     <h1>BAW Dev Tools MCP documentation</h1>
     <p class="lede">Build and modernize IBM Business Automation Workflow process apps with an AI agent. IBM Bob
-      writes app specs and coach specs; the MCP server builds the coaches from drag-and-drop widget toolkits, installs
-      and tests them on BAW. Start here.</p>
+      writes app specs and coach specs; the MCP server builds the coaches from drag-and-drop widget toolkits and reusable
+      groups of fields, installs and tests them on BAW. Start here.</p>
     <div class="tags">
       <span class="tag tag-blue">CP4BA · BAW 26.0.0</span>
       <span class="tag tag-gray">15 MCP tools</span>
-      <span class="tag tag-gray">2 Bob modes · 6 skills</span>
+      <span class="tag tag-gray">2 Bob modes · 8 skills</span>
       <span class="tag tag-gray">2 widget toolkits</span>
+      <span class="tag tag-gray">Reusable groups</span>
       <span class="tag tag-green">New snapshots only · no delete</span>
-      <span class="tag tag-purple">20 October 2026</span>
+      <span class="tag tag-purple">26 October 2026</span>
     </div>
   </div>
 </div>
@@ -269,7 +270,7 @@ h3[id]{scroll-margin-top:var(--s06)}
     <a class="doc" href="app-spec-reference.html">
       <span class="kicker">Reference · App builders</span>
       <h3>App spec reference</h3>
-      <p>Every key of the JSON that describes an app: steps or tabs, sections and columns, field types, review, confirmation, theme files and banner, and the validation errors.</p>
+      <p>Every key of the JSON that describes an app: steps or tabs, sections and columns, reusable groups, field types, review, confirmation, theme files and banner, and the validation errors.</p>
       <span class="tags"><span class="tag tag-blue">JSON</span><span class="tag tag-gray">8 field types</span></span>
       <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
     </a>
@@ -289,9 +290,23 @@ h3[id]{scroll-margin-top:var(--s06)}
     </a>
     <a class="doc" href="showoff/baw-mcp-demo-script/index.html">
       <span class="kicker">Script · Presenters</span>
-      <h3>Demo script</h3>
+      <h3>Demo script: from screenshots to an app</h3>
       <p>A timed run of show for presenting the tools live: what to say, what to type into Bob and what the audience sees.</p>
       <span class="tags"><span class="tag tag-blue">Live demo</span><span class="tag tag-gray">Timer · light and dark</span></span>
+      <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
+    </a>
+    <a class="doc" href="showoff/quote-widgets-demo-script/index.html">
+      <span class="kicker">Script · Presenters</span>
+      <h3>Demo script: the Quote screen as widgets</h3>
+      <p>Bob rebuilds a Quote screen from pictures, from small widgets in two toolkits, classic and React with Carbon, and writes a new Toggle widget live.</p>
+      <span class="tags"><span class="tag tag-blue">60 min · 2 acts</span><span class="tag tag-gray">Widget toolkits</span></span>
+      <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
+    </a>
+    <a class="doc" href="showoff/reusable-groups-demo-script/index.html">
+      <span class="kicker">Script · Presenters</span>
+      <h3>Demo script: reusable groups</h3>
+      <p>Bob builds the Quote screen from reusable groups of fields; the team changes a group in Coach Designer, and Bob keeps their change when it rebuilds.</p>
+      <span class="tags"><span class="tag tag-blue">45 min · 2 acts</span><span class="tag tag-gray">Reusable groups</span></span>
       <svg class="go" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg>
     </a>
     <a class="doc" href="#files">
@@ -315,12 +330,13 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td>Set up the project and build my first app</td><td><a href="getting-started.html">Getting started</a></td></tr>
         <tr><td>Write or fix an app spec, or understand one Bob wrote</td><td><a href="app-spec-reference.html">App spec reference</a></td></tr>
         <tr><td>Make an app look like a screenshot or a brand, or change its look</td><td><a href="app-spec-reference.html#theme">App spec reference: theme files</a> and <a href="app-spec-reference.html#banner">banner</a></td></tr>
+        <tr><td>Reuse the same fields on several screens, and change them in BAW</td><td><a href="app-spec-reference.html#groups">App spec reference: groups</a> and <a href="getting-started.html#groups">Getting started: reusable groups</a></td></tr>
         <tr><td>Know why a spec is rejected</td><td><a href="app-spec-reference.html#errors">App spec reference: validation errors</a></td></tr>
         <tr><td>Back up an app, or move one between servers, without Bob</td><td><a href="baw-import-export-terminal-guide.html">Terminal guide</a></td></tr>
         <tr><td>Know which BAW endpoints the tools call, and why</td><td><a href="baw-rest-api-reference.html">REST API usage</a></td></tr>
         <tr><td>Look up any BAW REST operation</td><td>The vendor specs in <a href="#files">reference files</a></td></tr>
         <tr><td>Fix a connection, install or test problem</td><td><a href="getting-started.html#troubleshooting">Getting started: troubleshooting</a></td></tr>
-        <tr><td>Show the tools to an audience</td><td><a href="showoff/baw-mcp-demo-script/index.html">Demo script</a></td></tr>
+        <tr><td>Show the tools to an audience</td><td><a href="showoff/baw-mcp-demo-script/index.html">Demo script</a>, <a href="showoff/quote-widgets-demo-script/index.html">the Quote screen as widgets</a> or <a href="showoff/reusable-groups-demo-script/index.html">reusable groups</a></td></tr>
       </tbody>
     </table>
   </div>
@@ -348,6 +364,10 @@ h3[id]{scroll-margin-top:var(--s06)}
   Open a coach in Coach Designer and you can drag, drop, relabel and rearrange its widgets; each one has a palette icon and
   a live preview. Each toolkit is installed once per server, see
   <a href="getting-started.html#toolkits">Getting started: the widget toolkits</a>.</p>
+  <p>Information that appears on several screens can be a <strong>reusable group</strong>: a View inside the app,
+  listed under its User interface, that every coach places, editable on one step and read-only on another, with a
+  Preview service to run it alone. Users change a group in Coach Designer; on the next rebuild Bob keeps their version
+  and asks before replacing it. See <a href="getting-started.html#groups">Getting started: reusable groups</a>.</p>
   <p>No BAW server to connect to? The build tools still work: every app is built from a template that ships with the
   tools, and you import the <code>.twx</code> in Workflow Center yourself. See
   <a href="getting-started.html#no-server">No BAW server? Import the app yourself</a>.</p>
@@ -379,9 +399,11 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td rowspan="3">🏗️ BAW App Builder</td><td class="mono">app-theme</td><td>A described look or a screenshot &rarr; a theme file, used by both modes</td></tr>
         <tr><td class="mono">baw-app-builder</td><td>A written requirement &rarr; app spec &rarr; installed, tested app built from App Builder Widgets</td></tr>
         <tr><td class="mono">screenshot-to-app</td><td>A screenshot of a form &rarr; an app with the same layout, colours and header</td></tr>
-        <tr><td rowspan="3">✨ BAW Coach Modernizer</td><td class="mono">coach-inventory</td><td>Reads an app's coaches into an editable coach spec</td></tr>
+        <tr><td rowspan="4">✨ BAW Coach Modernizer</td><td class="mono">coach-inventory</td><td>Reads an app's coaches into an editable coach spec, with its reusable groups and the groups worth proposing</td></tr>
         <tr><td class="mono">coach-modernize</td><td>Adds a "(Modernized)" copy of each service, its coaches made of Modernizer Widgets in the app's theme, as a new snapshot, installs and tests them</td></tr>
+        <tr><td class="mono">modernizer-widget</td><td>Adds a new widget to Modernizer Widgets when no widget does the job, checks it and builds a new toolkit snapshot</td></tr>
         <tr><td class="mono">react-coach-screen</td><td>Optional: writes a React + Carbon screen for one coach that needs more than the widgets give</td></tr>
+        <tr><td>Both modes</td><td class="mono">coach-groups</td><td>Proposes reusable groups, builds them as Views with Preview services, and asks before replacing a group someone changed in BAW</td></tr>
       </tbody>
     </table>
   </div>
@@ -390,6 +412,7 @@ h3[id]{scroll-margin-top:var(--s06)}
   <ul>
     <li>Bob installs into an app it did not create in the same task only after you approve. This is a rule of the Bob modes; the tools do not check it.</li>
     <li>A snapshot name can be used once per app; BAW would otherwise keep the old content silently.</li>
+    <li>A group someone changed in BAW is kept on Bob's next rebuild until you say to replace it.</li>
     <li>There is no delete tool.</li>
     <li>Credentials stay in the server process and are never returned to the agent.</li>
   </ul>
@@ -406,7 +429,7 @@ h3[id]{scroll-margin-top:var(--s06)}
         <tr><td class="mono"><a href="api-specs/baw-ops-rest-swagger-2.0.json">api-specs/baw-ops-rest-swagger-2.0.json</a></td><td>BAW Operations REST API, as served by the server (<code>/bas/ops</code>, 156 operations)</td></tr>
         <tr><td class="mono"><a href="api-specs/baw-bpm-rest-swagger-2.0.json">api-specs/baw-bpm-rest-swagger-2.0.json</a></td><td>BAW BPM REST API (<code>/bas/bpm</code>, 11 operations)</td></tr>
         <tr><td class="mono"><a href="api-specs/baw-case-rest-swagger-2.0.json">api-specs/baw-case-rest-swagger-2.0.json</a></td><td>BAW Case REST API (<code>/bas/CaseManager/CASEREST/v2</code>, 33 operations)</td></tr>
-        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/tree/main/app-specs">app-specs/</a></td><td>Three example app specs</td></tr>
+        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/tree/main/app-specs">app-specs/</a></td><td>Four example app specs and three theme files</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp#readme">README.md</a></td><td>Project overview, setup and tool list</td></tr>
       </tbody>
     </table>
@@ -419,7 +442,7 @@ h3[id]{scroll-margin-top:var(--s06)}
 
 <footer class="shell">
   <p>BAW Dev Tools MCP is not an official IBM project. Use it with test servers and test apps.</p>
-  <p>Facts on this page checked on 9 October 2026 against <code>baw_mcp.py</code>, <code>.bob/</code> and the documents it links.</p>
+  <p>Facts on this page checked on 26 October 2026 against <code>baw_mcp.py</code>, <code>.bob/</code> and the documents it links.</p>
 </footer>
 
 
