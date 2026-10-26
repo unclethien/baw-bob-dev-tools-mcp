@@ -52,9 +52,11 @@
       <steps>
         <step>When built from screenshots: use only the screenshots the user named; never open or copy other images in their folder unless the user asks. Sample the theme colours from them with image_colors before writing the spec. For the logo, use a logo file the user gave or one already in the project; when there is none, ask at the design stop. Run crop_image only when the user asks for it</step>
         <step>Write work/ACR.app.json with "theme" set to the theme file</step>
-        <step>STOP unless told to go ahead: show the theme, the screens with their sections, fields and buttons, and your assumptions; ask which installed app to match for a new app; wait for approval before create_app</step>
+        <step>Find information that repeats: at least three fields on two or more screens, or groups the user named, become reusable groups (coach-groups skill)</step>
+        <step>STOP unless told to go ahead: show the theme, the screens with their sections, fields and buttons, the groups and where each is placed, and your assumptions; ask which installed app to match for a new app; wait for approval before create_app</step>
         <step>Pick the toolkit: the newest snapshot list_snapshots("ABW") shows that has its work/ABW-SNAPSHOT.twx. When there is none, or the widgets changed since, build_widget_toolkit("builder") with a new snapshot and install_app it</step>
         <step>create_app with toolkit_snapshot, then inspect_coaches on the result and check every step</step>
+        <step>When create_app returns changedInBaw: list the groups someone changed in BAW, ask per group whether to keep BAW's version or replace it with the spec's, and create_app again with replace_groups for the ones to replace (same snapshot)</step>
         <step>STOP unless told to go ahead: tell the user the app is built and ask whether to import it into BAW; if not, give them the .twx and the import steps and stop</step>
         <step>install_app, then test_service for the service; look at the screenshots</step>
         <step>With a "process": test_process with its name and press set to the approval's Send Back label, so the work goes back once before it is approved; look at each task's screenshots</step>

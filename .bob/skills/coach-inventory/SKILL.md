@@ -17,6 +17,8 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
    - `native`, the items that stay as BAW views, below the widgets;
    - `dropped`, the items that will not appear at all.
 
+   A section with `"group"` is a placement of a reusable group (coach-groups skill); the spec's `"groups"` hold their fields. `groupCandidates` lists sections whose fields (at least three) appear again on another coach, and `changedInBaw` the groups someone changed in BAW.
+
 3. **Improve the spec.** Edit only these keys:
 
    | Key | Change |
@@ -40,7 +42,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 
 4. **Check what will not be modernized.** Read `native` and `dropped` for every coach. Tell the user about anything important that is dropped, such as a Custom HTML block with instructions, and add its text to the coach's `intro` when it matters.
 
-5. **STOP.** Show the inventory summary, the theme file, a short list of your changes, and the native or dropped items. Then ask:
+5. **STOP.** Show the inventory summary, the theme file, a short list of your changes, and the native or dropped items. Propose the `groupCandidates` as groups, and list any group changed in BAW. Then ask:
    > Approve this spec, or tell me what to change. When approved, I will build each coach from Modernizer Widgets, which you can rearrange in Coach Designer. Tell me if a coach should get a hand-written screen instead.
 
    Skip the stop only when the user said to continue without review.

@@ -78,6 +78,8 @@ Path: `work/<ACRONYM>.app.json`. Follow the baw-app-builder skill for the `app`,
   ]}
 ```
 
+When the same information (at least three fields) appears on two or more screens, or the user names a group, make it a reusable group instead of repeating the fields (coach-groups skill), and show it at the design stop.
+
 Build only the screens in the screenshots, plus what they clearly lead to. If the last screen's forward button says "Continue" or "Next", the user expects something after it: add a read-only review (`"review": { "title": ... }`) and, for a submission, a `confirmation`. If it says "Submit" and the user asked for nothing more, set `"review": false`.
 
 A screenshot shows one screen, not who works on it next. When the user asks for a workflow around it (a hand-off, a review, an approval, a BPMN diagram), add a `process` section as in the baw-app-builder skill: the form becomes the first task in its lane, and an `approval` adds a review task in a second lane with Approve and Send Back. After step 5 below, also run `test_process` with `press: ["<Send Back label>"]`.
