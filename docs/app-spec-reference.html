@@ -266,6 +266,7 @@ h3[id]{scroll-margin-top:var(--s06)}
     <li><a href="#layout">layout and form</a></li>
     <li><a href="#steps">steps</a></li>
     <li><a href="#sections">sections and columns</a></li>
+    <li><a href="#groups">groups</a></li>
     <li><a href="#fields">fields</a></li>
     <li><a href="#types">Field types</a></li>
     <li><a href="#review">review and confirmation</a></li>
@@ -369,6 +370,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono"><a href="#theme">theme</a></td><td>Yes</td><td></td><td>Path of the theme file: colours, font, shapes, field icons, width, button placement, header product name and logo</td></tr>
         <tr><td class="mono"><a href="#banner">banner</a></td><td>No</td><td>off</td><td>The header strip's title and text</td></tr>
         <tr><td class="mono"><a href="#process">process</a></td><td>No</td><td>off</td><td>A workflow on top of the form: lanes, an optional approval task, and Send Back to the form</td></tr>
+        <tr><td class="mono"><a href="#groups">groups</a></td><td>No</td><td>none</td><td>Reusable groups of fields, each a View in the app that sections place</td></tr>
       </tbody>
     </table>
   </div>
@@ -516,6 +518,60 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
   { "name": "yearEstablished", "label": "Year Established", "type": "Integer" },
   { "name": "businessSize", "label": "Business Size", "type": "Radio", "options": ["Small", "Medium", "Large"], "wide": true }
 ]}</code></pre>
+</section>
+
+<hr class="rule" aria-hidden="true">
+
+<section id="groups">
+  <h2>groups</h2>
+  <p>A group is a set of fields that appears on several screens, for example a contact's details on the form, again
+  for reference on a later step, and on the review. Instead of repeating the fields, the app gets one
+  <strong>View</strong> for the group, listed in Workflow Center under the app's <em>User interface</em>, and every
+  coach places it. Users can open the View in Coach Designer and add, remove or move fields; every coach that places
+  it follows. Each group also gets a client-side human service, <strong>&lt;group&gt; Preview</strong>, that shows
+  only the group.</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="group keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Required</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">name</td><td>Yes</td><td>The View's name, unique among the groups. Use words, digits, spaces and hyphens: it also names the Preview service</td></tr>
+        <tr><td class="mono">columns</td><td>No</td><td>1 to 6, as in a <a href="#sections">section</a></td></tr>
+        <tr><td class="mono">widths</td><td>No</td><td>Relative column widths, as in a section</td></tr>
+        <tr><td class="mono">fields</td><td>Yes</td><td>The group's <a href="#fields">fields</a>. Each belongs to the business object once, however often the group is placed, and is not listed in any other section</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>A section places a group instead of listing fields:</p>
+  <div class="tablewrap" role="region" tabindex="0" aria-label="placement keys, scrollable">
+    <table>
+      <thead><tr><th scope="col">Key</th><th scope="col">Required</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">group</td><td>Yes</td><td>The group's <code>name</code></td></tr>
+        <tr><td class="mono">title</td><td>No</td><td>Panel title; default the group's name</td></tr>
+        <tr><td class="mono">intro</td><td>No</td><td>Text at the top of the panel</td></tr>
+        <tr><td class="mono">readonly</td><td>No</td><td><code>true</code> shows the group read-only here (the placement's own Visibility, which every field in it follows)</td></tr>
+        <tr><td class="mono">hide</td><td>No</td><td>Field names to hide here. A required field cannot be hidden</td></tr>
+      </tbody>
+    </table>
+  </div>
+<pre><code>"groups": [
+  { "name": "Group Contact", "columns": 2, "fields": [
+    { "name": "groupName", "label": "Group Name", "required": true },
+    { "name": "contactName", "label": "Contact Name" },
+    { "name": "contactEmail", "label": "Contact Email" },
+    { "name": "contactPhone", "label": "Contact Phone" } ] }
+],
+"steps": [
+  { "title": "Group", "sections": [ { "group": "Group Contact" } ] },
+  { "title": "Rating", "sections": [
+    { "group": "Group Contact", "title": "Contact (for reference)", "readonly": true, "hide": ["contactPhone"] } ] }
+]</code></pre>
+  <ul>
+    <li>The review shows each group once, read-only, hiding only the fields every placement hides. So does an approval task.</li>
+    <li>In Coach Designer each placement has a <em>&lt;field&gt; visibility</em> setting per optional field (Same as parent, or Hidden) and its own Visibility (Read only).</li>
+    <li>Rebuilding an app whose group someone changed in Coach Designer (added, removed, moved or relabelled a field, then saved a snapshot) keeps their version and lists it in <code>create_app</code>'s <code>changedInBaw</code>; build again with <code>replace_groups</code> to use the spec's version. Other edits to a group (help text, choices, styling) belong in the spec, since a rebuild replaces them.</li>
+    <li><code>inspect_coaches</code> reads the groups back, so <code>modernize_app</code> builds a <strong>&lt;group&gt; (Modernized)</strong> View of Modernizer Widgets and its Preview service for each. Modernized groups show one field per row.</li>
+  </ul>
 </section>
 
 <hr class="rule" aria-hidden="true">
@@ -762,6 +818,10 @@ Invalid app spec:
         <tr><td class="mono">is not a theme setting</td><td>Check the spelling against the <a href="#theme">theme keys</a>; they are case-sensitive</td></tr>
         <tr><td class="mono">is not an app banner setting</td><td>Move <code>product</code> and <code>logo</code> from the spec's banner to the theme file's <code>banner</code></td></tr>
         <tr><td class="mono">banner.logo &hellip; must be an image file inside the project</td><td>Save the image under the project folder (e.g. <code>work/</code>) and give the path relative to it</td></tr>
+        <tr><td class="mono">unknown group</td><td>A section names a group that <code>groups</code> does not define; check the spelling</td></tr>
+        <tr><td class="mono">is not placed in any step</td><td>Place the group in a section (<code>{"group": "&lt;name&gt;"}</code>) or remove it</td></tr>
+        <tr><td class="mono">cannot hide it</td><td>A required field cannot be hidden; remove it from <code>hide</code></td></tr>
+        <tr><td class="mono">--replace-group names no group</td><td>From <code>create_app</code>'s <code>replace_groups</code>: use a group's <code>name</code> as the spec has it</td></tr>
         <tr><td class="mono">process.name is required</td><td>Give the workflow a name: <code>"process": { "name": "Quote Workflow" }</code></td></tr>
         <tr><td class="mono">process.approval must be an object</td><td>Use <code>{}</code> for the default approval task, or an object with your names and labels</td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>From <code>create_app</code> or <code>install_app</code>: bump <code>app.snapshot</code></td></tr>
@@ -799,6 +859,7 @@ Invalid app spec:
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-equipment-request.json">example-equipment-request.json</a></td><td>A simple multi-step form, every basic field type, review and confirmation</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-supplier-registration.json">example-supplier-registration.json</a></td><td>Written from <code>screenshots/example-supplier-registration.png</code>: sections, two columns, wide fields, dropdowns, radio groups, required fields</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-themed-quote.json">example-themed-quote.json</a></td><td>Tabs, a banner, placed columns with widths, field icons, help text, Cancel and no review</td></tr>
+        <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-grouped-quote.json">example-grouped-quote.json</a></td><td>Two reusable groups, one placed again read-only with a field hidden, and a review that shows each group once</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-quote-desk.theme.json">example-quote-desk.theme.json</a></td><td>The theme file of the quote example: pill buttons, field icons, full width, a product name</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-acme-procurement.theme.json">example-acme-procurement.theme.json</a></td><td>Read from <code>screenshots/example-supplier-registration.png</code>: square corners, buttons on the right, a product name</td></tr>
         <tr><td class="mono"><a href="https://github.com/unclethien/baw-bob-dev-tools-mcp/blob/main/app-specs/example-it-services.theme.json">example-it-services.theme.json</a></td><td>A plain navy look used by the equipment request</td></tr>
@@ -813,7 +874,8 @@ Invalid app spec:
 
 <footer class="shell">
   <p>Keys, defaults and messages checked on 12 October 2026 against <code>generate_app.py</code> and
-  <code>coach_theme.py</code>. The validation example is real output from a spec with deliberate mistakes.</p>
+  <code>coach_theme.py</code>; groups on 26 October 2026 against <code>generate_app.py</code> and
+  <code>group_views.py</code>. The validation example is real output from a spec with deliberate mistakes.</p>
   <p>Setup: <a href="getting-started.html">Getting started</a> · All docs: <a href="index.html">BAW Dev Tools MCP docs</a></p>
 </footer>
 

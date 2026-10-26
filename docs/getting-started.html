@@ -528,6 +528,28 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
   <code>.bob/skills/modernizer-widget/SKILL.md</code>. Changing or removing an existing widget stays a code change for
   Agent mode, because other apps use it.</p>
 
+  <h3 id="groups">Reusable groups</h3>
+  <p>When the same information appears on several screens, Bob can build it once as a <strong>group</strong>: a
+  <em>View</em> inside the app that every coach places, for example a contact block that is editable on the form,
+  read-only for reference on a later step, and shown again on the review.</p>
+  <ul>
+    <li>In Workflow Center, open the app and go to <em>User interface</em>: each group is under <strong>View</strong>,
+    and its <strong>&lt;group&gt; Preview</strong> service, which shows only the group, is under
+    <strong>Client-side human service</strong>. The modernized app adds a <strong>&lt;group&gt; (Modernized)</strong>
+    View and Preview for each.</li>
+    <li>Open a group in Coach Designer to add, remove, move or relabel its fields; every coach that places it
+    follows. On a placement, each optional field has a <em>&lt;field&gt; visibility</em> setting (Same as parent, or
+    Hidden), and the placement's own Visibility makes the whole group read-only.</li>
+    <li>Bob proposes groups for three or more fields that appear on two or more screens, or uses the ones you name,
+    and shows them before building.</li>
+    <li>After you change a group in Coach Designer, <strong>save a snapshot</strong>: Bob only sees changes in
+    snapshots. On the next rebuild he keeps your version, tells you what changed and asks whether to keep it or
+    replace it with his. Edits other than the fields (help text, choices, styling) belong in Bob's spec, because a
+    rebuild replaces them.</li>
+  </ul>
+  <p>The spec keys are in the <a href="app-spec-reference.html#groups">app spec reference</a>; Bob's steps in
+  <code>.bob/skills/coach-groups/SKILL.md</code>.</p>
+
   <h3 id="browser">Use another browser</h3>
   <p>The browser test tries <code>BROWSER_PATH</code> first, then Brave, Chrome and Helium. To use another Chromium browser
   with Bob, add it to the server's environment in <code>.bob/mcp.json</code>:</p>
