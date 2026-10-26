@@ -21,7 +21,7 @@
   --btn-primary-active:#002d9c;
   --hover:      light-dark(#e8e8e8, #333333);   /* layer-hover-01 */
   --selected:   light-dark(#e0e0e0, #393939);   /* layer-selected-01 */
-  --new:        #24a148;                          /* support-success: the reusable group, same in both themes */
+  --new:        #24a148;                          /* support-success: the new Toggle widget and the modern groups, same in both themes */
   --new-soft:   light-dark(#defbe6, #044317);   /* support-success background */
   --new-ink:    light-dark(#0e6027, #a7f0ba);   /* readable text on --new-soft */
   --shell:      #161616;                       /* UI shell header, Gray 100 in both themes */

@@ -380,8 +380,8 @@ button.btn { cursor: pointer; }
   .diagram .tile-new rect { animation: none; }
 }
 
-/* ---------------------------------------------------------------- this page: the group panel is wide and short, so its card is wider */
-.sheet-new { width: 46%; }
+/* ---------------------------------------------------------------- this page: the new widget's card holds a tall palette picture */
+.sheet-new { width: 20%; }
 
 /* the app's User interface list, drawn the way Workflow Center lists it */
 .uilist { border: var(--hairline-strong); background: var(--paper); font-size: var(--t-sm); line-height: 1.43; }
@@ -397,3 +397,5 @@ button.btn { cursor: pointer; }
 .uilist li.is-new { background: var(--new-soft); color: var(--new-ink); font-weight: 600; }
 .ui-pair { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--s-4); align-items: start; }
 @media (max-width: 640px) { .ui-pair { grid-template-columns: minmax(0, 1fr); } }
+/* the second run shot is a wide screen, not a small control */
+.shots-run .shot:last-child img { max-width: 100%; }
