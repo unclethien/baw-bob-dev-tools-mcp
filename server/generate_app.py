@@ -55,7 +55,7 @@ import app_template
 import coach_theme
 import group_views
 import widget_toolkit
-from coach_builder import SYSTEM_TYPES, Layout, coachflow, uid, write_twx
+from coach_builder import Layout, coachflow, uid, write_twx
 from process_builder import process_xml
 
 FIELD_TYPES = {  # spec type -> (business object type, input view)
