@@ -1,0 +1,67 @@
+{
+  "app": {
+    "name": "ZZ Grouped Quote",
+    "acronym": "ZZGWQ",
+    "snapshot": "1.0.0"
+  },
+  "businessObject": {
+    "name": "GroupedQuote",
+    "variable": "quote"
+  },
+  "service": {
+    "name": "Grouped Quote",
+    "description": "Request a group insurance quote, built from reusable groups."
+  },
+  "theme": "app-specs/example-quote-desk.theme.json",
+  "groups": [
+    {
+      "name": "Group Contact",
+      "columns": 2,
+      "fields": [
+        { "name": "groupName", "label": "Group Name", "required": true, "icon": "building" },
+        { "name": "contactName", "label": "Contact Name", "icon": "user" },
+        { "name": "contactEmail", "label": "Contact Email", "icon": "mail" },
+        { "name": "contactPhone", "label": "Contact Phone", "icon": "phone" }
+      ]
+    },
+    {
+      "name": "Rating Method",
+      "columns": 2,
+      "fields": [
+        { "name": "ratingMethod", "label": "Proposed Rating Method", "type": "Select", "options": ["Community", "Experience", "Blended"] },
+        { "name": "brokerCommission", "label": "Broker Commission (%)", "type": "Decimal" },
+        { "name": "effectiveDate", "label": "Effective Date", "type": "Date" },
+        { "name": "grandfathered", "label": "Grandfathered plan", "type": "Boolean" }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "title": "Group",
+      "intro": "Who is the quote for?",
+      "sections": [
+        { "group": "Group Contact" }
+      ]
+    },
+    {
+      "title": "Rating",
+      "intro": "How should the quote be rated? The contact is shown again for reference.",
+      "sections": [
+        { "group": "Rating Method" },
+        { "group": "Group Contact", "title": "Contact (for reference)", "readonly": true, "hide": ["contactPhone"] },
+        {
+          "title": "Notes",
+          "fields": [
+            { "name": "notes", "label": "Notes for the underwriter", "type": "Text Area" }
+          ]
+        }
+      ]
+    }
+  ],
+  "confirmation": {
+    "title": "Quote Submitted",
+    "message": "Your quote request has been submitted.",
+    "referencePrefix": "GQ-",
+    "showFields": ["groupName", "ratingMethod"]
+  }
+}

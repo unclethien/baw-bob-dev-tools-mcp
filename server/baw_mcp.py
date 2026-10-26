@@ -245,15 +245,26 @@ def crop_image(path: str, box: list[float], dest: str) -> Image:
 def inspect_coaches(twx: str) -> dict:
     """Read every coach of an app's client-side human services into an editable coach spec
     (work/<name>.coaches.json): sections, fields, buttons and where each button goes. Set its "theme"
-    to the app's theme file before modernize_app."""
+    to the app's theme file before modernize_app.
+    Reusable groups come back too: the spec's "groups", and a section {"group", "readonly", "hide"} where a coach
+    places one. "groupCandidates" lists sections with at least three fields that appear again on another coach;
+    propose them to the user as groups. "changedInBaw" lists the groups whose fields someone changed in BAW since Bob
+    built them (pass these names to replace_groups to rebuild them)."""
     source = local(twx)
     out = WORK / f"{source.stem}.coaches.json"
     summary = python("coach_inventory.py", source, "-o", out)
-    return {"coachSpec": rel(out), "summary": summary}
+    spec = json.loads(out.read_text())
+    result = {"coachSpec": rel(out), "summary": summary}
+    if spec.get("groupCandidates"):
+        result["groupCandidates"] = spec["groupCandidates"]
+    changed = [g["name"] for g in spec.get("groupViews", []) if g["changedInBaw"]]
+    if changed:
+        result["changedInBaw"] = changed
+    return result
 
 
 @mcp.tool()
-def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | None = None) -> dict:
+def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | None = None, replace_groups: list[str] | None = None) -> dict:
     """Build an installable .twx from an app spec (see app-specs/example-equipment-request.json, and
     app-specs/example-themed-quote.json for tabs, a banner, placed columns and field icons). The spec's
     "theme" names a theme file (e.g. app-specs/example-quote-desk.theme.json) that sets the look.
@@ -263,7 +274,16 @@ def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | N
     The package comes from a built-in template, so no server is needed. base (optional) is an app on
     the server (its acronym) or an exported .twx in the project, to match that server's BAW build and
     toolkit versions; ask the user which app to use. When the app already exists on the server, the
-    build becomes a new snapshot of it, and base is not needed."""
+    build becomes a new snapshot of it, and base is not needed.
+    "groups" (app-specs/example-grouped-quote.json) are reusable groups of fields: each becomes a View in the app,
+    listed under its User interface, with a "<group> Preview" service that shows it alone. A section
+    {"group": "<name>"} places the group instead of listing fields; "readonly": true and "hide": [field names] set
+    that placement's Visibility and hide fields there (a required field cannot be hidden). Review places every
+    group read-only. Users can open a group in Coach Designer and change it; every coach that places it follows.
+    When the app is on the server and someone changed which fields a group has there (added, removed, moved or
+    relabelled), the build keeps their version and lists it in "changedInBaw"; other edits to a group (help text,
+    choices, styling) belong in the spec, since a rebuild replaces them; then ask the user whether to keep it or replace it with the spec's, and for the ones to replace
+    build again with replace_groups (same snapshot name, before install_app)."""
     spec_path = local(app_spec)
     toolkit = installed_toolkit("builder", toolkit_snapshot, "create_app builds coaches from App Builder Widgets")
     app = json.loads(spec_path.read_text())["app"]
@@ -291,8 +311,15 @@ def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | N
             base_twx = Path(tmp) / "base.twx"
             ops().export(base, newest(found)["version"], base_twx, toolkits=False)
             note = f"Packaged to match {base} on the server"
-        summary = python("generate_app.py", spec_path, dest, "--toolkit", toolkit, *(["--base", base_twx] if base_twx else []))
+        summary = python("generate_app.py", spec_path, dest, "--toolkit", toolkit, *(["--base", base_twx] if base_twx else []),
+                         *[a for g in replace_groups or [] for a in ("--replace-group", g)])
     result = {"twx": rel(dest), "newApp": not existing, "summary": summary + (f"\n{note}" if note else "")}
+    groups = json.loads(spec_path.read_text()).get("groups") or []
+    if groups:
+        result["groups"] = [{"name": g["name"], "view": g["name"], "preview": f"{g['name']} Preview"} for g in groups]
+    kept = re.search(r"^Changed in BAW, kept: (.+)$", summary, re.M)
+    if kept:
+        result["changedInBaw"] = json.loads(kept.group(1))
     if not online:
         result["install"] = (f"Import the toolkit {rel(toolkit)} first, unless the server already has that snapshot.\n"
                              + IMPORT_STEPS.format(twx=rel(dest)))
@@ -307,13 +334,21 @@ def build_screens() -> str:
 
 
 @mcp.tool()
-def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: str | None = None) -> dict:
+def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: str | None = None, replace_groups: list[str] | None = None) -> dict:
     """Add a React + Carbon copy of each service, "<service> (Modernized)", driven by the coach spec and
     styled by its "theme" file. Each coach is rebuilt from Modernizer Widgets inside native Panels or a Tab
     Section, so it stays editable by drag and drop in Coach Designer; the app then depends on the toolkit
     snapshot toolkit_snapshot, built with build_widget_toolkit("modernizer", ...) and installed first. A coach
     with "screen": "<name>" instead shows the hand-written React screen registered under that name. Builds the
-    widgets and screens first. Output: a new snapshot of the same app."""
+    widgets and screens first. Output: a new snapshot of the same app.
+    The coach spec's "groups" ([{"name", "fields": [field objects as in a section]}]) are reusable groups of fields:
+    each becomes a View "<group> (Modernized)" made of Modernizer Widgets, listed under the app's User interface,
+    with a "<group> (Modernized) Preview" service. A section {"title", "group": "<name>", "readonly": true,
+    "hide": [paths]} places the group instead of listing fields; a group belongs to one business object and cannot
+    be placed in a coach that shows a hand-written screen. Users can change a group in Coach Designer; every coach
+    that places it follows. A group whose fields someone changed in BAW stays as it is and is listed in "changedInBaw"
+    (other edits to a group belong in the spec, since a rebuild replaces them); ask the
+    user whether to keep it, and for the ones to replace build again with replace_groups (before install_app)."""
     source, spec = local(twx), local(coach_spec)
     require_new_snapshot(target_of(source)["acronym"], snapshot)
     args = []
@@ -322,8 +357,12 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: st
         args = ["--toolkit", installed_toolkit("modernizer", toolkit_snapshot, "Coaches without a hand-written screen are built from Modernizer Widgets")]
     build = build_screens()
     dest = WORK / f"{target_of(source)['acronym']}-{snapshot}.twx"
-    summary = python("modernize_coaches.py", source, spec, dest, "--snapshot", snapshot, *args)
+    summary = python("modernize_coaches.py", source, spec, dest, "--snapshot", snapshot, *args,
+                     *[a for g in replace_groups or [] for a in ("--replace-group", g)])
     result = {"twx": rel(dest), "summary": summary, "build": build[-500:]}
+    kept = re.search(r"^Changed in BAW, kept: (.+)$", summary, re.M)
+    if kept:
+        result["changedInBaw"] = json.loads(kept.group(1))
     if not configured():
         first = f"Import the toolkit {rel(args[1])} first, unless the server already has that snapshot.\n" if args else ""
         result["install"] = first + IMPORT_STEPS.format(twx=rel(dest))

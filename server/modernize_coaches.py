@@ -36,9 +36,11 @@ from xml.sax.saxutils import escape
 
 from coach_inventory import view_names
 from coach_theme import load_theme
-from coach_builder import SYSTEM_TYPES, VIEWS
+from coach_builder import SYSTEM_TYPES, VIEWS, Layout
 from coach_views import screen_assets, screen_view
 from twx_clone import UUID_RE, foreign_uuids
+import app_template
+import group_views
 import widget_toolkit
 
 SUFFIX = " (Modernized)"
@@ -48,6 +50,8 @@ XSI_NS = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
 SCREEN_ITEM, ACTIONS_ITEM = "CoachScreen1", "PPNativeActions"
 SPEC_KEYS = ("path", "label", "type", "readonly", "required", "pattern", "message", "example", "options", "min", "max", "help")
 TOOLKIT = "modernizer"
+GROUP_VIEWS = {}  # group name -> (View ID, group_views fields), from modernize()
+KEPT = []  # groups changed in BAW that the last modernize() kept as they are
 
 
 def uid():
@@ -109,7 +113,8 @@ def screen_spec(app, service, coach):
         "app": app, "title": coach["title"], "intro": coach.get("intro", ""),
         "steps": [c["title"] for c in service["coaches"]], "step": service["coaches"].index(coach),
         "sectionStyle": coach["sectionStyle"],
-        "sections": [{"title": s["title"], "fields": [{k: f[k] for k in keys if k in f} for f in s["fields"]]} for s in coach["sections"]],
+        "sections": [{"title": s["title"], "fields": [{k: f[k] for k in keys if k in f} for f in s["fields"]],
+                      **{k: s[k] for k in ("group", "readonly", "hide") if k in s}} for s in coach["sections"]],
         "buttons": [{k: b[k] for k in ("label", "viewId", "primary", "validate") if k in b} for b in coach["buttons"]],
     }
 
@@ -145,9 +150,10 @@ def visibility(value):
     return json.dumps({"isResponsiveData": True, "values": [{"deviceConfigID": "LargeID", "value": value}]})
 
 
-def field_widget(p, next_id, views, variable, field):
-    """One field widget bound to the business object. Required and read-only become the view's own visibility,
-    so Coach Designer shows and edits them like any view's; the other spec keys become the widget's options."""
+def field_widget(p, next_id, views, variable, field, root="tw.local", item_id=None):
+    """One field widget bound to the business object (root tw.businessData inside a group View). Required and read-only
+    become the view's own visibility, so Coach Designer shows and edits them like any view's; the other spec keys
+    become the widget's options."""
     kind = "text" if field["type"] == "output" else field["type"]
     w = widget_toolkit.widgets(TOOLKIT)[kind]
     state = "READONLY" if field.get("readonly") or field["type"] == "output" else "REQUIRED" if field.get("required") else None
@@ -159,7 +165,7 @@ def field_widget(p, next_id, views, variable, field):
             value = [{"name": o.get("label") or o["value"], "value": o["value"]} for o in value]
         if value not in (None, "", []):
             options.append((name, widget_toolkit.option_text(value)))
-    return view_item(p, next_id(w["view"]), views[kind], options, binding=f"tw.local.{variable}.{field['path']}", tag="contributions")
+    return view_item(p, item_id or next_id(w["view"]), views[kind], options, binding=f"{root}.{variable}.{field['path']}", tag="contributions")
 
 
 def widget_layout(old, p, coach, views, theme, variable, spec):
@@ -178,7 +184,8 @@ def widget_layout(old, p, coach, views, theme, variable, spec):
         widget("errors", []),
     ]
     sections = [s for s in spec["sections"] if s["fields"]]
-    fields = lambda s: [field_widget(p, next_id, views, variable, f) for f in s["fields"]]  # noqa: E731
+    fields = lambda s: ([place_group(p, next_id, variable, s, "contributions")] if "group" in s  # noqa: E731
+                        else [field_widget(p, next_id, views, variable, f) for f in s["fields"]])
     hide = [("@helpText", ""), ("@labelVisibility", "HIDE")]
     if spec["sectionStyle"] == "tabs" and len(sections) > 1:
         tabs = [view_item(p, next_id("Vertical Layout"), VIEWS["Vertical Layout"], [("@label", s["title"]), *hide], children=fields(s), tag="contributions")
@@ -198,6 +205,126 @@ def widget_layout(old, p, coach, views, theme, variable, spec):
         buttons.append(widget_toolkit.swap_view(item, b["viewId"], views["button"], options))
     actions = [view_item(p, next_id("Horizontal Layout"), VIEWS["Horizontal Layout"], [("@label", "Actions"), *hide], children=buttons)] if buttons else []
     return "".join(head + body + native + actions)
+
+
+# ---------------------------------------------------------------- groups
+
+
+def control_id(path):
+    return path.replace(".", "_")
+
+
+def group_fields(g):
+    """(path, kind, label, hideable) of a group's fields, as group_views takes them; a required or read-only field
+    keeps its own visibility."""
+    return [(f["path"], f["type"], f["label"], not (f.get("required") or f.get("readonly") or f["type"] == "output")) for f in g["fields"]]
+
+
+def place_group(p, next_id, variable, s, tag):
+    """A coach's placement of a group View: bound to the coach's object, with the section's hidden fields and its
+    read-only visibility, which every field in the group follows."""
+    view_id, gfields = GROUP_VIEWS[s["group"]]
+    options = [("@label", s["title"]), ("@helpText", ""), ("@labelVisibility", "HIDE")]
+    options += group_views.placement_options(gfields, s.get("hide", []), s.get("readonly", False))
+    return view_item(p, next_id("Group"), view_id, options, binding=f"tw.local.{variable}", tag=tag)
+
+
+def expand_groups(spec):
+    """Give every section that names a group the group's fields, so the rest of the build sees them, and check the
+    groups: known, placed, by services of one business object, not in a hand-written screen, hiding only optional
+    fields. Returns {group name: (variable, classRef)}."""
+    groups = {g.get("name"): g for g in spec.get("groups") or []}
+    errors, users = [], {}
+    for g in groups.values():
+        if not g.get("name") or not g.get("fields"):
+            errors.append(f"group {g.get('name')!r}: name and fields are required")
+    for service in (s for s in spec["services"] if s.get("modernize")):
+        for coach in service["coaches"]:
+            for sec in coach["sections"]:
+                if "group" not in sec:
+                    continue
+                where = f'coach "{coach["name"]}" ({service["name"]})'
+                g = groups.get(sec["group"])
+                if not g:
+                    errors.append(f"{where}: unknown group {sec['group']!r}; groups: {', '.join(groups) or 'none'}")
+                    continue
+                if coach.get("screen"):
+                    errors.append(f"{where} shows the hand-written screen {coach['screen']!r}, so it cannot place group {sec['group']!r}")
+                optional = {path for path, _, _, hideable in group_fields(g) if hideable}
+                errors += [f"{where}: group {sec['group']!r} cannot hide {path!r} (only its editable, not required fields)" for path in sec.get("hide", []) if path not in optional]
+                users.setdefault(sec["group"], set()).add((service["variable"], service["classRef"]))
+                sec.setdefault("title", sec["group"])
+                sec["fields"] = g["fields"]
+    for name, used in users.items():
+        if any(not ref.startswith("/") for _, ref in used):
+            errors.append(f"group {name!r}: its business object comes from a toolkit; a group needs one of the app's own")
+        if len(used) > 1:
+            errors.append(f"group {name!r} is placed by services of different business objects ({', '.join(v for v, _ in used)}); a group belongs to one")
+    errors += [f"group {name!r} is not placed in any coach; place it in a section ({{\"group\": \"{name}\"}}) or remove it" for name in groups if name not in users]
+    if errors:
+        raise SystemExit("Invalid groups in the coach spec:\n  " + "\n  ".join(errors))
+    return {name: next(iter(used)) for name, used in users.items()}
+
+
+def preview_layout(name, g, variable, views, theme, app):
+    """The Preview service's coach: Theme and Header widgets, the group in a Panel, an OK Button widget."""
+    lay = Layout()
+    widget = lambda kind, options, **kw: lay.view(kind.title(), "", view_uuid=views[kind], options=options, show_label=False, **kw)  # noqa: E731
+    view_id, gfields = GROUP_VIEWS[g["name"]]
+    group = lay.view("Group", g["name"], binding=f"tw.local.{variable}", view_uuid=view_id, show_label=False)
+    ok = lay.view("Button", "OK", view_uuid=views["button"], options=[("kind", "primary")], item_id="OK_Button", show_label=False)
+    return Layout.wrap([
+        widget("theme", [("theme", json.dumps(theme, separators=(",", ":")))]),
+        widget("header", [("title", name), ("subtitle", app), ("intro", "The reusable group on its own."), ("steps", "[]"), ("step", "0")]),
+        lay.view("Panel", g["name"], children=[group]),
+        lay.view("Horizontal Layout", "Actions", children=[ok], show_label=False),
+    ]), "OK_Button"
+
+
+def group_objects(spec, package, owners, views, theme, twx, replace=()):
+    """The group Views ("<group> (Modernized)") and their Preview services, and the visibility type unless the app has
+    it already: package objects (id, version, name, type, xml). A group View the app has and someone changed in BAW
+    stays as it is (listed in KEPT), unless its group is in replace. Fills GROUP_VIEWS."""
+    GROUP_VIEWS.clear()
+    KEPT.clear()
+    replace = {n.removesuffix(SUFFIX) for n in replace}  # "<group> (Modernized)", as inspect_coaches names the View, works too
+    unknown = sorted(replace - {g["name"] for g in spec["groups"]})
+    if unknown:
+        raise SystemExit(f"--replace-group names no group of the coach spec: {', '.join(unknown)}; groups: {', '.join(g['name'] for g in spec['groups'])}")
+    acronym = app_template.target(package)["acronym"]
+    type_id, type_version, type_xml = group_views.visibility_type(acronym)
+    objects = [] if f'id="{type_id}"' in package else [(type_id, type_version, group_views.VISIBILITY_TYPE, "twClass", type_xml)]
+    for g in spec["groups"]:
+        variable, class_ref = owners[g["name"]]
+        name = g["name"] + SUFFIX
+        items = [field_widget("ns2", None, views, variable, f, root="tw.businessData", item_id=control_id(f["path"])) for f in g["fields"]]
+        items = [group_views.bind_visibility(item, path) if hideable else item for item, (path, _, _, hideable) in zip(items, group_fields(g))]
+        view_id, version, xml = group_views.group_view(acronym, name, variable, class_ref, f"/{type_id}", group_fields(g), items, "modernize_coaches")
+        GROUP_VIEWS[g["name"]] = (view_id, group_fields(g))
+        current = f"objects/{view_id}.xml"
+        if g["name"] not in replace and current in twx.namelist() and group_views.changed_in_baw(twx.read(current).decode("utf-8")):
+            KEPT.append(g["name"])
+            continue
+        objects.append((view_id, version, name, "coachView", xml))
+    for g in spec["groups"]:
+        variable, class_ref = owners[g["name"]]
+        name = f"{g['name']}{SUFFIX} Preview"
+        layout, ok = preview_layout(name, g, variable, views, theme, spec.get("app", ""))
+        init = "\n".join([f"tw.local.{variable} = {{}};"] + [f"tw.local.{variable}.{f['path']} = false;" for f in g["fields"] if f["type"] == "checkbox"])
+        objects.append(group_views.preview_service(acronym, name, variable, class_ref.lstrip("/"), layout, ok, init, "modernize_coaches"))
+    return objects
+
+
+def add_objects(package, objects, entries, files):
+    """Put package objects into the app: a new object gets an entry, one the app already has (a rebuild) gets the
+    new version. Returns the package."""
+    for oid, version, name, kind, xml in objects:
+        files[f"objects/{oid}.xml"] = xml.encode("utf-8")
+        if f'<object id="{oid}" ' in package:
+            package = re.sub(rf'(<object id="{re.escape(oid)}" versionId=")[^"]+', rf"\g<1>{version}", package)
+        else:
+            entries.append(f'<object id="{oid}" versionId="{version}" name="{escape(name, {chr(34): "&quot;"})}" type="{kind}"/>')
+    return package
 
 
 # ---------------------------------------------------------------- service copies
@@ -254,12 +381,13 @@ def check_field_types(services):
         raise SystemExit("Unknown field types in the coach spec:\n" + "\n".join(bad) + f"\nAllowed types: {', '.join(allowed)}")
 
 
-def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, snapshot=None, toolkit: Path | None = None):
+def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, snapshot=None, toolkit: Path | None = None, replace_groups=()):
     """theme: a theme file loaded by coach_theme.load_theme. toolkit: the Modernizer Widgets .twx (widget_toolkit.py
     build) whose snapshot the app depends on; needed when a coach has no hand-written screen."""
     services = [s for s in spec["services"] if s["modernize"]]
     if not services:
         raise SystemExit("Nothing to modernize: no service in the spec has \"modernize\": true")
+    owners = expand_groups(spec)
     screens = sorted({c["screen"] for s in services for c in s["coaches"] if c.get("screen")})
     built = any(not c.get("screen") for s in services for c in s["coaches"])
     if built and not toolkit:
@@ -299,6 +427,9 @@ def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, s
                 views[ref] = view_id
                 objects.append(entry)
                 files.update(view_files)
+
+        if spec.get("groups"):
+            package = add_objects(package, group_objects(spec, package, owners, widget_views, theme, twx, replace_groups), objects, files)
 
         created = []
         for service in services:
@@ -343,13 +474,17 @@ def main():
     parser.add_argument("--theme", help="Theme file (default: the spec's theme)")
     parser.add_argument("--snapshot", help="Install as this new snapshot of the same app")
     parser.add_argument("--toolkit", type=Path, help="Modernizer Widgets .twx (widget_toolkit.py build) for coaches built from widgets")
+    parser.add_argument("--replace-group", action="append", default=[], metavar="NAME",
+                        help="Rebuild this group from the spec even if it was changed in BAW (repeatable)")
     args = parser.parse_args()
     spec = json.loads(args.spec.read_text())
     theme, errors = load_theme(args.theme or spec.get("theme"), PROJECT, "the coach spec's theme")
     if errors:
         raise SystemExit("Invalid theme:\n  " + "\n  ".join(errors))
-    for name in modernize(args.twx, spec, args.bundle, args.dest, theme, args.snapshot, args.toolkit):
+    for name in modernize(args.twx, spec, args.bundle, args.dest, theme, args.snapshot, args.toolkit, args.replace_group):
         print(f"Added service: {name}")
+    if KEPT:
+        print(f"Changed in BAW, kept: {json.dumps(KEPT)}")
     print(f"Wrote {args.dest}")
 
 
