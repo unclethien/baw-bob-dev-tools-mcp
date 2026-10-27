@@ -46,8 +46,7 @@ from coach_builder import (  # noqa: E402
 DATA_SOURCE = "jdbc/bawexternal"
 MAX_ROWS = 1000
 NAME = re.compile(r"^[a-z_][a-z0-9_]{0,62}\Z")
-PG_TYPES = {"String": "text", "Integer": "integer", "Decimal": "numeric", "Boolean": "boolean", "Date": "timestamptz"}  # by BAW type
-ISO_UTC = "YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\""  # to_char pattern: an instant as ISO-8601 in UTC
+PG_TYPES = {"String": "text", "Integer": "integer", "Decimal": "numeric", "Boolean": "boolean", "Date": "date"}  # by BAW type
 MESSAGE = "dbMessage"  # the business object property that carries a database message or result between flow steps
 
 BUILD_PARAMS = """__VALUES__
@@ -287,9 +286,9 @@ def key_column(plan: dict) -> dict:
 
 
 def load_sql(plan: dict) -> str:
-    """SELECT of every column by key (one ? for the key). Every column comes back as text, and an instant as
-    ISO-8601 in UTC, so a row is read the same whatever the Java type behind it."""
-    cols = ", ".join(f"to_char({quote(c['column'])} AT TIME ZONE 'UTC', '{ISO_UTC}')" if c["pg"] == "timestamptz"
+    """SELECT of every column by key (one ? for the key). Every column comes back as text, and a date as YYYY-MM-DD,
+    so a row is read the same whatever the Java type behind it."""
+    cols = ", ".join(f"to_char({quote(c['column'])}, 'YYYY-MM-DD')" if c["type"] == "Date"
                      else f"CAST({quote(c['column'])} AS text)" for c in plan["columns"])
     key = key_column(plan)
     return f"SELECT {cols} FROM {qualified(plan)} WHERE {quote(key['column'])} = CAST(? AS {key['pg']})"
@@ -319,7 +318,9 @@ def cell(var: str, column: dict) -> str:
     v = f"tw.local.{var}.{column['field']}"
     if column["text"]:  # a number typed as text: spaces around it do not count, and nothing typed is NULL
         return f'({v} == null || String({v}).trim() === "" ? null : String({v}).trim())'
-    text = f"({v}.toISOString ? {v}.toISOString() : String({v}))" if column["type"] == "Date" else f"String({v})"
+    # a date is the day the user picked, in their time zone, as YYYY-MM-DD
+    day = f'{v}.getFullYear() + "-" + ("0" + ({v}.getMonth() + 1)).slice(-2) + "-" + ("0" + {v}.getDate()).slice(-2)'
+    text = f"({v}.getFullYear ? {day} : String({v}))" if column["type"] == "Date" else f"String({v})"
     return f'({v} == null || {v} === "" ? null : {text})'
 
 
@@ -356,7 +357,7 @@ def load_apply_script(var: str, plan: dict) -> str:
     """After the Load call: fill the form from the row, or leave a message (no key, no row, or a failure)."""
     obj, key, ask = f"tw.local.{var}", f"tw.local.{var}.{plan['key']}", json.dumps(f"Enter {plan['keyLabel']}, then press Load.")
     parse = {"Integer": "{v} === null ? null : parseInt({v}, 10)", "Decimal": "{v} === null ? null : parseFloat({v})",
-             "Boolean": '{v} === "true"', "Date": "{v} === null ? null : new Date({v})", "String": "{v}"}
+             "Boolean": '{v} === "true"', "Date": "{v} === null ? null : new Date(Number({v}.substr(0, 4)), Number({v}.substr(5, 2)) - 1, Number({v}.substr(8, 2)))", "String": "{v}"}
     fill = "\n".join(f"  {obj}.{c['field']} = {parse['String' if c['text'] else c['type']].format(v=f'row[{i}]')};" for i, c in enumerate(plan["columns"]))
     return (f'{reply(var)}\nif ({key} == null || {key} === "") {{\n  {obj}.{MESSAGE} = {ask};\n}}'
             f' else if (res == null || res.ok !== true) {{\n  {obj}.{MESSAGE} = {failure("load")};\n}}'
