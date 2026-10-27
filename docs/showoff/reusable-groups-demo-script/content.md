@@ -29,7 +29,7 @@ Every screen and every group stays editable by drag and drop in Coach Designer.
 Thirty minutes before:
 
 1. Check the BAW login file (`.env`) is filled in. Never show it on screen.
-2. Get the latest project (`git switch main && git pull`). Open it in Bob; the tools panel shows **baw-dev-tools** with **15 tools**. If it shows fewer, restart baw-dev-tools in that panel.
+2. Get the latest project (`git switch main && git pull`). Open it in Bob; the tools panel shows **baw-dev-tools** with **21 tools**. If it shows fewer, restart baw-dev-tools in that panel.
 3. **Make sure the Toggle does not exist yet**, so Bob creates it live. Run `git status` and check that these are absent:
    - `coach-ui/src/widgets/toggle.jsx`, `coach-ui/src/widgets/toggle.scss`, `coach-ui/widgets/icons/toggle.svg`
    - a `"kind": "toggle"` entry in `coach-ui/widgets/modernizer-widgets.json`
@@ -48,7 +48,7 @@ Thirty minutes before:
 7. Do one full rehearsal, so you know how long each step takes. Keep the rehearsal app as a backup.
 8. Open Workflow Center (Business Automation Studio) in a second browser tab.
 9. In Bob, pick the **🏗️ BAW App Builder** mode. Allow mode switches in Bob's auto-approve settings. Make the font bigger.
-10. Afterwards, ask a BAW admin to archive the test snapshots: Bob cannot delete anything.
+10. Afterwards, ask a BAW admin to archive the test snapshots: Bob cannot delete apps or snapshots.
 
 ---
 
@@ -80,9 +80,9 @@ Thirty minutes before:
 - "Each placement of a group has its own settings: every optional field can be hidden, and the whole group can be read-only. So the form shows it editable, and the review shows the same group read-only."[^visibility][^options]
 - "Bob proposes a group when three or more fields appear on two or more screens, or uses the groups you name, and shows them in the design before it builds anything."
 - "An app depends on one version of a toolkit. A new widget means a new toolkit version; apps on older versions keep them until someone moves them."[^toolkits]
-- "Bob has 15 tools and two roles, App Builder and Modernizer. The ones that change something ask first."
+- "Bob has 21 tools and two roles, App Builder and Modernizer. The ones that change something ask first."
 
-**Do.** Open Bob's tools panel and show **baw-dev-tools** with its 15 tools.
+**Do.** Open Bob's tools panel and show **baw-dev-tools** with its 21 tools.
 
 ---
 
@@ -204,7 +204,7 @@ Thirty minutes before:
 | Bob adds widgets, never changes existing ones | Apps that depend on a widget keep working |
 | A new widget is tested before the toolkit is built | A broken widget never reaches BAW |
 | A group changed in BAW is kept on Bob's next rebuild until you say otherwise | Your edits survive |
-| Bob cannot delete anything | No tool for it exists |
+| Bob cannot delete apps or snapshots | No tool for it exists |
 | The password stays in the connector | Bob never sees it |
 
 **Questions to expect** (including the open questions from last session)
@@ -216,7 +216,7 @@ Thirty minutes before:
 - *Does a change to a classic group change its modern copy?* Not by itself: they are separate Views. Ask Bob to modernize again and it builds the modern copy from the current classic group.
 - *Can our developers change a widget themselves?* Yes, like any view in a toolkit. A change becomes a new toolkit version, and each app moves to it when you choose.[^toolkits]
 - *Which widgets can Bob create?* Any widget that saves one value: text, number, date or yes/no.
-- *Can other AI assistants do this?* Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 15 tools.[^mcp]
+- *Can other AI assistants do this?* Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 21 tools.[^mcp]
 
 **If something breaks on stage**
 
@@ -246,6 +246,8 @@ Thirty minutes before:
 **Say.** "In one hour: pictures became a BAW app made of reusable groups, then a modern version made of the same groups, and Bob added a widget your developers can use anywhere. Every step was tested in a browser and approved by a person before it reached BAW."
 
 Project: https://github.com/unclethien/baw-bob-dev-tools-mcp (Apache-2.0). Not an official IBM project; use it with test servers and test apps.
+
+Next script: [The Quote screen remembers](../database-demo-script/index.html), a 30-minute follow-on where the same app saves to the database.
 
 ---
 
