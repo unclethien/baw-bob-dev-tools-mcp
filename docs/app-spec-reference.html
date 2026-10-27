@@ -807,7 +807,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
       <thead><tr><th scope="col">Key</th><th scope="col">Default</th><th scope="col">What it does</th></tr></thead>
       <tbody>
         <tr><td class="mono">table</td><td>required</td><td>The table, as <code>"schema.name"</code>, e.g. <code>"public.equipment_request"</code></td></tr>
-        <tr><td class="mono">key</td><td>required</td><td>The name of the field that identifies a row. It becomes a required field and the table's primary key, and it is the field Load reads</td></tr>
+        <tr><td class="mono">key</td><td>required</td><td>The name of the field that identifies a row. It becomes a required field and the table's primary key, and it is the field Load reads. In a <a href="#groups">group</a>, no placement may hide it, and the first placement that shows it must not be read-only</td></tr>
         <tr><td class="mono">columns</td><td>none</td><td>Renames: <code>{ "estimatedCost": "estimated_cost_usd" }</code> maps a field to a column. Every other simple field is stored in a column named by its field name in snake_case (<code>employeeName</code> &rarr; <code>employee_name</code>). With a <code>confirmation</code>, the reference number is stored too, in <code>reference_number</code></td></tr>
       </tbody>
     </table>

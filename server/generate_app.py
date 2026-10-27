@@ -292,7 +292,21 @@ def database_errors(spec) -> list:
         for f in fields(spec):
             if f.get("name") == plan["key"]:
                 f["required"] = True
+        errors += key_placement_errors(spec, plan["key"])
     return errors + plan_errors
+
+
+def key_placement_errors(spec, key):
+    """The key is required, so no group placement may hide it, and the section that first shows it (where Load is)
+    must be editable."""
+    placed = [(i, j, s) for i, step in enumerate(spec["steps"], 1) for j, s in enumerate(step["sections"], 1)
+              if any(f.get("name") == key for f in s.get("fields", []))]
+    errors = [f"step {i} section {j}: {key!r} is the database key, which is required, so group {s['group']!r} cannot hide it"
+              for i, j, s in placed if key in s.get("hide", [])]
+    if placed and placed[0][2].get("readonly"):
+        i, j, _ = placed[0]
+        errors.append(f"step {i} section {j}: the database key {key!r} is first shown here read-only; place it editable there, so Load can use it")
+    return errors
 
 
 def database_result(spec):
