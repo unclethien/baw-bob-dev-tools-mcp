@@ -825,7 +825,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td>Integer</td><td class="mono">integer</td></tr>
         <tr><td>Decimal</td><td class="mono">numeric</td></tr>
         <tr><td>Boolean</td><td class="mono">boolean</td></tr>
-        <tr><td>Date</td><td class="mono">timestamptz</td></tr>
+        <tr><td>Date</td><td class="mono">date</td></tr>
       </tbody>
     </table>
   </div>
@@ -869,8 +869,8 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
     app.</li>
     <li><strong>A failed call shows PostgreSQL's message</strong> on the coach (for example <code>relation "public.x" does not
     exist</code>), and the flow goes back to the screen. Each Load or Save call commits on its own.</li>
-    <li><strong>Dates</strong> are stored as instants (<code>timestamptz</code>) and come back in UTC; the date picker shows them in the
-    browser's time zone.</li>
+    <li><strong>Dates</strong> are stored as calendar days (<code>date</code>): Submit saves the day picked in the browser, and
+    Load shows that same day in any time zone. A <code>timestamptz</code> column of an existing table also works.</li>
     <li><strong>The data source exists on the BAWAUT server only.</strong> After a column's type changes under an installed app, BAW's
     pooled connections may fail with "cached plan must not change result type" until the app or server restarts (not
     tried).</li>
