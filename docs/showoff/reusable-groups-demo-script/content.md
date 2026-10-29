@@ -247,7 +247,7 @@ Thirty minutes before:
 
 Project: https://github.com/unclethien/baw-bob-dev-tools-mcp (Apache-2.0). Not an official IBM project; use it with test servers and test apps.
 
-Next script: [The Quote screen remembers](../database-demo-script/index.html), a 30-minute follow-on where the same app saves to the database.
+Next script: [The Quote screen remembers](../database-demo-script/index.html), a 30-minute follow-on where the same app saves to the database. Both on the same day? [From pictures to a Quote screen that remembers](../groups-and-database-demo-script/index.html) blends the two into one hour.
 
 ---
 
