@@ -7,8 +7,6 @@ A one-hour session for the client's team and their managers. Last session the te
 3. **Act 3. Your data.** A spreadsheet of 20 quotes goes in with one sentence; any of them opens in the app; a question comes back as a table.
 4. **Act 4. Safety.** Bob reads BAW's own database, and its attempt to change it is refused.
 
-It joins two shorter scripts: [reusable groups](../reusable-groups-demo-script/index.html) and [the Quote screen remembers](../database-demo-script/index.html). Use this one when both run on the same day: it tells one story, on one app.
-
 **How to read this script.** Each step tells you what to **do**, what to **paste** into Bob, what **Bob does**, and what to **say**. Text in quotes is meant to be said out loud. The pictures on the demo page come from a neutral example app; on the day, Bob builds from the client's own pictures.
 
 ---
