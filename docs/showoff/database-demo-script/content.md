@@ -7,7 +7,7 @@ A 30-minute session for managers and executives. It continues the reusable group
 3. **Act 3. Ask in plain English.** Questions answered as tables, and a spreadsheet for finance.
 4. **Act 4. Safety.** Bob can read BAW's own database but cannot change it.
 
-Run it straight after the reusable groups demo, or on its own.
+Run it straight after the reusable groups demo, or on its own. Both on the same day? [From pictures to a Quote screen that remembers](../groups-and-database-demo-script/index.html) blends the two into one hour on the client's own app.
 
 **How to read this script.** Each step tells you what to **do**, what to **paste** into Bob, what **Bob does**, and what to **say**. Text in quotes is meant to be said out loud. The pictures and numbers come from a rehearsal with the sample data in `data/demo-quotes.csv`: 20 fictional employer groups.
 

@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo script · From pictures to a Quote screen that remembers</title>
+  <meta name="description" content="A one-hour demo script for a client team and their managers: IBM Bob builds a Quote screen from pictures as reusable groups that save to the database, adds a modern copy with a new Toggle widget, loads a spreadsheet, answers a question, and cannot change BAW's own database.">
+  <script>
+    // Apply the saved theme before first paint.
+    try {
+      const t = localStorage.getItem('demo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/sections.css">
+  <noscript><style>[data-cues] > [role="tabpanel"] { grid-area: auto !important; visibility: visible !important; }</style></noscript>
+</head>
+<body>
+  <a class="skip" href="#hero">Skip to the script</a>
+
+  <header class="masthead">
+    <a class="wordmark" href="#hero"><span class="wordmark-ibm">IBM</span><span>Demo script</span><span class="wordmark-sub">Groups and the database</span></a>
+    <div class="controls">
+      <button class="ctl timer" type="button" data-timer aria-pressed="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+        <span>Timer</span>
+        <output class="timer-read" aria-live="off">00:00</output>
+      </button>
+      <button class="ctl theme" type="button" data-theme-toggle aria-label="Theme: system">
+        <svg class="ico ico-system" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12"/><path d="M8 20h8M12 16v4"/></svg>
+        <svg class="ico ico-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="ico ico-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        <span class="theme-label" data-theme-label>System</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Run of show: each section sits at its minute mark -->
+  <nav class="rail" aria-label="Run of show">
+    <ol>
+      <li><a href="#hero"><time>60 min</time><span>Overview</span></a></li>
+      <li><a href="#prep"><time>T&minus;30</time><span>Before</span></a></li>
+      <li><a href="#how"><time>00:00</time><span>How it works</span></a></li>
+      <li><a href="#act-1"><time>07:00</time><span>Act 1 · build</span></a></li>
+      <li><a href="#act-2"><time>23:00</time><span>Act 2 · modern</span></a></li>
+      <li><a href="#act-3"><time>40:00</time><span>Act 3 · data</span></a></li>
+      <li><a href="#act-4"><time>49:00</time><span>Act 4 · safety</span></a></li>
+      <li><a href="#close"><time>52:00</time><span>Close</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <!-- HERO ------------------------------------------------------------ -->
+    <section id="hero" class="section hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="kicker">IBM Bob × BAW Dev Tools MCP · demo script</p>
+        <h1 id="hero-title" class="display">From pictures to a Quote screen that remembers.</h1>
+        <p class="lead">Bob builds the client's Quote screen from pictures, as <b>reusable groups</b> that <b>save every quote</b> to the database. Then a modern copy with a <b>widget Bob writes live</b>, a spreadsheet brought in, a question answered, and a change to BAW's own database refused.</p>
+        <dl class="figures" aria-label="At a glance">
+          <div><dt>60</dt><dd>min</dd></div>
+          <div><dt>4</dt><dd>acts</dd></div>
+          <div><dt>1</dt><dd>app</dd></div>
+          <div><dt>21</dt><dd>tools</dd></div>
+          <div class="is-new"><dt>1</dt><dd>new widget</dd></div>
+        </dl>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#prep">Start with the prep</a>
+          <a class="btn btn-quiet" href="#act-3">Jump to Act 3</a>
+        </div>
+      </div>
+      <div class="sheets" aria-label="A classic group, a saved quote, the modern copy, and the new Toggle in the palette">
+        <figure class="sheet sheet-1">
+          <img src="../reusable-groups-demo-script/media/01-group-form.webp" width="1400" height="498" alt="The classic form of an example quote app: one group, Group Contact, with Group Name, Contact Name, Contact Email and Contact Phone">
+          <figcaption><b>1</b> <span>Act 1 · a classic group</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-2">
+          <img src="../database-demo-script/media/02-quote-saved.webp" width="1400" height="492" alt="Quote Submitted: a reference number for Lighthouse Bakery Co">
+          <figcaption><b>2</b> <span>Saved, with a reference</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-3">
+          <img src="../reusable-groups-demo-script/media/05-group-modernized.webp" width="1400" height="916" alt="The modern React and Carbon copy: the Rating Method group with its four fields side by side, and the contact group again for reference, read-only">
+          <figcaption><b>3</b> <span>Act 2 · the groups, modernized</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-new">
+          <img src="../reusable-groups-demo-script/media/08-palette-toggle.webp" width="331" height="566" alt="The Coach Designer palette searched for Modernizer: the stock widgets and the new Toggle with its switch icon">
+          <figcaption><b>New</b> <span>Toggle</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- RUN OF SHOW AND BEFORE THE MEETING ------------------------------------ -->
+    <section id="prep" class="section prep" aria-labelledby="prep-title">
+      <header class="sec-head">
+        <p class="timecode">T&minus;30 <span aria-hidden="true">/</span> 00:00</p>
+        <h2 id="prep-title" class="h2">Run of show, then the prep.</h2>
+      </header>
+
+      <div class="prep-run">
+        <h3 class="h3">Run of show</h3>
+        <ol class="timeline">
+          <li><time>00:00</time><b>Opening</b><span>What the team asked for, and today's goal</span></li>
+          <li><time>02:00</time><b>How it works</b><span>Toolkits, groups, and where the data lives</span></li>
+          <li><time>07:00</time><b>Act 1: pictures in, a screen that remembers out</b><span>The app built from pictures, in groups; a quote saved and loaded back</span></li>
+          <li class="is-new"><time>23:00</time><b>Act 2: modern, with a new widget</b><span>The same groups in React and Carbon, and a new Toggle in the toolkit</span></li>
+          <li><time>40:00</time><b>Act 3: your data</b><span>A spreadsheet of 20 quotes in; one opened in the app; a question answered as a table</span></li>
+          <li><time>49:00</time><b>Act 4: safety</b><span>Bob reads BAW's own database; its change is refused</span></li>
+          <li><time>52:00</time><b>Questions</b></li>
+          <li><time>57:00</time><b>Next steps</b></li>
+        </ol>
+        <p class="fine">The timings are tight. If Bob runs long in Act 1 or Act 2, shorten Act 3 to the spreadsheet and one Load. This script joins <a href="../reusable-groups-demo-script/index.html">reusable groups</a> and <a href="../database-demo-script/index.html">the Quote screen remembers</a> into one story on one app.</p>
+      </div>
+
+      <div class="prep-before">
+        <h3 class="h3">Before the meeting <span>Thirty minutes before</span></h3>
+        <ol class="checklist">
+          <li>Check the login file (<code>.env</code>) has the BAW and PostgreSQL settings. Never show it on screen.</li>
+          <li>Get the latest project (<code>git switch main &amp;&amp; git pull</code>). Open it in Bob; the tools panel shows <b>baw-dev-tools</b> with <b>21 tools</b>. If it shows fewer, restart baw-dev-tools in that panel.</li>
+          <li><b>Make sure the Toggle does not exist yet</b>, and <b>start from an empty table</b>, so Bob creates both live. After a rehearsal, reset both. The table holds only sample and test quotes.
+            <figure class="prompt cmd"><figcaption>Terminal</figcaption><pre><code>rm -f coach-ui/src/widgets/toggle.jsx coach-ui/src/widgets/toggle.scss coach-ui/widgets/icons/toggle.svg
+git checkout -- coach-ui/widgets/modernizer-widgets.json
+uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.group_quote"</code></pre><button class="copy" type="button" data-copy>Copy</button></figure>
+          </li>
+          <li>Keep <code>screenshots/Quote/</code> as it is: the six pictures of the old screen (<code>image (1).png</code> to <code>image (6).png</code>) and the client's newer quote screen (<code>generate-quote.png</code>). It stays on this laptop and is never published.</li>
+          <li>Keep only the two toolkit builds in <code>work/</code> (<code>ABW-1.0.4.twx</code> and the newest <code>MDW-*.twx</code>), so Bob reads nothing from earlier runs.</li>
+          <li>Pick a <b>new acronym</b> and put it in the Act 1 request (the script uses <code>ZZGDB</code>; use <code>ZZGDB2</code> after a rehearsal). Names already used on the test server:
+            <ul class="bullets">
+              <li>Apps: ZZQI, ZZLGQ, ZZLGQI, ZZSLX, ZZGRP, ZZGRP2, ZZGWQ, ZZLGG, ZZGQ3, ZZGDEMO, ZZGDBR, ZZQDBR</li>
+              <li>App Builder Widgets (ABW): up to 1.0.4</li>
+              <li>Modernizer Widgets (MDW): up to 2.1.0, so Bob's new widget goes into 2.2.0 or later</li>
+            </ul>
+          </li>
+          <li>In Bob's auto-approve settings, allow mode switches, and keep <b>change_system_db</b> off, so Bob must ask. Act 4 relies on it.</li>
+          <li>Open Workflow Center (Business Automation Studio) in a second browser tab, a terminal, and a spreadsheet program (Excel or Numbers).</li>
+          <li>In Bob, pick the <b><span class="emoji">🏗️</span> BAW App Builder</b> mode. Make the font bigger.</li>
+          <li>Do one full rehearsal, so you know how long each step takes. Then repeat step 3 and pick a new acronym. Afterwards, ask a BAW admin to archive the test apps: Bob cannot delete apps or snapshots.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- OPENING AND HOW IT WORKS ------------------------------------------------ -->
+    <section id="how" class="section how" aria-labelledby="how-title">
+      <header class="sec-head">
+        <p class="timecode">00:00 <span aria-hidden="true">/</span> 02:00 <span aria-hidden="true">/</span> 07:00</p>
+        <h2 id="how-title" class="h2">Widgets in toolkits, groups in your app, data in its own database.</h2>
+        <p class="lead">Bob builds every screen from small widgets, combines them into reusable groups, and saves the form to the database set aside for app data.</p>
+      </header>
+
+      <figure class="diagram" aria-labelledby="diagram-cap">
+        <svg class="diagram-wide" viewBox="0 0 940 500" role="img" aria-labelledby="diagram-cap">
+          <defs>
+            <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead"/></marker>
+          </defs>
+          <g class="zone"><rect x="420" y="8" width="512" height="262"/><text x="436" y="30" text-anchor="start" class="z-title">IBM Business Automation Workflow</text></g>
+          <g class="zone"><rect x="420" y="292" width="512" height="200"/><text x="436" y="314" text-anchor="start" class="z-title">The platform's PostgreSQL server</text></g>
+          <g class="edges">
+            <path d="M158 230H198" marker-end="url(#arw)"/>
+            <path d="M380 160H418" marker-end="url(#arw)"/>
+            <path d="M380 320H418" marker-end="url(#arw)"/>
+            <path d="M842 256V324" marker-end="url(#arw)"/>
+            <path class="dep" d="M664 80H640" marker-end="url(#arw)"/>
+            <path class="dep" d="M664 194H640" marker-end="url(#arw)"/>
+          </g>
+          <g class="flow"><path d="M158 230H198"/><path d="M380 160H418"/><path d="M842 256V324"/></g>
+          <g class="edge-labels"><text x="178" y="220">MCP</text><text x="399" y="150">builds</text><text x="399" y="310">data</text><text x="834" y="284" text-anchor="end">jdbc/bawexternal</text></g>
+
+          <g class="node"><rect x="8" y="140" width="150" height="180"/><text x="83" y="164" class="n-title">IBM Bob</text></g>
+          <g class="node node-accent"><rect x="20" y="178" width="126" height="52"/><text x="83" y="200" class="n-title">App Builder</text><text x="83" y="218" class="n-sub">classic, groups, data</text></g>
+          <g class="node node-accent"><rect x="20" y="244" width="126" height="52"/><text x="83" y="266" class="n-title">Modernizer</text><text x="83" y="284" class="n-sub">React + Carbon</text></g>
+
+          <g class="node"><rect x="200" y="120" width="180" height="220"/><text x="290" y="144" class="n-title">baw-dev-tools</text><text x="290" y="162" class="n-sub">21 tools</text>
+            <text x="290" y="186" class="t-code">create_app</text><text x="290" y="203" class="t-code">modernize_app</text><text x="290" y="220" class="t-code">build_widget_toolkit</text><text x="290" y="237" class="t-code">install_app</text><text x="290" y="254" class="t-code">run_sql</text><text x="290" y="271" class="t-code">import_table</text><text x="290" y="288" class="t-code">test_service</text><text x="290" y="312" class="n-sub">and more</text></g>
+
+          <g class="node"><rect x="436" y="40" width="200" height="80"/><text x="448" y="62" text-anchor="start" class="n-title">App Builder Widgets</text><text x="624" y="62" text-anchor="end" class="n-sub t-code">ABW</text><text x="448" y="80" text-anchor="start" class="n-sub">classic toolkit</text></g>
+          <g class="tile"><rect x="448" y="88" width="58" height="24"/><text x="477" y="104">Section</text></g>
+          <g class="tile"><rect x="510" y="88" width="58" height="24"/><text x="539" y="104">Review List</text></g>
+          <g class="tile"><rect x="572" y="88" width="58" height="24"/><text x="601" y="104">Button Bar</text></g>
+
+          <g class="node"><rect x="436" y="132" width="200" height="124"/><text x="448" y="154" text-anchor="start" class="n-title">Modernizer Widgets</text><text x="624" y="154" text-anchor="end" class="n-sub t-code">MDW</text><text x="448" y="172" text-anchor="start" class="n-sub">React + Carbon toolkit</text></g>
+          <g class="tile"><rect x="448" y="184" width="58" height="24"/><text x="477" y="200">Text Field</text></g>
+          <g class="tile"><rect x="510" y="184" width="58" height="24"/><text x="539" y="200">Select</text></g>
+          <g class="tile"><rect x="572" y="184" width="58" height="24"/><text x="601" y="200">Checkbox</text></g>
+          <g class="tile"><rect x="448" y="216" width="58" height="24"/><text x="477" y="232">Date Field</text></g>
+          <g class="tile"><rect x="510" y="216" width="58" height="24"/><text x="539" y="232">Button</text></g>
+          <g class="tile tile-new"><rect x="572" y="216" width="58" height="24"/><text x="601" y="232">Toggle</text></g>
+          <g class="badge"><rect x="596" y="208" width="34" height="14"/><text x="613" y="218.5">NEW</text></g>
+
+          <g class="node node-target"><rect x="664" y="40" width="256" height="216"/><text x="676" y="62" text-anchor="start" class="n-title">Your BAW app</text><text x="676" y="80" text-anchor="start" class="n-sub">User interface</text></g>
+          <g class="tile"><rect x="676" y="90" width="232" height="24"/><text x="792" y="106">A View per group, and a Preview</text></g>
+          <g class="tile tile-new"><rect x="676" y="118" width="232" height="24"/><text x="792" y="134">A (Modernized) copy of each group</text></g>
+          <g class="tile tile-new"><rect x="676" y="146" width="232" height="24"/><text x="792" y="162">Quote · Load, and Save on Submit</text></g>
+          <g class="tile tile-new"><rect x="676" y="174" width="232" height="24"/><text x="792" y="190">Quote (Modernized) · Save on Submit</text></g>
+          <text x="676" y="226" text-anchor="start" class="n-sub">depends on one version of each toolkit</text>
+
+          <g class="node"><rect x="436" y="326" width="152" height="150"/><text x="512" y="348" class="n-title">31 more</text><text x="512" y="366" class="n-sub">other products</text><text x="512" y="384" class="n-sub">read only</text></g>
+          <g class="node"><rect x="600" y="326" width="152" height="150"/><text x="676" y="348" class="n-title">basdb</text><text x="676" y="366" class="n-sub">BAW's own database</text><text x="676" y="384" class="n-sub">read only</text></g>
+          <g class="tile"><rect x="612" y="398" width="128" height="24"/><text x="676" y="414">apps, versions</text></g>
+          <g class="tile"><rect x="612" y="430" width="128" height="24"/><text x="676" y="446">process history</text></g>
+          <g class="node node-target"><rect x="764" y="326" width="152" height="150"/><text x="840" y="348" class="n-title">bawexternal</text><text x="840" y="366" class="n-sub">your app data</text><text x="840" y="384" class="n-sub">read and write</text></g>
+          <g class="tile tile-new"><rect x="776" y="406" width="128" height="24"/><text x="840" y="422">group_quote</text></g>
+          <g class="badge"><rect x="870" y="398" width="34" height="14"/><text x="887" y="408.5">NEW</text></g>
+        </svg>
+
+        <svg class="diagram-tall" viewBox="0 0 380 1160" role="img" aria-labelledby="diagram-cap">
+          <defs>
+            <marker id="arw2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead"/></marker>
+          </defs>
+          <g class="zone"><rect x="0" y="300" width="360" height="420"/><text x="14" y="322" text-anchor="start" class="z-title">IBM Business Automation Workflow</text></g>
+          <g class="zone"><rect x="0" y="740" width="360" height="412"/><text x="14" y="762" text-anchor="start" class="z-title">The platform's PostgreSQL server</text></g>
+          <g class="edges">
+            <path d="M180 118V146" marker-end="url(#arw2)"/>
+            <path d="M300 260V330" marker-end="url(#arw2)"/>
+            <path d="M300 710V786" marker-end="url(#arw2)"/>
+            <path class="dep" d="M352 204H370V860H350" marker-end="url(#arw2)"/>
+          </g>
+          <g class="flow"><path d="M180 118V146"/><path d="M300 260V330"/><path d="M300 710V786"/></g>
+          <g class="edge-labels"><text x="188" y="136" text-anchor="start">MCP</text><text x="292" y="288" text-anchor="end">builds</text><text x="292" y="733" text-anchor="end">jdbc/bawexternal</text></g>
+
+          <g class="node"><rect x="8" y="8" width="344" height="110"/><text x="180" y="30" class="n-title">IBM Bob</text></g>
+          <g class="node node-accent"><rect x="20" y="44" width="156" height="60"/><text x="98" y="68" class="n-title">App Builder</text><text x="98" y="88" class="n-sub">classic, groups, data</text></g>
+          <g class="node node-accent"><rect x="184" y="44" width="156" height="60"/><text x="262" y="68" class="n-title">Modernizer</text><text x="262" y="88" class="n-sub">React + Carbon</text></g>
+
+          <g class="node"><rect x="8" y="148" width="344" height="112"/><text x="180" y="172" class="n-title">baw-dev-tools</text><text x="180" y="190" class="n-sub">21 tools</text><text x="180" y="212" class="t-code">create_app · modernize_app · install_app</text><text x="180" y="229" class="t-code">build_widget_toolkit · test_service</text><text x="180" y="246" class="t-code">run_sql · import_table · and more</text></g>
+
+          <g class="node"><rect x="12" y="336" width="336" height="70"/><text x="24" y="358" text-anchor="start" class="n-title">App Builder Widgets</text><text x="336" y="358" text-anchor="end" class="n-sub t-code">ABW</text></g>
+          <g class="tile"><rect x="24" y="370" width="100" height="24"/><text x="74" y="386">Section</text></g>
+          <g class="tile"><rect x="130" y="370" width="100" height="24"/><text x="180" y="386">Review List</text></g>
+          <g class="tile"><rect x="236" y="370" width="100" height="24"/><text x="286" y="386">Button Bar</text></g>
+
+          <g class="node"><rect x="12" y="418" width="336" height="104"/><text x="24" y="440" text-anchor="start" class="n-title">Modernizer Widgets</text><text x="336" y="440" text-anchor="end" class="n-sub t-code">MDW</text></g>
+          <g class="tile"><rect x="24" y="452" width="100" height="24"/><text x="74" y="468">Text Field</text></g>
+          <g class="tile"><rect x="130" y="452" width="100" height="24"/><text x="180" y="468">Select</text></g>
+          <g class="tile"><rect x="236" y="452" width="100" height="24"/><text x="286" y="468">Checkbox</text></g>
+          <g class="tile"><rect x="24" y="484" width="100" height="24"/><text x="74" y="500">Date Field</text></g>
+          <g class="tile"><rect x="130" y="484" width="100" height="24"/><text x="180" y="500">Button</text></g>
+          <g class="tile tile-new"><rect x="236" y="484" width="100" height="24"/><text x="286" y="500">Toggle</text></g>
+          <g class="badge"><rect x="302" y="476" width="34" height="14"/><text x="319" y="486.5">NEW</text></g>
+
+          <g class="node node-target"><rect x="12" y="534" width="336" height="176"/><text x="24" y="556" text-anchor="start" class="n-title">Your BAW app</text><text x="24" y="574" text-anchor="start" class="n-sub">User interface</text></g>
+          <g class="tile"><rect x="24" y="584" width="312" height="24"/><text x="180" y="600">A View per group, and a Preview</text></g>
+          <g class="tile tile-new"><rect x="24" y="612" width="312" height="24"/><text x="180" y="628">A (Modernized) copy of each group</text></g>
+          <g class="tile tile-new"><rect x="24" y="640" width="312" height="24"/><text x="180" y="656">Quote · Load, and Save on Submit</text></g>
+          <g class="tile tile-new"><rect x="24" y="668" width="312" height="24"/><text x="180" y="684">Quote (Modernized) · Save on Submit</text></g>
+
+          <g class="node node-target"><rect x="12" y="788" width="336" height="120"/><text x="24" y="810" text-anchor="start" class="n-title">bawexternal</text><text x="24" y="828" text-anchor="start" class="n-sub">your app data · read and write</text></g>
+          <g class="tile tile-new"><rect x="24" y="852" width="150" height="24"/><text x="99" y="868">group_quote</text></g>
+          <g class="badge"><rect x="140" y="844" width="34" height="14"/><text x="157" y="854.5">NEW</text></g>
+
+          <g class="node"><rect x="12" y="924" width="336" height="110"/><text x="24" y="946" text-anchor="start" class="n-title">basdb</text><text x="24" y="964" text-anchor="start" class="n-sub">BAW's own database · read only</text></g>
+          <g class="tile"><rect x="24" y="984" width="150" height="24"/><text x="99" y="1000">apps, versions</text></g>
+          <g class="tile"><rect x="180" y="984" width="150" height="24"/><text x="255" y="1000">process history</text></g>
+
+          <g class="node"><rect x="12" y="1050" width="336" height="90"/><text x="24" y="1072" text-anchor="start" class="n-title">31 more databases</text><text x="24" y="1090" text-anchor="start" class="n-sub">other products on the platform · read only</text></g>
+        </svg>
+        <figcaption id="diagram-cap">Widgets live in toolkits every app can use. Groups live in your app, as Views with a Preview each, and the Modernizer adds a modern copy of each. The app saves and loads through BAW's own connection to the app database; everything else on the server is read only for Bob.</figcaption>
+      </figure>
+
+      <div class="talk" data-cues>
+        <div class="ledger-tabs" role="tablist" aria-label="Opening and how it works">
+          <button role="tab" id="h-t1" aria-controls="h-p1" aria-selected="true">Opening</button>
+          <button role="tab" id="h-t2" aria-controls="h-p2" aria-selected="false" tabindex="-1">Pieces</button>
+          <button role="tab" id="h-t3" aria-controls="h-p3" aria-selected="false" tabindex="-1">Groups</button>
+          <button role="tab" id="h-t4" aria-controls="h-p4" aria-selected="false" tabindex="-1">Data</button>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p1" aria-labelledby="h-t1">
+          <blockquote class="cue-say"><b class="say-label">Say · opening, 2 min</b>
+            <ul>
+              <li>“Last time you asked for reusable pieces: small widgets combined into larger groups, so the same information isn't rebuilt on every screen, and something your developers can maintain in BAW.”</li>
+              <li>“Today Bob builds your Quote screen from pictures, made of reusable groups, and this time the screen remembers what people type.”</li>
+              <li>“Then a modern version, with a widget Bob writes during the demo, your existing data brought in, and a look at the safety rules.”</li>
+            </ul>
+          </blockquote>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p2" aria-labelledby="h-t2" hidden>
+          <p class="cue-do"><b>Do</b> <span>Show the diagram.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“Bob uses two kinds of reusable pieces: widgets, in a toolkit every app can use, and groups, Views inside your app that combine those widgets.”<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup></li>
+              <li>“Bob has 21 tools and two roles, App Builder and Modernizer. The ones that change something important ask a person first.”</li>
+            </ul>
+          </blockquote>
+          <div class="ledger">
+            <table class="toolkits">
+              <thead><tr><th scope="col">Piece</th><th scope="col">Lives in</th><th scope="col">What it is</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">App Builder Widgets (ABW)</th><td data-label="Lives in">A toolkit</td><td data-label="What it is">Classic BAW: Section, Review List, Button Bar and more</td></tr>
+                <tr><th scope="row">Modernizer Widgets (MDW)</th><td data-label="Lives in">A toolkit</td><td data-label="What it is">React + Carbon: Text Field, Select, Checkbox, Date Field, Button and more</td></tr>
+                <tr><th scope="row">A group, e.g. Group Eligibility</th><td data-label="Lives in">Your app, as a View</td><td data-label="What it is">Fields bound to the app's data, placed on any step</td></tr>
+                <tr><th scope="row">A group's Preview</th><td data-label="Lives in">Your app, as a client-side human service</td><td data-label="What it is">The group on its own, to run and test it</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p3" aria-labelledby="h-t3" hidden>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“In BAW a screen is a coach, and its building blocks are views. A view can contain other views and bind to the app's data. That is exactly what a group is.”<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup></li>
+              <li>“Each placement of a group has its own settings: optional fields can be hidden, and the whole group can be read-only. The form shows a group editable; the review shows the same group read-only.”<sup><a href="#ref-2" aria-label="Reference 2">2</a></sup><sup><a href="#ref-3" aria-label="Reference 3">3</a></sup></li>
+              <li>“An app depends on one version of a toolkit. A new widget means a new toolkit version; apps on older versions keep theirs until someone moves them.”</li>
+            </ul>
+          </blockquote>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="h-p4" aria-labelledby="h-t4" hidden>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“The platform already has a database server. One database on it is set aside for your apps' data: Bob can read and write there. BAW keeps its own records on the same server; Bob can read them, but not change them.”</li>
+              <li>“Once the app is built it doesn't need Bob: it saves and loads through BAW's own connection to the app database.”</li>
+            </ul>
+          </blockquote>
+          <div class="ledger">
+            <table>
+              <thead><tr><th scope="col">Where</th><th scope="col">What it holds</th><th scope="col">What Bob may do</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">App database (<code>bawexternal</code>)</th><td data-label="Holds">Your apps' data, such as today's quotes</td><td data-label="Bob">Read and write</td></tr>
+                <tr><th scope="row">BAW's own database (<code>basdb</code>)</th><td data-label="Holds">BAW's apps, versions and history</td><td data-label="Bob">Read only</td></tr>
+                <tr><th scope="row">The platform's other databases</th><td data-label="Holds">Other IBM products on the platform</td><td data-label="Bob">Read only</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACT 1 ------------------------------------------------------------ -->
+    <section id="act-1" class="section act" aria-labelledby="act1-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">07:00 <span aria-hidden="true">/</span> 23:00</p>
+          <h2 id="act1-title" class="h2">Act 1. Pictures in, a screen that remembers out.</h2>
+          <p class="lead">Bob builds the app from pictures, every section a reusable group, and saves each quote. Submit one, then Load it back.</p>
+        </header>
+        <div class="pair" aria-label="A group on the form, and a quote loaded back from the database">
+          <figure>
+            <img src="../reusable-groups-demo-script/media/01-group-form.webp" width="1400" height="498" alt="The example app's first step: the Group Contact group with four fields">
+            <figcaption>A group on the form (example app)</figcaption>
+          </figure>
+          <figure>
+            <img src="../database-demo-script/media/03-load-filled.webp" width="1400" height="498" alt="A quote loaded back by name: the contact fields filled in from the database">
+            <figcaption>Load fills the form back (example app)</figcaption>
+          </figure>
+        </div>
+        <figure class="prompt">
+          <figcaption>Step 2 · paste in Bob, <span class="emoji">🏗️</span> BAW App Builder mode</figcaption>
+          <pre><code>Build a ZZ app from the screenshots in screenshots/Quote, image (1).png to image (6).png. They show one long page, scrolled, so some parts appear twice. Build it from App Builder Widgets, with the acronym ZZGDB. Add a review screen before Final Val., and make each section a reusable group so we can reuse it on other screens. Add a Group Name field at the top, and save every quote to a new table group_quote in bawexternal, keyed by Group Name, so a saved quote can be loaded again. Show me the design first.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <figure class="prompt">
+          <figcaption>Step 2 · when Bob shows the design</figcaption>
+          <pre><code>Approved. Use the built-in template, build only the Info. tab, and leave out the product name. Create the table, install the app and test it, compare it with the screenshots, and delete your test quote when you are done.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <ol class="seq" aria-label="What Bob does after the design is approved, in order">
+          <li><code>create_app</code> <span>groups, Load, Save</span></li>
+          <li class="seq-new"><code>run_sql</code> <span>create the table</span></li>
+          <li class="seq-new"><code>describe_table</code> <span>check it</span></li>
+          <li class="seq-ask"><code>install_app</code> <span>app</span></li>
+          <li><code>test_service</code> <span>every step</span></li>
+        </ol>
+        <p class="seq-legend"><i class="dot dot-new"></i> the database <i class="dot dot-ask"></i> Bob asks you</p>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="Act 1 steps">
+          <button role="tab" id="a1-t1" aria-controls="a1-p1" aria-selected="true"><i>1</i><span>Old screen</span></button>
+          <button role="tab" id="a1-t2" aria-controls="a1-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Ask</span></button>
+          <button role="tab" id="a1-t3" aria-controls="a1-p3" aria-selected="false" tabindex="-1"><i>3</i><span>Build</span></button>
+          <button role="tab" id="a1-t4" aria-controls="a1-p4" aria-selected="false" tabindex="-1"><i>4</i><span>Save, load</span></button>
+          <button role="tab" id="a1-t5" aria-controls="a1-p5" aria-selected="false" tabindex="-1"><i>5</i><span>In BAW</span></button>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p1" aria-labelledby="a1-t1">
+          <h3 class="step-title">Step 1. Show the old screen</h3>
+          <p class="cue-do"><b>Do</b> <span>Flip through the six pictures: one long “Info” tab of a quote in an old CRM, captured while scrolling. Point at the yes/no checkboxes (ERISA group?, Union group?, Reinsurance Declined). We come back to those in Act 2.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“All we have is pictures. The pictures are the requirement. And today the screen should also remember every quote.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p2" aria-labelledby="a1-t2" hidden>
+          <h3 class="step-title">Step 2. Ask Bob</h3>
+          <div class="cue-do"><b>Paste</b> <span>The request in the first Paste block.</span></div>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li>Opens each picture and reads the screen: sections, columns, drop-downs, checkboxes. Reads the colours and the logo file. Looks at the app database: there is no <code>group_quote</code> table yet.</li>
+              <li>Writes the design: <b>the groups</b> (each section, its fields, editable on the form, read-only on the review) and <b>the table</b> (its key, Group Name, and one column per field).</li>
+              <li><b>Stops and shows us the design</b>, with a few questions.</li>
+            </ol>
+          </div>
+          <div class="cue-do"><b>Paste</b> <span>The answer in the second Paste block.</span></div>
+          <blockquote class="cue-say"><b class="say-label">Say, while it works</b>
+            <ul>
+              <li>“Bob reads the pictures the way a developer would, and designs the table from the form itself. Nobody writes database code.”</li>
+              <li>“It doesn't build anything before we approve the design.”</li>
+            </ul>
+          </blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p3" aria-labelledby="a1-t3" hidden>
+          <h3 class="step-title">Step 3. Build, install and test</h3>
+          <div class="ledger">
+            <table class="order">
+              <caption>Bob does</caption>
+              <thead><tr><th scope="col">Order</th><th scope="col">Bob's step</th><th scope="col">Tool</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Builds the app: one View and one Preview service per group, a <b>Load</b> button, and saving on Submit</td><td><code>create_app</code></td></tr>
+                <tr><td>2</td><td>Creates the table, and checks it matches the design</td><td><code>run_sql</code>, <code>describe_table</code></td></tr>
+                <tr class="is-ask"><td>3</td><td><b>Asks before installing.</b> Answer yes</td><td><code>install_app</code></td></tr>
+                <tr><td>4</td><td>Opens it in a real browser, clicks through, compares it with the pictures, and deletes its test quote</td><td><code>test_service</code>, <code>run_sql</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“About 60 fields in 8 or 9 groups, in the same layout and colours, and a table with a column for each.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p4" aria-labelledby="a1-t4" hidden>
+          <h3 class="step-title">Step 4. Save a quote, then load it back</h3>
+          <div class="cue-do"><b>Do</b>
+            <ol class="num">
+              <li>Open the app. Type <b>Lighthouse Bakery Co</b> as the Group Name, pick a Proposed Rating Method, tick <b>ERISA group?</b>, press Review, then Submit. The confirmation shows a reference number.</li>
+              <li>Open the app again: an empty form. Type <b>Lighthouse Bakery Co</b> and press <b>Load</b>. Everything comes back.</li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“That quote now lives in the database, not in someone's inbox or spreadsheet. And the review placed the same groups, read-only.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a1-p5" aria-labelledby="a1-t5" hidden>
+          <h3 class="step-title">Step 5. The groups in BAW <span>if time allows</span></h3>
+          <p class="cue-do"><b>Do</b> <span>In Workflow Center, open the app, <b>User interface</b>: the groups under <b>View</b>, a Preview service per group under <b>Client-side human service</b>. Run one Preview.</span></p>
+          <div class="ui-pair">
+            <figure class="uilist" aria-label="Drawing of the classic app's User interface list">
+              <p>User interface</p>
+              <h4>Client-side human service</h4>
+              <ul><li>Large Group Quote</li><li>Group Eligibility Preview</li><li>…a Preview per group</li></ul>
+              <h4>View</h4>
+              <ul><li>Group Eligibility</li><li>Rating Methods and Commission</li><li>…a View per group</li></ul>
+            </figure>
+            <figure class="shot">
+              <img src="../reusable-groups-demo-script/media/04-group-preview.webp" width="1400" height="498" alt="A Preview service: one group on its own, with an OK button">
+              <figcaption>A Preview service: the group on its own (example app).</figcaption>
+            </figure>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“These are ordinary BAW views. Your developers can open a group, change its fields, and every screen that uses it follows. Bob got us here fast; BAW owns the result.”</li></ul></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACT 2 ------------------------------------------------------------ -->
+    <section id="act-2" class="section act" aria-labelledby="act2-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">23:00 <span aria-hidden="true">/</span> 40:00</p>
+          <h2 id="act2-title" class="h2">Act 2. Modern, with a new widget.</h2>
+          <p class="lead">One request: React + Carbon screens, the groups carried over, and a new Toggle in the toolkit.</p>
+        </header>
+        <figure class="prompt">
+          <figcaption>Step 2 · paste in Bob, same chat</figcaption>
+          <pre><code>Give the app you just built a React UI with IBM Carbon, from Modernizer Widgets, and keep its reusable groups. Lay it out like screenshots/Quote/generate-quote.png: the sections as tabs, the fields side by side, the client's blue from that screen on a white page, Submit and Cancel at the bottom right. Show the yes/no questions (ERISA group?, Union group?, Reinsurance Declined) as a Carbon toggle switch with Yes and No. No Modernizer Widget does that yet, so add a new Toggle widget to the toolkit that other apps can reuse. Keep Load on the classic screen only: leave the Load button and the database message out of the modern copy. Show me the plan before you build.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <figure class="prompt">
+          <figcaption>Step 3 · after you approve the plan</figcaption>
+          <pre><code>Approved. Build it, install it and test it, and delete your test quotes when you are done.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <figure class="prompt cmd">
+          <figcaption>Step 3 · in the terminal, while Bob builds: the spreadsheet for Act 3</figcaption>
+          <pre><code>python3 docs/showoff/groups-and-database-demo-script/data/make-sample-quotes.py work/ZZGDB.app.json work/demo-quotes.csv</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <ol class="seq" aria-label="What Bob does after the plan is approved, in order">
+          <li class="seq-new"><code>(files)</code> <span>write the Toggle</span></li>
+          <li class="seq-new"><code>(offline check)</code> <span>test every widget</span></li>
+          <li class="seq-new"><code>build_widget_toolkit</code> <span>new MDW version</span></li>
+          <li class="seq-ask"><code>install_app</code> <span>toolkit</span></li>
+          <li><code>modernize_app</code> <span>screens and groups</span></li>
+          <li class="seq-ask"><code>install_app</code> <span>app</span></li>
+          <li><code>test_service</code> <span>every step</span></li>
+        </ol>
+        <p class="seq-legend"><i class="dot dot-new"></i> the new Toggle <i class="dot dot-ask"></i> Bob asks you</p>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="Act 2 steps">
+          <button role="tab" id="a2-t1" aria-controls="a2-p1" aria-selected="true"><i>1</i><span>Target</span></button>
+          <button role="tab" id="a2-t2" aria-controls="a2-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Plan</span></button>
+          <button role="tab" id="a2-t3" aria-controls="a2-p3" aria-selected="false" tabindex="-1"><i>3</i><span>Build</span></button>
+          <button role="tab" id="a2-t4" aria-controls="a2-p4" aria-selected="false" tabindex="-1"><i>4a</i><span>Run it</span></button>
+          <button role="tab" id="a2-t5" aria-controls="a2-p5" aria-selected="false" tabindex="-1"><i>4b</i><span>The Toggle</span></button>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p1" aria-labelledby="a2-t1">
+          <h3 class="step-title">Step 1. Show the target look</h3>
+          <p class="cue-do"><b>Do</b> <span>Open <code>screenshots/Quote/generate-quote.png</code>, the client's newer quote screen. Point at the tabs, the fields side by side and the buttons at the bottom right. Then point at the three yes/no checkboxes. Stay in the same chat.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“A checkbox is a poor fit for a yes/no question. A switch reads better, and nobody has one in the toolkit yet.”</li></ul></blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p2" aria-labelledby="a2-t2" hidden>
+          <h3 class="step-title">Step 2. One request: modernize, keep the groups, create the widget</h3>
+          <div class="cue-do"><b>Paste</b> <span>The request in the first Paste block.</span></div>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li><b>Switches to its second role</b>, the Modernizer, by itself.</li>
+              <li>Reads the app it just built (<code>inspect_coaches</code>): every step, and <b>every group</b> with its fields and placements.</li>
+              <li>Plans the modern screens, a modern copy of each group, and the <b>new Toggle widget</b>: it saves one yes/no value, has On text and Off text options, and is used by the three questions.</li>
+              <li><b>Stops and shows us the plan.</b></li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say, while it works</b><ul><li>“Bob found the groups by itself. The modern version keeps the same structure: the same groups, placed the same way.”</li></ul></blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p3" aria-labelledby="a2-t3" hidden>
+          <h3 class="step-title">Step 3. Build it</h3>
+          <div class="cue-do"><b>Paste</b> <span>The answer in the second Paste block. Answer yes at both install stops.</span></div>
+          <div class="ledger">
+            <table class="order">
+              <caption>Bob does</caption>
+              <thead><tr><th scope="col">Order</th><th scope="col">Bob's step</th><th scope="col">Tool</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Writes the Toggle: its React component with Carbon's toggle, its styles, one entry in the toolkit's list, and a palette icon</td><td>(files)</td></tr>
+                <tr><td>2</td><td>Checks every widget in a browser, the new one included</td><td>(offline check)</td></tr>
+                <tr><td>3</td><td>Builds a <b>new</b> Modernizer Widgets version that contains the Toggle</td><td><code>build_widget_toolkit</code></td></tr>
+                <tr class="is-ask"><td>4</td><td><b>Asks before installing the toolkit.</b> Answer yes</td><td><code>install_app</code></td></tr>
+                <tr><td>5</td><td>Builds the modern screens, and a “(Modernized)” copy of every group, with toggles on the three questions</td><td><code>modernize_app</code></td></tr>
+                <tr class="is-ask"><td>6</td><td><b>Asks before installing the app.</b> Answer yes</td><td><code>install_app</code></td></tr>
+                <tr><td>7</td><td>Tests every step in a real browser, then deletes its test quotes</td><td><code>test_service</code>, <code>run_sql</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="cue-do"><b>Do</b> <span>While Bob builds, run the terminal line in the third block: it writes <code>work/demo-quotes.csv</code>, 20 made-up quotes whose columns match the table, whatever Bob named the fields. If the name differs, <code>ls work/*.app.json</code> shows Bob's design file. The file stays in <code>work/</code>.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say, while it works</b>
+            <ul>
+              <li>“Bob is writing a real BAW widget, not a picture of one. It uses IBM's Carbon toggle, which is meant for exactly this: an on/off choice.”<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup></li>
+              <li>“It tests the widget before it builds the toolkit, so a broken widget never reaches BAW.”</li>
+            </ul>
+          </blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p4" aria-labelledby="a2-t4" hidden>
+          <h3 class="step-title">Step 4. The reveal: run it</h3>
+          <div class="cue-do"><b>Do</b>
+            <span>Run the “(Modernized)” version. Show the tabs and the groups with their fields side by side. Flip <b>ERISA group?</b> to Yes. Carry on to the review: the groups are read-only, and it shows “Yes”.</span>
+          </div>
+          <div class="shots shots-run">
+            <figure class="shot">
+              <img src="../reusable-groups-demo-script/media/05-group-modernized.webp" width="1400" height="916" alt="A modernized step: the Rating Method group with its four fields side by side, and the contact group again for reference, read-only">
+              <figcaption>Modernized groups: fields side by side, the reference copy read-only (example app).</figcaption>
+            </figure>
+            <figure class="shot">
+              <img src="../reusable-groups-demo-script/media/07-group-modernized-form.webp" width="1400" height="482" alt="The modernized first step: the Group Contact group with its fields side by side">
+              <figcaption>The first step's group, modernized.</figcaption>
+            </figure>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“Both versions are made of the same groups, so the structure your developers maintain is the same in classic and modern.”</li>
+              <li>“The modern copy saves on Submit too. Loading a saved quote stays on the classic screen for now.”</li>
+            </ul>
+          </blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="a2-p5" aria-labelledby="a2-t5" hidden>
+          <h3 class="step-title">Step 4. The reveal: the Toggle in BAW</h3>
+          <p class="cue-do"><b>Do</b> <span>Open a modernized coach in Coach Designer. In the palette, search “Modernizer”: the <b>Toggle</b> is there with its icon. Drag one onto a step; show <b>On text</b> and <b>Off text</b> in its Configuration tab.</span></p>
+          <div class="shots shots-designer">
+            <figure class="shot">
+              <img src="../reusable-groups-demo-script/media/08-palette-toggle.webp" width="331" height="566" alt="The Designer palette searched for Modernizer: the stock widgets and the new Toggle with its switch icon">
+              <figcaption>Palette: the new Toggle.</figcaption>
+            </figure>
+            <figure class="shot shot-wide">
+              <img src="../reusable-groups-demo-script/media/09-properties-toggle.webp" width="1586" height="203" alt="The Toggle's Configuration tab with two options, On text and Off text">
+              <figcaption>Configuration: On text and Off text.</figcaption>
+            </figure>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Twenty minutes ago this widget did not exist. Now it is in your toolkit, with an icon, a preview and options, like IBM's own.”</li></ul></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACT 3 ------------------------------------------------------------ -->
+    <section id="act-3" class="section act" aria-labelledby="act3-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">40:00 <span aria-hidden="true">/</span> 49:00</p>
+          <h2 id="act3-title" class="h2">Act 3. Your data.</h2>
+          <p class="lead">A spreadsheet of 20 quotes goes in with one sentence; any of them opens in the app; a question comes back as a table.</p>
+        </header>
+        <figure class="prompt">
+          <figcaption>Step 2 · paste in Bob</figcaption>
+          <pre><code>Load the spreadsheet work/demo-quotes.csv into the group_quote table, then tell me how many quotes the table holds.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <figure class="prompt">
+          <figcaption>Step 4 · a question</figcaption>
+          <pre><code>Which rating methods do our quotes use, and what is the average medical commission percentage for each?</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <div class="pair" aria-label="A quote loaded from the spreadsheet, both parts of the form">
+          <figure>
+            <img src="../database-demo-script/media/03-load-filled.webp" width="1400" height="498" alt="A quote loaded by name: the contact fields filled in">
+            <figcaption>Type the name, press Load (example app)</figcaption>
+          </figure>
+          <figure>
+            <img src="../database-demo-script/media/04-load-rating.webp" width="1400" height="412" alt="The rating group of the same quote, filled from the same row">
+            <figcaption>Every group fills from the same row</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="Act 3 steps">
+          <button role="tab" id="a3-t1" aria-controls="a3-p1" aria-selected="true"><i>1</i><span>Spreadsheet</span></button>
+          <button role="tab" id="a3-t2" aria-controls="a3-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Load it in</span></button>
+          <button role="tab" id="a3-t3" aria-controls="a3-p3" aria-selected="false" tabindex="-1"><i>3</i><span>In the app</span></button>
+          <button role="tab" id="a3-t4" aria-controls="a3-p4" aria-selected="false" tabindex="-1"><i>4</i><span>Ask</span></button>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a3-p1" aria-labelledby="a3-t1">
+          <h3 class="step-title">Step 1. Show the spreadsheet</h3>
+          <p class="cue-do"><b>Do</b> <span>Open <code>work/demo-quotes.csv</code> in the spreadsheet program: 20 employer groups, one column per field of the form. All made up for today.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Every team has a spreadsheet like this. Let's put it where the app can use it.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a3-p2" aria-labelledby="a3-t2" hidden>
+          <h3 class="step-title">Step 2. Load it in</h3>
+          <div class="cue-do"><b>Paste</b> <span>The request in the first Paste block.</span></div>
+          <div class="cue-bob"><b>Bob does</b> <span>Loads the file into the table (<code>import_table</code>) in one go, then counts: <b>20 rows loaded, 21 quotes in all</b>, counting Lighthouse Bakery from Act 1.</span></div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“A load is all or nothing: if one row were wrong, nothing would go in, and Bob would tell us which row.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a3-p3" aria-labelledby="a3-t3" hidden>
+          <h3 class="step-title">Step 3. Open one in the app</h3>
+          <p class="cue-do"><b>Do</b> <span>In the classic app, type <b>Northwind Logistics</b> and press <b>Load</b>. Every group fills in from the spreadsheet row.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“From spreadsheet to working app in one sentence.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a3-p4" aria-labelledby="a3-t4" hidden>
+          <h3 class="step-title">Step 4. Ask in plain English</h3>
+          <div class="cue-do"><b>Paste</b> <span>The question in the second Paste block.</span></div>
+          <div class="cue-bob"><b>Bob does</b> <span>Writes a query (<code>run_sql</code>) and answers with a table. In the rehearsal, over the 20 sample quotes:</span></div>
+          <div class="ledger answer">
+            <table>
+              <thead><tr><th scope="col">Rating method</th><th scope="col">Quotes</th><th scope="col">Average medical commission</th></tr></thead>
+              <tbody>
+                <tr><td>Fully Insured</td><td>9</td><td>4.33%</td></tr>
+                <tr><td>Self-Funded</td><td>7</td><td>3.86%</td></tr>
+                <tr><td>Level Funded</td><td>4</td><td>4.63%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“No report request, no waiting. If you ask, Bob shows the query it ran, so an analyst can check it.”</li></ul></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACT 4 ------------------------------------------------------------ -->
+    <section id="act-4" class="section act" aria-labelledby="act4-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">49:00 <span aria-hidden="true">/</span> 52:00</p>
+          <h2 id="act4-title" class="h2">Act 4. Safety.</h2>
+          <p class="lead">Bob can read BAW's own database. When it tries to change it, the database says no.</p>
+        </header>
+        <figure class="prompt">
+          <figcaption>Step 1 · Bob reads BAW's own database</figcaption>
+          <pre><code>How many process apps does BAW itself have? Read it from BAW's own database.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <figure class="prompt">
+          <figcaption>Step 2 · Bob tries to change it</figcaption>
+          <pre><code>Now rename the app you built directly in BAW's database. Use run_sql only.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+        <figure class="prompt cmd">
+          <figcaption>What the database answers, in the rehearsal</figcaption>
+          <pre><code>cannot execute UPDATE in a read-only transaction.
+basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code></pre>
+        </figure>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="Act 4 steps">
+          <button role="tab" id="a4-t1" aria-controls="a4-p1" aria-selected="true"><i>1</i><span>Read</span></button>
+          <button role="tab" id="a4-t2" aria-controls="a4-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Try to change</span></button>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a4-p1" aria-labelledby="a4-t1">
+          <h3 class="step-title">Step 1. Bob reads BAW's own database</h3>
+          <div class="cue-bob"><b>Bob does</b> <span>Reads <code>basdb</code> and answers with the count.</span></div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Bob can see inside BAW itself. Useful for audits, clean-ups and support questions.”</li></ul></blockquote>
+        </div>
+        <div class="cue-panel" role="tabpanel" id="a4-p2" aria-labelledby="a4-t2" hidden>
+          <h3 class="step-title">Step 2. Bob tries to change it</h3>
+          <div class="cue-bob"><b>Bob does</b> <span>Tries, and the database refuses: <b>basdb is read-only for Bob</b>.</span></div>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“The refusal comes from the database itself, not from Bob being polite. Bob's login there is read-only.”</li>
+              <li>“When a change there really is needed, Bob must ask a person first, and it saves a backup before it writes anything.”</li>
+            </ul>
+          </blockquote>
+          <p class="cue-do"><b>If</b> <span>Bob offers to make the change with its approval tool, say no, or press Deny when it asks. “That's the point: a person decides.”</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAFETY, QUESTIONS, NEXT STEPS, REHEARSAL ------------------------------------ -->
+    <section id="close" class="section guard" aria-labelledby="close-title">
+      <header class="sec-head">
+        <p class="timecode">52:00 <span aria-hidden="true">/</span> 60:00</p>
+        <h2 id="close-title" class="h2">Safety, questions and next steps.</h2>
+        <p class="lead">Tick each rehearsal check as it passes. The page remembers them; copy the results when you are done.</p>
+        <div class="meter" data-meter>
+          <div class="meter-bar"><span data-meter-fill></span></div>
+          <p><output data-meter-read>0 of 10</output> checks passed</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn btn-primary" type="button" data-checks-copy>Copy results</button>
+          <button class="btn btn-quiet" type="button" data-checks-clear>Clear ticks</button>
+        </div>
+      </header>
+
+      <div class="ledger" data-cues>
+        <div class="ledger-tabs" role="tablist" aria-label="Safety, questions, troubleshooting, next steps and the rehearsal checklist">
+          <button role="tab" id="c-t1" aria-controls="c-p1" aria-selected="true">Safety</button>
+          <button role="tab" id="c-t2" aria-controls="c-p2" aria-selected="false" tabindex="-1">Questions</button>
+          <button role="tab" id="c-t3" aria-controls="c-p3" aria-selected="false" tabindex="-1">If it breaks</button>
+          <button role="tab" id="c-t4" aria-controls="c-p4" aria-selected="false" tabindex="-1">Next steps</button>
+          <button role="tab" id="c-t5" aria-controls="c-p5" aria-selected="false" tabindex="-1">Rehearsal checklist</button>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p1" aria-labelledby="c-t1">
+          <table>
+            <thead><tr><th scope="col">Safety rule</th><th scope="col">Why it matters</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">A person approves every design, plan and install</th><td>Bob stops before building and before installing</td></tr>
+              <tr><th scope="row">Every install is a new version</th><td>Nothing is overwritten; you can always go back</td></tr>
+              <tr><th scope="row">Bob adds widgets, never changes existing ones, and tests a new one first</th><td>Apps that depend on a widget keep working; a broken widget never reaches BAW</td></tr>
+              <tr><th scope="row">Bob writes only in the app database</th><td>BAW's own records and the other products' databases are read only for its login</td></tr>
+              <tr><th scope="row">A change to a system database asks a person first, and backs up first</th><td>Nothing changes there without a decision and a way back</td></tr>
+              <tr><th scope="row">A load is all or nothing</th><td>A bad spreadsheet never half-loads</td></tr>
+              <tr><th scope="row">The app's Load and Save run fixed statements</th><td>Nobody can make the app run their own SQL</td></tr>
+              <tr><th scope="row">Passwords stay in the connector</th><td>Bob never sees them</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p2" aria-labelledby="c-t2" hidden>
+          <dl class="qa" aria-label="Questions to expect">
+            <div><dt>Can smaller widgets be combined into larger reusable ones, keeping configuration and data binding?</dt><dd>Yes. A group is a View made of field widgets, bound to the app's data, with a visibility setting per field and a read-only setting per placement.<sup><a href="#ref-1" aria-label="Reference 1">1</a></sup><sup><a href="#ref-3" aria-label="Reference 3">3</a></sup> Groups inside groups, and repeating groups (lists), are not built yet.</dd></div>
+            <div><dt>Which changes can we make in BAW, and which need Bob?</dt><dd>Changes to a group's fields are yours: on its next rebuild Bob keeps your version and asks before replacing it. Other edits, such as help text or choice lists, belong in Bob's design, because a rebuild replaces them.<sup><a href="#ref-4" aria-label="Reference 4">4</a></sup></dd></div>
+            <div><dt>Can a group be shared across apps?</dt><dd>Not yet: groups live in one app. Widgets are shared, through the toolkit.</dd></div>
+            <div><dt>Where is our data?</dt><dd>On the platform's own database server, in the app database. Not on this laptop, and not inside Bob.</dd></div>
+            <div><dt>Can Bob break BAW?</dt><dd>Its login can only read BAW's databases. A change there needs a person's approval, and a backup is taken first.</dd></div>
+            <div><dt>Does Bob ask before every change to the app database?</dt><dd>Not by default, because it's where we test. That's a setting: in production, turn on asking for those tools too.</dd></div>
+            <div><dt>Does the modern screen load saved quotes?</dt><dd>Not yet. It saves on Submit; Load is on the classic screen.</dd></div>
+            <div><dt>Other databases, such as Oracle or Db2?</dt><dd>Today, PostgreSQL only.</dd></div>
+            <div><dt>Can other AI assistants do this?</dt><dd>Yes. The connector follows the open MCP standard, so any assistant that supports MCP can use the same 21 tools.<sup><a href="#ref-6" aria-label="Reference 6">6</a></sup></dd></div>
+          </dl>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p3" aria-labelledby="c-t3" hidden>
+          <table>
+            <thead><tr><th scope="col">Problem on stage</th><th scope="col">What to do</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Bob's tools panel shows fewer than 21 tools</th><td>Restart baw-dev-tools in that panel</td></tr>
+              <tr><th scope="row">Bob proposes no groups</th><td>Say: “Make each section a reusable group.”</td></tr>
+              <tr><th scope="row">Bob says the table exists with other columns</th><td>The table was not reset. Run the last line of prep step 3, then ask again</td></tr>
+              <tr><th scope="row">Bob uses a Checkbox instead of a new widget</th><td>Say: “No, add a new Toggle widget to Modernizer Widgets for those three questions.”</td></tr>
+              <tr><th scope="row">The modern copy shows a Load button or a “Db Message” tab</th><td>Say: “Leave the Load button and the database message out of the modern copy, and rebuild it.” Load there would not fill the form</td></tr>
+              <tr><th scope="row">The new widget fails its check twice</th><td>Bob falls back to the stock Checkbox and finishes. Carry on; show the Toggle in the rehearsal app instead</td></tr>
+              <tr><th scope="row">The spreadsheet helper says there is no database section</th><td>The design file is from an earlier run; pick the newest <code>work/*.app.json</code></td></tr>
+              <tr><th scope="row">The load fails with “duplicate key”</th><td>The rows are already there. Say: “Replace the rows in group_quote with work/demo-quotes.csv.” Bob backs the table up first</td></tr>
+              <tr><th scope="row">Load says “No record found”</th><td>The name must match exactly, including capitals: “Northwind Logistics”</td></tr>
+              <tr><th scope="row">“Snapshot already exists”, or the acronym is taken</th><td>Give Bob a new acronym: a safety rule working</td></tr>
+              <tr><th scope="row">An install or the first database answer is slow</th><td>Talk through the diagram while it runs</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p4" aria-labelledby="c-t4" hidden>
+          <div class="cue-do"><b>Do</b>
+            <div>
+              <p>Ask the room, and write the answers down:</p>
+              <ol class="num">
+                <li>Which information repeats across your screens? Those are your first groups.</li>
+                <li>Which forms should remember their data first, and which spreadsheets belong in an app?</li>
+                <li>Which questions wait for a report today?</li>
+                <li>Who on your team will own the groups and the toolkit?</li>
+                <li>What data must never go into the app database, such as personal or health data?</li>
+              </ol>
+            </div>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, a spreadsheet became app data, and a question was answered in plain English. BAW's own database stayed untouched, and a person approved every step that mattered.”</li></ul></blockquote>
+          <p class="project">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps.</p>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p5" aria-labelledby="c-t5" hidden>
+          <fieldset class="scorecard" data-checks>
+            <legend>Rehearsal checklist</legend>
+            <label><input type="checkbox" value="1"><span>Bob's design lists the groups and the table (key Group Name, a column per field) before anything is built.</span></label>
+            <label><input type="checkbox" value="2"><span>Bob creates the table, asks before installing, and deletes its test quote.</span></label>
+            <label><input type="checkbox" value="3"><span>A submitted quote shows a reference number, and Load brings it back.</span></label>
+            <label><input type="checkbox" value="4"><span>Bob switches to the Modernizer by itself and reads every group back.</span></label>
+            <label><input type="checkbox" value="5"><span>Bob's plan lists the modern groups and the new Toggle, and leaves Load out of the modern copy.</span></label>
+            <label><input type="checkbox" value="6"><span>Bob builds a <b>new</b> Modernizer Widgets version and asks before each install.</span></label>
+            <label><input type="checkbox" value="7"><span>The modern copy's tabs lay the groups out side by side, a flipped toggle reads “Yes” on the review, and the Toggle is in the palette.</span></label>
+            <label><input type="checkbox" value="8"><span>The helper writes <code>work/demo-quotes.csv</code>; the load reports 20 rows, and Northwind Logistics loads in the classic app.</span></label>
+            <label><input type="checkbox" value="9"><span>The rating question comes back as a table, and Bob's rename in BAW's database is refused.</span></label>
+            <label><input type="checkbox" value="10"><span>Afterwards: the Toggle files and the table are reset (prep step 3), and the test apps are archived.</span></label>
+          </fieldset>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="refs page-refs">
+    <h3>References</h3>
+    <ol>
+      <li id="ref-1">IBM, Developing reusable views (BAW 26.0.x). <a href="https://www.ibm.com/docs/en/baw/SS8JB4_26.0.x/com.ibm.wbpm.wle.editor.doc/topics/tcreatingviews.html" target="_blank" rel="noopener">https://www.ibm.com/docs/en/baw/SS8JB4_26.0.x/com.ibm.wbpm.wle.editor.doc/topics/tcreatingviews.html</a></li>
+      <li id="ref-2">IBM, Setting the visibility of coach views. <a href="https://www.ibm.com/docs/en/bpm/8.6.0?topic=views-setting-visibility-coach" target="_blank" rel="noopener">https://www.ibm.com/docs/en/bpm/8.6.0?topic=views-setting-visibility-coach</a></li>
+      <li id="ref-3">IBM, Configuration properties and configuration options. <a href="https://www.ibm.com/docs/en/SSFPJS_8.6.0/com.ibm.wbpm.wle.editor.doc/topics/c_config_options.html" target="_blank" rel="noopener">https://www.ibm.com/docs/en/SSFPJS_8.6.0/com.ibm.wbpm.wle.editor.doc/topics/c_config_options.html</a></li>
+      <li id="ref-4">IBM, Managing snapshots (BAW 23.x). <a href="https://www.ibm.com/docs/SS8JB4_23.x/com.ibm.wbpm.admin.doc/topics/managing_snapshots.html" target="_blank" rel="noopener">https://www.ibm.com/docs/SS8JB4_23.x/com.ibm.wbpm.admin.doc/topics/managing_snapshots.html</a></li>
+      <li id="ref-5">Carbon Design System, Toggle usage. <a href="https://carbondesignsystem.com/components/toggle/usage" target="_blank" rel="noopener">https://carbondesignsystem.com/components/toggle/usage</a></li>
+      <li id="ref-6">Model Context Protocol, Tools. <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools" target="_blank" rel="noopener">https://modelcontextprotocol.io/specification/2025-06-18/server/tools</a></li>
+    </ol>
+    <p class="fine">The app pictures come from neutral example apps; on the day, Bob builds from the client's own pictures, which stay on the presenter's laptop. The sample quotes are made up by <code>data/make-sample-quotes.py</code> and stay in <code>work/</code>. The steps and the figures in Act 3 come from a rehearsal on a test server.</p>
+    <p class="fine">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps. Shorter scripts: <a href="../reusable-groups-demo-script/index.html">reusable groups</a> and <a href="../database-demo-script/index.html">the Quote screen remembers</a>.</p>
+  </footer>
+
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+  <script src="js/main.js"></script>
+</body>
+</html>
