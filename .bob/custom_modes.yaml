@@ -27,7 +27,7 @@ customModes:
     groups:
       - read
       - - edit
-        - fileRegex: ^(work|app-specs|coach-ui/src/screens|coach-ui/src/widgets|coach-ui/widgets)/
+        - fileRegex: ^(/.+/)?(work|app-specs|coach-ui/src/screens|coach-ui/src/widgets|coach-ui/widgets)/
           description: App specs, coach specs, React screens and new Modernizer widgets
       - mcp
       - skill
@@ -57,7 +57,7 @@ customModes:
     groups:
       - read
       - - edit
-        - fileRegex: ^(work|app-specs)/
+        - fileRegex: ^(/.+/)?(work|app-specs)/
           description: App specs, theme files and coach specs
       - mcp
       - skill

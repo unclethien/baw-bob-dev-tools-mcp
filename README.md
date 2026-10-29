@@ -216,7 +216,7 @@ The Load and Save services of a generated app are callable by any signed-in BAW 
 - **Each Load or Save call commits on its own.** An app that fails halfway through a form does not roll back what an earlier call saved.
 - **A failed call shows PostgreSQL's own message on the coach** (for example `relation "public.x" does not exist`), including table and column names.
 - **One huge value is still read whole.** The row and size caps apply after PostgreSQL's driver has read a row into memory, so a single row with a very large `bytea` or `text` value is not cut before it is read. `describe_table` marks such columns; select `length(col)` or `left(col, 200)` of them.
-- The admin password sits in `.env` like the BAW credentials. `.bobignore` blocks Bob's file tools from `.env` and `.bob/mcp.json`, as a second guard next to the modes' rule never to read them; other shell commands are not restricted by it.
+- The admin password sits in `.env` like the BAW credentials. `.bobignore` blocks Bob's file tools from `.env`, as a second guard next to the modes' rule never to read it; other shell commands are not restricted by it. `.bob/mcp.json` cannot be listed there, because Bob reads its own MCP config through the same filter and its chat fails to start; the modes' rule is its only guard.
 
 ## Without a BAW server
 

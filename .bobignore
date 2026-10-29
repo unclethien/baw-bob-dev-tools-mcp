@@ -1,6 +1,6 @@
-# Files Bob must not read or edit: the credentials of the BAW and PostgreSQL servers and Bob's own server config
+# Files Bob must not read or edit: the credentials of the BAW and PostgreSQL servers.
+# Do not list .bob/mcp.json: Bob reads it through this filter at startup and its chat fails to start.
 .env
 .env.*
 !.env.example
-.bob/mcp.json
 db-backups/
