@@ -45,7 +45,7 @@ In the app spec (see `app-specs/example-grouped-quote.json`), list the groups on
 
 ## Modernized app (modernize_app)
 
-`inspect_coaches` reads the groups of a classic app back: the coach spec's `"groups"` and a section `{"title", "group", "readonly", "hide"}` where a coach places one. Keep them; `modernize_app` builds "<group> (Modernized)" and its Preview service from them. To add groups to an app that has none, add `"groups": [{"name", "fields": [fields as in a section]}]` to the coach spec and replace each section that repeats them with `{"title", "group", "readonly", "hide"}`. A group belongs to one business object, and a coach with a hand-written `"screen"` cannot place one.
+`inspect_coaches` reads the groups of a classic app back: the coach spec's `"groups"`, which list each group's fields once, and a section `{"title", "group", "readonly", "hide"}`, without fields, where a coach places one. Edit a group's field (label, type, help) in `"groups"`; every placement follows. Keep them; `modernize_app` builds "<group> (Modernized)" and its Preview service from them. To add groups to an app that has none, add `"groups": [{"name", "fields": [fields as in a section]}]` to the coach spec and replace each section that repeats them with `{"title", "group", "readonly", "hide"}`. A group belongs to one business object, and a coach with a hand-written `"screen"` cannot place one.
 
 ## When someone changed a group in BAW
 

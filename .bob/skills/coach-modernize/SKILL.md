@@ -23,7 +23,7 @@ Each modernized coach is a layout of Modernizer Widgets (Theme, Header, Error Su
 
 5. **Test every copy:** `test_service` for each `<service> (Modernized)` with `snapshot` set and `fill: true`. It walks each screen, types sample values (each field's `example`), presses the primary button and screenshots every step.
 
-6. **Look at the screenshots.** Check titles, grouping, labels, validation, the summary screens and the theme's look against your design. Fix the spec (or a screen, then `build_screens`) and repeat from step 3 with a new snapshot.
+6. **Look at the screenshots.** Check titles, grouping, labels, validation, the summary screens and the theme's look against your design. Fix the spec (or a screen, then `build_screens`) and repeat from step 3 with a new snapshot. A difference in buttons, fields or steps is an app spec change: hand it to BAW App Builder, then modernize the rebuilt app from `inspect_coaches` with `previous` set to this coach spec.
 
 7. **Report** the app and snapshot, the MDW snapshot, each service with its result and steps, the screenshot folders, any screens you wrote, and the spec's native and dropped items. Mention that the coaches open in Coach Designer as editable layouts. A change to an existing widget (for every app) is code in `coach-ui/`: hand it to Agent mode. Adding a new widget stays here, with the modernizer-widget skill.
 

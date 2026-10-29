@@ -23,13 +23,13 @@ An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com
 | `export_table` | Write a table, or the result of one `SELECT`, from any readable database to a CSV file under `work/` |
 | `import_table` | Load a CSV file or a JSON array of objects from `work/` into an existing `bawexternal` table, appending or replacing (a replace backs the table up first) |
 | `change_system_db` | One write on a system database (any database except `bawexternal`), as the admin login, after the user approves it, with the touched rows backed up first |
-| `inspect_coaches` | Read every coach (sections, fields, buttons, flow, reusable groups) into an editable coach spec; lists sections worth making a group, and groups someone changed in BAW |
-| `build_widget_toolkit` | Build App Builder Widgets (`builder`) or Modernizer Widgets (`modernizer`) as a toolkit `.twx`, a new snapshot each time |
+| `inspect_coaches` | Read every coach (sections, fields, buttons, flow, reusable groups) into an editable coach spec; lists sections worth making a group, and groups someone changed in BAW; after a rebuild, carries the edits of an earlier coach spec over (`previous`) |
+| `build_widget_toolkit` | Build App Builder Widgets (`builder`) or Modernizer Widgets (`modernizer`) as a toolkit `.twx`, a new snapshot each time; Modernizer Widgets are first checked in a browser, and a failed check builds nothing |
 | `create_app` | Build an installable `.twx` from an app spec, its coaches made of App Builder Widgets and reusable groups, from a built-in template or matching an app you pick; a new snapshot when the app exists, keeping groups someone changed in BAW unless told to replace them |
 | `build_screens` | Compile the widgets and the hand-written React screens; returns compiler errors with file and line |
 | `modernize_app` | Add a React + Carbon copy of each service, its coaches made of Modernizer Widgets and the app's groups rebuilt as "(Modernized)" Views, styled by the app's theme file, as a new snapshot |
 | `install_app` | Install a `.twx` (an app or a widget toolkit) and wait for the result |
-| `test_service` | Walk a service in a browser: screenshot each screen, fill sample values, type the values you give it (`values`), press the forward button or the buttons you name (`press`, e.g. Load) |
+| `test_service` | Walk a service in a browser: screenshot each screen, fill sample values (toggles switched on), type the values you give it (`values`), press the forward button or the buttons you name (`press`, e.g. Load) |
 | `test_process` | Start an app's workflow and work every task it creates in a browser, pressing the buttons you name (e.g. Send Back once), until it completes |
 
 Guard rails:
@@ -66,14 +66,14 @@ Each widget shows in the palette with its icon and draws a preview on the canvas
 
 The widgets live in `coach-ui/`: `widgets/*-widgets.json` lists each widget's view name, options and icon (`widgets/icons/`, `widgets/builder/icons/`), `widgets/builder/` holds the App Builder widgets' markup and scripts, and `src/widgets/` the Modernizer widgets. `src/screens/` holds the screens hand-written for single coaches; such a coach is one block in Coach Designer. Changing a widget is a code change: ask Bob in Agent mode, then build and install a new toolkit snapshot.
 
-The Modernizer can also add a widget while it modernizes an app, when no Modernizer Widget does the job (for example a Yes/No Toggle for Boolean questions). It lists the new widget in the plan it shows you, then writes three files: the React + Carbon component `coach-ui/src/widgets/<kind>.jsx`, its entry in `coach-ui/widgets/modernizer-widgets.json` and its palette icon `coach-ui/widgets/icons/<kind>.svg`, plus `coach-ui/src/widgets/<kind>.scss` when it uses a Carbon component the other widgets don't. It checks the widget offline, builds and installs a new `MDW` snapshot, and uses it in the app; the widget is then in the palette for every app on that snapshot. A widget binds one value (a String, Integer, Decimal, Boolean or Date). The steps are in the skill [`.bob/skills/modernizer-widget/SKILL.md`](.bob/skills/modernizer-widget/SKILL.md). Changing or removing an existing widget stays a code change for Agent mode, because other apps use it.
+The Modernizer can also add a widget while it modernizes an app, when no Modernizer Widget does the job (for example a Yes/No Toggle for Boolean questions). It lists the new widget in the plan it shows you, then writes three files: the React + Carbon component `coach-ui/src/widgets/<kind>.jsx`, its entry in `coach-ui/widgets/modernizer-widgets.json` and its palette icon `coach-ui/widgets/icons/<kind>.svg`, plus `coach-ui/src/widgets/<kind>.scss` when it uses a Carbon component the other widgets don't. `build_widget_toolkit` checks every widget in a browser before it builds a new `MDW` snapshot, Bob installs it and uses it in the app; the widget is then in the palette for every app on that snapshot. A widget binds one value (a String, Integer, Decimal, Boolean or Date). The steps are in the skill [`.bob/skills/modernizer-widget/SKILL.md`](.bob/skills/modernizer-widget/SKILL.md). Changing or removing an existing widget stays a code change for Agent mode, because other apps use it.
 
 ## Reusable groups
 
 When the same information appears on several screens, Bob can build it once as a **group**: a View inside the app, listed in Workflow Center under the app's User interface, that every coach places. A contact block can sit editable on the form, read-only for reference on a later step, and on the review, all from one View. Each group also gets a "<group> Preview" client-side human service that shows it alone.
 
 - **Classic UI:** the app spec's `groups` define them, and a section `{"group": "<name>", "readonly": true, "hide": [...]}` places one (details in [docs/app-spec-reference.html](docs/app-spec-reference.html#groups)). The fields inside are BAW's own.
-- **Modernized UI:** `inspect_coaches` reads the groups back, and `modernize_app` builds "<group> (Modernized)" from Modernizer Widgets, with its own Preview service.
+- **Modernized UI:** `inspect_coaches` reads the groups back, each group's fields listed once in the coach spec, and `modernize_app` builds "<group> (Modernized)" from Modernizer Widgets, with its own Preview service.
 - **Settings per placement:** a "<field> visibility" setting for each optional field (Same as parent, or Hidden), and the placement's own Visibility for Read only.
 - **Proposals:** Bob proposes a group for three or more fields that appear on two or more screens, or uses the groups you name, and shows them for approval before building.
 - **Changes in Coach Designer:** users can add, remove, move or relabel a group's fields and every coach follows. Save a snapshot, so Bob sees the change. On the next rebuild Bob keeps that group, says what changed and asks whether to keep it or replace it with the spec's version (`replace_groups`). Other edits to a group (help text, choices, styling) belong in the spec, because a rebuild replaces them.
@@ -138,6 +138,23 @@ Settings are read from the environment first, then `.env`:
    Bob reads the screen with the screenshot-to-app skill: its layout (tabs, sections, columns and their widths, which field sits where), its controls (labels, dropdowns, radio groups, checkboxes, required markers, help icons, buttons) and its look (colours sampled with `image_colors`, the header banner with the logo cut out by `crop_image`, field icons, shapes, button placement). It writes the theme file and the app spec, shows you the design and waits for your approval, builds it, asks whether to import it into BAW, then installs it and compares the test screenshots with the original and fixes any differences. It lists what it assumed, such as the options of a closed dropdown, and what the spec cannot express, such as tables or file uploads.
 
 Before building a new app, Bob shows you the design (look, screens, fields, buttons, assumptions) and waits for your approval. The first time on a server, it builds and installs the widget toolkit the app needs. After building, it asks whether to import the app into BAW. Bob's tool prompts also ask before `create_app`, `crop_image`, `modernize_app`, `install_app` and `change_system_db`; the read, test and `bawexternal` database tools run without asking.
+
+### A lean Bob for BAW work
+
+Bob sends its whole list of skills, modes and MCP tools with every step it takes. With many global skills and MCP servers installed, that list alone can be tens of thousands of tokens, which makes every step slower and dearer and fills the context sooner (a long task then stops to compact and waits for "continue").
+
+- **MCP servers:** an entry in this project's `.bob/mcp.json` wins over a global server with the same name, so `"disabled": true` there turns a global server off in this workspace only. Turn off the ones BAW work does not use (browser automation, web search, design tools); keep `baw-dev-tools`, and `carbon-mcp` for hand-written React screens:
+
+  ```json
+  { "mcpServers": {
+      "baw-dev-tools": { "...": "as in .bob/mcp.example.json" },
+      "chrome-devtools": { "...": "copied from your global MCP settings", "disabled": true },
+      "tavily": { "...": "copied from your global MCP settings", "disabled": true }
+  } }
+  ```
+
+  Copy each entry from your global MCP settings (Bob's MCP panel, Edit Global MCP) and add `"disabled": true`, so the project entry is a complete one that wins over the global one. Check in the MCP panel that only the servers you kept are connected. Every mode lists every MCP tool, so this also shortens the list of modes.
+- **Skills:** the BAW modes use the eight skills in `.bob/skills/`. Bob's documentation describes no per-workspace switch for global skills (`~/.bob/skills/`); for a demo, turn off the global ones you do not need in Bob's Settings, Skills.
 
 ## Database access
 

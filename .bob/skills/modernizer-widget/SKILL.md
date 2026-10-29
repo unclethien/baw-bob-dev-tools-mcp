@@ -18,7 +18,7 @@ Example: kind `toggle`, view "Toggle", binding `Boolean`, options `onText` and `
 
 ## 2. Copy the closest widget
 
-Open `coach-ui/src/components/fields/checkbox-field.jsx` (an input) and `coach-ui/src/widgets/field-widget.js` (the shared helper `fieldWidget`). The build picks up every `coach-ui/src/widgets/*.jsx` by itself, so the new file needs no import anywhere. A field widget gets its label, help text, REQUIRED / READONLY / HIDDEN handling, validation and error message from the shared helper, so you write only the input:
+The example below is complete for a one-value widget; read `coach-ui/src/components/fields/checkbox-field.jsx` (an input) and `coach-ui/src/widgets/field-widget.js` (the shared helper `fieldWidget`) only when yours needs more, and no other platform file. The build picks up every `coach-ui/src/widgets/*.jsx` by itself, so the new file needs no import anywhere. A field widget gets its label, help text, REQUIRED / READONLY / HIDDEN handling, validation and error message from the shared helper, so you write only the input:
 
 ```jsx
 import { Toggle } from '@carbon/react';
@@ -58,29 +58,21 @@ registerWidget('toggle', fieldWidget('toggle', {
 
 No other list, map or shared file needs editing; the build and the check read the contract and the widget folder.
 
-## 4. Check offline
-
-```
-cd coach-ui && npm run build && node scripts/check-widgets.mjs
-```
-
-The check renders every contract widget at runtime and as a Coach Designer preview, fails when a Carbon component it uses has no styles, and fails on any page error. READONLY, HIDDEN and REQUIRED come from the shared helper, which the check tests on the stock fields. Fix what it reports and run it again.
-
-The check does not test what is particular to the new widget. Run it with `--shot work/<kind>.png` and look at `work/<kind>-contract.png`, which shows every contract widget with its sample value: the new one must look like a finished Carbon component. Then check its own behaviour (for the toggle: clicking flips it, READONLY shows the on or off text) in the modernized app with `test_service`. If it fails twice, take the fallback (step 7).
-
-## 5. Build and install a new MDW snapshot
+## 4. Check, build and install a new MDW snapshot
 
 1. `list_snapshots("MDW")`. Take the next name after the newest one. Never reuse a name: BAW silently keeps the old content of an existing snapshot name.
-2. `build_widget_toolkit("modernizer", <new snapshot>)`; it returns `work/MDW-<snapshot>.twx`.
+2. `build_widget_toolkit("modernizer", <new snapshot>)`. It compiles the widgets, then checks every contract widget in a browser before it builds anything: each renders at runtime and as a Coach Designer preview, its Carbon component has styles, and no page error occurs (READONLY, HIDDEN and REQUIRED come from the shared helper, checked on the stock fields). When a check fails it builds no toolkit and returns the failures: fix the widget and call it again. Its `checks` lists what passed. It returns `work/MDW-<snapshot>.twx`.
 3. `install_app` with that `.twx` (the user approves). Continue only when `"ok": true`. With no BAW server, give the user the `.twx` and its import steps.
 
-## 6. Use it
+The check does not test what is particular to the new widget. Check its own behaviour in the modernized app with `test_service` and its screenshots: with `fill` it turns on every switch that is off and ticks every checkbox on screen, so for a toggle the review shows the on text. A field on a tab that is not open is reached through its group's Preview service.
 
-In the coach spec from `inspect_coaches`, set `"type"` to the new kind on every field the plan assigned to it, and keep each field's other values. Continue the coach-modernize skill from its toolkit step, passing this MDW snapshot as `toolkit_snapshot` to `modernize_app`. A later `inspect_coaches` reads the field back with the same `"type"`.
+## 5. Use it
 
-## 7. Fallback
+In the coach spec from `inspect_coaches`, set `"type"` to the new kind on every field the plan assigned to it, and keep each field's other values. A field of a group is set once, in the spec's `"groups"`; every placement follows. Continue the coach-modernize skill from its toolkit step, passing this MDW snapshot as `toolkit_snapshot` to `modernize_app`. A later `inspect_coaches` reads the field back with the same `"type"`.
 
-If the offline check fails twice, do not stall. Set the fields back to their stock kind (Checkbox for a Boolean), delete the new component, icon and contract entry, continue the modernization with the stock widget, and say in the report that the widget was not done and why.
+## 6. Fallback
+
+If the widget check fails twice, do not stall. Set the fields back to their stock kind (Checkbox for a Boolean), delete the new component, icon and contract entry, continue the modernization with the stock widget, and say in the report that the widget was not done and why.
 
 ## Pitfalls
 
@@ -91,4 +83,4 @@ If the offline check fails twice, do not stall. Set the fields back to their sto
 
 ## Report
 
-List the files you added, the one added contract entry, `git status --short` and `git diff --stat` (compared with before you started, they may add only the new files and change only `modernizer-widgets.json`), the MDW snapshot, which fields use the widget, and whether the fallback was taken.
+List the files you added and the one added contract entry (you added only new files and changed only `modernizer-widgets.json`), the MDW snapshot, what `checks` reported, which fields use the widget, and whether the fallback was taken.
