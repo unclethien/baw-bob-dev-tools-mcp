@@ -11,13 +11,15 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 
 1. **Run the inventory** with the `inspect_coaches` MCP tool on the app's `.twx` (from `export_app` or `create_app`). It writes the coach spec and returns one line per coach: sections, fields, how many items stay native, and each button with the coach it leads to.
 
+   When the app was rebuilt after you edited a coach spec of it (the App Builder added a button or a field), pass that spec as `previous`. Your edits are carried onto the new spec, matched by service, coach, field path, group and button, and `carriedOver` reports them: `values` moved, `appChangedSince` (the app changed that value too, so the app's value stays: check each one) and `notFound` (its field, coach or group is gone). Moving fields between sections is not carried. Then improve only what is new.
+
 2. **Read the spec.** Each service has a `variable` (the business object behind its fields) and its `coaches` in flow order. Each coach has:
    - `sections`, each holding `fields` (`path`, `label`, `type`, `readonly`, `required`);
    - `buttons` (`label`, `viewId`, `primary`, `to`);
    - `native`, the items that stay as BAW views, below the widgets;
    - `dropped`, the items that will not appear at all.
 
-   A section with `"group"` is a placement of a reusable group (coach-groups skill); the spec's `"groups"` hold their fields. `groupCandidates` lists sections whose fields (at least three) appear again on another coach, and `changedInBaw` the groups someone changed in BAW.
+   A section with `"group"` is a placement of a reusable group (coach-groups skill): it has no `fields`, since the spec's `"groups"` list each group's fields once. Edit a group's field there, and every coach that places the group follows. `groupCandidates` lists sections whose fields (at least three) appear again on another coach, and `changedInBaw` the groups someone changed in BAW.
 
 3. **Improve the spec.** Edit only these keys:
 

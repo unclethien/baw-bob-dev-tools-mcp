@@ -20,6 +20,9 @@ A theme file is JSON, e.g. work/acme.theme.json:
       "banner": { "product": "ACME", "logo": "work/acme-logo.png" }   header strip shared by every app
     }
 
+The logo is any image file in the project (work/, screenshots/, ...). One over 200 KB is embedded as a smaller PNG
+(with Pillow; the file is not changed); an SVG must be under 200 KB.
+
 An app spec names its theme file ("theme": "work/acme.theme.json") and may add its own banner
 "title" and "text". A coach spec names it too, for the React screens.
 
@@ -31,6 +34,7 @@ panels are .SPARKPanel with a .panel-heading, and buttons are .btn (.btn-primary
 """
 
 import base64
+import io
 import json
 import re
 from pathlib import Path
@@ -107,11 +111,37 @@ def load_theme(name, project: Path, where="theme"):
                 errors.append(f"{name}: banner.logo {banner['logo']!r} must be an image file inside the project")
             elif logo.suffix.lower() not in LOGO_TYPES:
                 errors.append(f"{name}: banner.logo must be one of {', '.join(LOGO_TYPES)}")
-            elif logo.stat().st_size > LOGO_LIMIT:
-                errors.append(f"{name}: banner.logo is larger than {LOGO_LIMIT // 1000} KB; crop or compress it")
-            else:
+            elif logo.stat().st_size <= LOGO_LIMIT:
                 banner["logoData"] = f"data:{LOGO_TYPES[logo.suffix.lower()]};base64,{base64.b64encode(logo.read_bytes()).decode()}"
+            elif small := shrink(logo):
+                banner["logoData"] = f"data:image/png;base64,{base64.b64encode(small).decode()}"
+            else:
+                errors.append(f"{name}: banner.logo is larger than {LOGO_LIMIT // 1000} KB and could not be made smaller; "
+                              "crop or compress it")
     return theme, errors
+
+
+def shrink(logo: Path):
+    """A raster logo over LOGO_LIMIT as a smaller PNG to embed (the file stays as it is), at most twice the size the
+    header shows it; None for an SVG, without Pillow, or when it stays too large."""
+    if logo.suffix.lower() == ".svg":
+        return None
+    try:
+        from PIL import Image
+    except ImportError:
+        return None
+    with Image.open(logo) as img:
+        img.load()
+    width = min(img.width, 560)
+    while width >= 80:
+        small = img.copy()
+        small.thumbnail((width, width * 4))
+        out = io.BytesIO()
+        small.save(out, "PNG", optimize=True)
+        if out.tell() <= LOGO_LIMIT:
+            return out.getvalue()
+        width = width * 3 // 4
+    return None
 
 
 def validate(spec, project: Path) -> list:

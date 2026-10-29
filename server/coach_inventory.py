@@ -15,8 +15,14 @@ coach's intro, and the Button Bar holds the buttons.
 
 Reusable groups that Bob built (group_views.py: Views carrying its fingerprint) are read back too; other composite
 Views stay native, as before. The spec lists the groups the services to modernize place ("groups", each with its fields), and a coach's
-placement of a group becomes a section {"title", "group", "readonly", "hide", "fields"}. "groupCandidates" lists
-the sections whose fields (at least three) appear again on another coach: groups Bob can propose.
+placement of a group becomes a section {"title", "group", "readonly", "hide"}: the group's fields are listed once, under
+"groups", so one edit there changes every placement. "groupCandidates" lists the sections whose fields (at least three)
+appear again on another coach: groups Bob can propose.
+
+With --previous, the edits made to an earlier coach spec of the app (its labels, types, help, titles, theme and the
+rest) are carried onto the new one. An edit is what that spec says and a fresh inventory of its "source" .twx does
+not; it is matched by keys a rebuild keeps (service, coach, field path, group, button). When the app changed the same
+value since, the app's value stays and the edit is reported; edits whose field, coach or group is gone are reported too.
 
 Review the spec before running modernize_coaches.py. Fix labels, mark fields
 "required" or give them a "pattern" (a regular expression), a "message" and an
@@ -26,6 +32,7 @@ the app's theme file (*.theme.json, see coach_theme.py).
 
 Example:
     python3 server/coach_inventory.py zzeq.twx -o zzeq.coaches.json
+    python3 server/coach_inventory.py work/ZZEQ-1.0.3.twx -o work/ZZEQ-1.0.3.coaches.json --previous work/ZZEQ-1.0.1.coaches.json
 """
 
 import argparse
@@ -62,6 +69,10 @@ CONTAINERS = {"Panel", "Tab Section", "Vertical Layout", "Horizontal Layout", "C
 BACKWARD = re.compile(r"\b(back|previous|prev|cancel|close)\b", re.I)
 SUFFIX = " (Modernized)"
 MIN_CANDIDATE_FIELDS = 3
+# Keys that identify or hold parts of a coach spec, or that the inventory derives: never carried as an edit.
+NOT_EDITS = {"id", "name", "path", "viewId", "to", "fields", "sections", "coaches", "services", "buttons", "native", "dropped",
+             "groups", "groupViews", "groupCandidates", "source", "app", "acronym", "snapshot", "variable", "classRef", "reason"}
+GONE = object()  # a key the edit removed
 
 
 def local(tag):
@@ -415,22 +426,96 @@ def inventory(twx_path: Path):
                 if service:
                     services.append(service)
     placed = {sec["group"]: sec["fields"] for s in services if s["modernize"] for c in s["coaches"] for sec in c["sections"] if sec.get("group")}
+    candidates = group_candidates(services)
+    for sec in (sec for s in services for c in s["coaches"] for sec in c["sections"] if sec.get("group")):
+        del sec["fields"]  # listed once, under "groups"; modernize_coaches gives every placement the group's fields
     return {
         "source": twx_path.name, "app": project.group(1), "acronym": project.group(2), "snapshot": snapshot.group(1),
         "theme": None, "services": services,
         "groups": [{"name": name, "fields": fields} for name, fields in placed.items()],
         "groupViews": [{"name": g["name"], "changedInBaw": g["changedInBaw"]} for g in groups.values()],
-        "groupCandidates": group_candidates(services),
+        "groupCandidates": candidates,
     }
+
+
+def parts(spec):
+    """Every part of a coach spec an edit can change, by a key a rebuild keeps: {key: dict}. A key that repeats
+    (a group placed twice on one coach) is numbered by its order."""
+    found = {}
+
+    def add(key, part):
+        n = sum(1 for k in found if k[:len(key)] == key)
+        found[key + ((n,) if n else ())] = part
+
+    add(("app",), spec)
+    for g in spec.get("groups") or []:
+        for f in g.get("fields") or []:
+            add(("group", g["name"], f["path"]), f)
+    for s in spec.get("services") or []:
+        add(("service", s["name"]), s)
+        for c in s.get("coaches") or []:
+            add(("coach", s["name"], c["name"]), c)
+            for b in c.get("buttons") or []:
+                add(("button", s["name"], c["name"], b["viewId"]), b)
+            for sec in c.get("sections") or []:
+                fields = [] if sec.get("group") else sec.get("fields") or []
+                anchor = sec.get("group") or (fields[0]["path"] if fields else None)
+                if anchor:
+                    add(("section", s["name"], c["name"], anchor), sec)
+                for f in fields:
+                    add(("field", s["name"], c["name"], f["path"]), f)
+    return found
+
+
+def describe(key):
+    kind, *rest = key
+    return {"app": lambda: "the spec",
+            "group": lambda: f'field "{rest[1]}" of group "{rest[0]}"',
+            "service": lambda: f'service "{rest[0]}"',
+            "coach": lambda: f'coach "{rest[1]}"',
+            "button": lambda: f'button {rest[2]} on coach "{rest[1]}"',
+            "section": lambda: f'section "{rest[2]}" on coach "{rest[1]}"',
+            "field": lambda: f'field "{rest[2]}" on coach "{rest[1]}"'}[kind]()
+
+
+def carry_over(spec, previous, base):
+    """Apply to spec the edits made to previous, an earlier coach spec, against base, a fresh inventory of its source.
+    Returns (number of values carried, values the app changed since and that stay, edits with nothing to go to)."""
+    new, was = parts(spec), parts(base)
+    carried, kept, unmatched = 0, [], []
+    for key, old in parts(previous).items():
+        before = was.get(key, {})
+        edits = {k: old.get(k, GONE) for k in old.keys() | before.keys()
+                 if k not in NOT_EDITS and old.get(k, GONE) != before.get(k, GONE)}
+        if not edits:
+            continue
+        target = new.get(key)
+        if target is None:
+            unmatched.append(f"{describe(key)}: {', '.join(sorted(edits))}")
+            continue
+        for k, value in sorted(edits.items()):
+            now = target.get(k, GONE)
+            if now == value:
+                continue
+            if now != before.get(k, GONE):
+                kept.append(f"{describe(key)}: {k}")
+            elif value is GONE:
+                del target[k]
+                carried += 1
+            else:
+                target[k] = value
+                carried += 1
+    return carried, kept, unmatched
 
 
 def summary(spec):
     lines = [f'{spec["app"]} ({spec["acronym"]} {spec["snapshot"]}): {len(spec["services"])} client-side human service(s)']
+    sizes = {g["name"]: len(g["fields"]) for g in spec.get("groups") or []}
     for s in spec["services"]:
         state = "modernize" if s["modernize"] else f'skip: {s["reason"]}'
         lines.append(f'  {s["name"]} [{state}] variable tw.local.{s["variable"]}')
         for c in s["coaches"]:
-            fields = sum(len(sec["fields"]) for sec in c["sections"])
+            fields = sum(len(sec["fields"]) if "fields" in sec else sizes.get(sec.get("group"), 0) for sec in c["sections"])
             buttons = ", ".join(f'{b["label"]} -> {b["to"]}' for b in c["buttons"])
             extra = f', {len(c["native"])} kept native' if c["native"] else ""
             groups = [sec["group"] + (" (read-only)" if sec.get("readonly") else "") for sec in c["sections"] if sec.get("group")]
@@ -447,11 +532,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("twx", type=Path, help="Exported process app")
     parser.add_argument("-o", "--output", type=Path, help="Spec file to write (default: <twx name>.coaches.json)")
+    parser.add_argument("--previous", type=Path, help="An earlier coach spec of the app whose edits to carry over")
     args = parser.parse_args()
+    previous = json.loads(args.previous.read_text()) if args.previous else None
     spec = inventory(args.twx)
+    if previous:
+        name = previous.get("source") or ""
+        source = next((p for p in (args.previous.parent / name, Path(__file__).resolve().parent.parent / "work" / name)
+                       if name and p.is_file()), None)
+        if not source:
+            raise SystemExit(f"{args.previous} came from {name or 'an unknown .twx'}, which is not next to it or in work/: "
+                             "without it the edits cannot be told apart from what the app had")
+        carried, kept, unmatched = carry_over(spec, previous, inventory(source))
     out = args.output or args.twx.with_suffix(".coaches.json")
     out.write_text(json.dumps(spec, indent=2) + "\n")
     print(summary(spec))
+    if previous:
+        print("Carried over: " + json.dumps({"from": str(args.previous), "values": carried, "appChangedSince": kept, "notFound": unmatched}))
     print(f"Wrote {out}")
 
 

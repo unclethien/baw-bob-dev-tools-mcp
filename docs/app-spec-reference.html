@@ -572,7 +572,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
     <li>The review shows each group once, read-only, hiding only the fields every placement hides. So does an approval task.</li>
     <li>In Coach Designer each placement has a <em>&lt;field&gt; visibility</em> setting per optional field (Same as parent, or Hidden) and its own Visibility (Read only).</li>
     <li>Rebuilding an app whose group someone changed in Coach Designer (added, removed, moved or relabelled a field, then saved a snapshot) keeps their version and lists it in <code>create_app</code>'s <code>changedInBaw</code>; build again with <code>replace_groups</code> to use the spec's version. Other edits to a group (help text, choices, styling) belong in the spec, since a rebuild replaces them.</li>
-    <li><code>inspect_coaches</code> reads the groups back, so <code>modernize_app</code> builds a <strong>&lt;group&gt; (Modernized)</strong> View of Modernizer Widgets and its Preview service for each. Modernized groups show one field per row.</li>
+    <li><code>inspect_coaches</code> reads the groups back, so <code>modernize_app</code> builds a <strong>&lt;group&gt; (Modernized)</strong> View of Modernizer Widgets and its Preview service for each, its fields in the widgets' responsive columns. The coach spec lists each group's fields once, under <code>groups</code>, so one edit there changes every placement; after the app is rebuilt, <code>inspect_coaches</code> with <code>previous</code> carries the earlier coach spec's edits over.</li>
   </ul>
 </section>
 

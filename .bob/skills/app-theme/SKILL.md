@@ -31,7 +31,7 @@ Path: `work/<name>.theme.json`, named after the look or the organisation, e.g. `
 | `fieldIcons` | `true`: an icon box before every input. Fields choose theirs with `icon` in the app spec |
 | `width` | Most the form spreads to: pixels (600 to 3000) or `"full"` |
 | `buttonAlign` | `left`, `center` or `right`: where the buttons sit |
-| `banner` | `product`: product or system name shown in the header, e.g. `"QUOTE DESK"`. `logo`: an image file in `work/`, at most 200 KB |
+| `banner` | `product`: product or system name shown in the header, e.g. `"QUOTE DESK"`. `logo`: the path of an image file anywhere in the project, e.g. `screenshots/acme/logo.png`; a PNG, JPEG, GIF or WebP over 200 KB is shrunk when the app is built (the file stays as it is), an SVG must be at most 200 KB |
 
 ```json
 {
@@ -54,9 +54,9 @@ Turning a description into values:
 
 Never cut a logo out of a picture on your own. In this order:
 
-1. **A logo file the user gives or names:** use it. An attached logo must be saved in `work/` first, since `banner.logo` needs a file.
+1. **A logo file the user gives or names:** use its path as it is, in whatever project folder it sits; never ask to copy or shrink it. A logo attached in the chat must be saved as a file in the project first, since `banner.logo` needs a file.
 2. **A logo file already in the project:** look for `banner.logo` in the theme files in `work/` and `app-specs/` for the same brand, and for image files with "logo" in the name in `work/` and in the screenshots' folder. Use the one that matches the brand and tell the user which file it is.
-3. **None found:** leave `banner.logo` out and ask the user, at the design stop, to choose: save the official logo file in `work/`, have you cut it out of the screenshot with `crop_image`, or go without a logo.
+3. **None found:** leave `banner.logo` out and ask the user, at the design stop, to choose: save the official logo file in the project (any folder) and name it, have you cut it out of the screenshot with `crop_image`, or go without a logo.
 
 Use `crop_image` only when the user asks for it, here or in their request ("cut out its logo"). Then save the crop in `work/` (e.g. `work/<name>-logo.png`), check it with `view_image`, and adjust the box until the whole logo is in and the edges are clean.
 
@@ -80,7 +80,7 @@ Sample every colour with `image_colors` on the screenshot file. `box` is `[left,
 | Product or system name in the header | `banner.product` |
 | Logo in the header | `banner.logo`: a logo file, found or asked for as in "The logo" above. Cut it out with `crop_image` only when the user asks |
 
-Keep screenshots and logos in `work/` (not committed), never in `app-specs/`.
+Keep client screenshots and logos out of committed folders: in `work/` or another folder the repository ignores, never in `app-specs/`.
 
 ## 4. Use it
 
