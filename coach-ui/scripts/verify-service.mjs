@@ -136,8 +136,8 @@ async function typeInto(frame, label, text) {
 }
 
 // --fill: type into the React form's empty editable fields (the field's example placeholder,
-// today's date for date pickers, or "Test"), tick unticked checkboxes, pick the first option of
-// empty dropdowns and of radio groups with nothing chosen. Returns the count.
+// today's date for date pickers, or "Test"), tick unticked checkboxes, turn on switches that are off (a Toggle
+// widget), pick the first option of empty dropdowns and of radio groups with nothing chosen. Returns the count.
 async function fill(frame) {
   let count = 0;
   for (const input of await frame.$$('.pp-app input:not([readonly]):not([type=checkbox]):not([type=radio]), .pp-app textarea:not([readonly])')) {
@@ -150,6 +150,11 @@ async function fill(frame) {
   }
   for (const box of await frame.$$('.pp-app input[type=checkbox]:not(:checked):not([readonly])')) {
     await box.evaluate((el) => el.parentElement.querySelector('label')?.click());
+    count++;
+  }
+  for (const toggle of await frame.$$('.pp-app button[role=switch][aria-checked=false]:not([disabled]):not([aria-readonly=true])')) {
+    if (!(await toggle.evaluate((el) => !!el.offsetParent))) continue;
+    await toggle.click();
     count++;
   }
   for (const select of await frame.$$('.pp-app select:not([disabled])')) {

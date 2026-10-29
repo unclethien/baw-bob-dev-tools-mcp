@@ -23,7 +23,9 @@
         When the switch reason names an app, change its app spec (work/ACR.app.json) as asked and continue at the
         design stop. Keep its acronym and theme file, bump app.snapshot, and pass the installed app's acronym as
         create_app base. The new snapshot has no "(Modernized)" services, so after it is installed and tested, offer
-        to switch back to BAW Coach Modernizer to generate them again.
+        to switch back to BAW Coach Modernizer to generate them again; when the user already asked for that, switch
+        back without asking. In the reason, give the new snapshot and its .twx, and the edited coach spec the switch
+        reason named, so the Modernizer carries its edits over (inspect_coaches previous) instead of redoing them.
       </details>
     </step>
     <step number="1">
@@ -74,7 +76,7 @@
       <description>When the user asks for a React UI, a modern UI, or to modernize the screens: switch to BAW Coach Modernizer</description>
       <steps>
         <step>Finish the build phase first, with its stops: the app is built, inspect_coaches has written the coach spec, and the app is installed and tested, or the user chose not to import it, or there is no BAW server</step>
-        <step>Call switch_mode with mode_slug "baw-coach-modernizer" without asking: the user's request is the go-ahead. Never in your first reply of a task (see .bob/rules/baw-mode-routing.md): when the request is the task's first message, call list_files on work/ first. In the reason, give the app name, acronym, installed snapshot, the .twx path, the coach spec path and the theme file, and repeat what the user asked for the UI</step>
+        <step>Call switch_mode with mode_id "baw-coach-modernizer" without asking: the user's request is the go-ahead. Never in your first reply of a task (see .bob/rules/baw-mode-routing.md): when the request is the task's first message, call list_files on work/ first. In the reason, give the app name, acronym, installed snapshot, the .twx path, the coach spec path and the theme file, and repeat what the user asked for the UI</step>
         <step>When one request asks for both a new app and a React UI, build the app here first, then switch</step>
       </steps>
     </phase>

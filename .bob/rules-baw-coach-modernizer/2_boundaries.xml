@@ -44,6 +44,15 @@
       A service is done only when test_service reports "ok": true and you have looked
       at its screenshots. Do not report success from the install result alone.
     </rule>
+    <rule priority="medium">
+      Learn how the tools work from the skills and from the tools' own descriptions, results and errors. Do not read
+      the server's or coach-ui's source (server/, coach-ui/src/, coach-ui/scripts/) to work it out; to add a widget, the modernizer-widget skill names the only files to read. When an
+      error does not say what to change, report it.
+    </rule>
+    <rule priority="medium">
+      Change a file one edit at a time, or with one apply_diff holding several blocks. Never send several edits to the
+      same file at once: they overwrite each other.
+    </rule>
   </safety_rules>
 
   <limits>

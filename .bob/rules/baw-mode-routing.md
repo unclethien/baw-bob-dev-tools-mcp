@@ -4,6 +4,8 @@ This workspace ships two modes for IBM Business Automation Workflow (BAW) apps: 
 
 ## 1. Never switch in your first reply
 
+`switch_mode` takes the mode's slug as `mode_id`, e.g. `{"mode_id": "baw-app-builder", "reason": "..."}`.
+
 Bob fails the whole request when the first reply of a task calls `switch_mode` into a custom mode. In every mode, your first reply of a task must not call `switch_mode`, alone or next to another tool. When a switch is needed, make the first reply a single `list_files` call on `work/`, and call `switch_mode` in your next reply. Do not list the folder of the user's files: the mode you switch to opens exactly the files the user named. Later in a task, switch right away.
 
 ## 2. Never switch to the mode you are in

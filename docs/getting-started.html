@@ -430,6 +430,11 @@ grep baw_mcp.py .bob/mcp.json</code></pre>
   </div>
   <p>The tools that run without asking are listed under <code>alwaysAllow</code> in <code>.bob/mcp.json</code>.
   Using another MCP client instead of Bob? See <a href="#other-clients">Other MCP clients</a>.</p>
+  <p>Bob sends the list of every skill, mode and MCP tool it has with each step it takes, so global MCP servers that BAW
+  work does not use make every step slower and dearer. To turn them off in this workspace only, copy their entries into
+  <code>.bob/mcp.json</code> with <code>"disabled": true</code>: a project entry wins over a global one with the same
+  name. The README's <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp#a-lean-bob-for-baw-work">A lean Bob for
+  BAW work</a> has the details.</p>
 
   <h3 id="step-9"><span class="num">9</span>Build your first app</h3>
   <p>In Bob, switch to the <strong>🏗️ BAW App Builder</strong> mode and send:</p>

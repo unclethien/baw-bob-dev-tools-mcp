@@ -17,8 +17,11 @@
       <details>
         When the switch reason names an app just built, use it: its acronym, snapshot, .twx, coach spec and theme
         file. Do not ask for the acronym, do not call export_app, and skip the legacy test_service, since the app was
-        just tested. Run inspect_coaches on the .twx only when the coach spec is missing. Keep the theme file unless
-        the user asked for another look. Then continue with "Improve the spec" in the analyze phase.
+        just tested. Run inspect_coaches on the .twx only when the coach spec is missing. When the App Builder rebuilt
+        an app you had already planned or modernized, run inspect_coaches on the new .twx with previous set to the
+        coach spec you edited before: it carries your edits (theme, labels, types, titles) over, and reports the ones
+        the app changed since or that found nothing to go to. Keep the theme file unless the user asked for another
+        look. Then continue with "Improve the spec" in the analyze phase.
       </details>
     </step>
     <step number="1">
@@ -39,8 +42,9 @@
         <step>Improve the spec: human labels, section titles, required fields, patterns, examples, read-only review coaches</step>
         <step>Set the spec's "theme" to the app's theme file; without one, ask the user to describe the look and write work/NAME.theme.json with the app-theme skill</step>
         <step>When a coach needs a field no Modernizer Widget gives (for example a Yes/No Toggle for a Boolean), plan a new widget: what single value it saves, its options, and which fields use it. Never plan a change to an existing widget</step>
-        <step>Keep the groups inspect_coaches read back; propose its groupCandidates, or the groups the user named, as reusable groups (coach-groups skill)</step>
-        <step>STOP unless told to continue: show what is wrong with the legacy screens, your design for each coach, the theme file, the spec changes, the groups and where each is placed, and the new widgets (what each saves, its options, the fields that use it)</step>
+        <step>Keep the groups inspect_coaches read back; propose its groupCandidates, or the groups the user named, as reusable groups (coach-groups skill). A group's fields are listed once, in the spec's "groups": edit a group's field there, not in the coaches that place it</step>
+        <step>Check the request against what the coach spec can change. Buttons (a new Cancel, a renamed Submit), fields, steps, a workflow or an approval live in the app spec: the Modernizer cannot add or rename them. When the request needs one, put it first in the plan as an App Builder change, and on approval switch to BAW App Builder before building anything here, so the app is rebuilt once and modernized once</step>
+        <step>STOP unless told to continue: show what is wrong with the legacy screens, your design for each coach, the theme file, the spec changes, the groups and where each is placed, the new widgets (what each saves, its options, the fields that use it), and the App Builder changes the request needs first</step>
       </steps>
     </phase>
 
@@ -57,7 +61,7 @@
     <phase name="hand_off">
       <description>When the user asks for a new app, or for a change to what an app collects: switch to BAW App Builder</description>
       <steps>
-        <step>A new app from a requirement or screenshots, or new or removed fields, steps, a workflow or an approval, changes the app spec, not the screens. Call switch_mode with mode_slug "baw-app-builder" without asking: the user's request is the go-ahead. Never in your first reply of a task (see .bob/rules/baw-mode-routing.md): when the request is the task's first message, call list_files on work/ first</step>
+        <step>A new app from a requirement or screenshots, or new or removed fields, steps, a workflow or an approval, changes the app spec, not the screens. Call switch_mode with mode_id "baw-app-builder" without asking: the user's request is the go-ahead. Never in your first reply of a task (see .bob/rules/baw-mode-routing.md): when the request is the task's first message, call list_files on work/ first</step>
         <step>In the reason, give the app name, acronym, installed snapshots, the app spec and theme file when you know them, and repeat what the user asked for</step>
         <step>Labels, help text, grouping, validation, the look and screen behaviour stay here: they live in the coach spec, the theme file and the React screens</step>
         <step>A change to what an existing Modernizer Widget shows or does, for every app that uses it, is a code change in coach-ui/: switch to agent mode with the widget and the change in the reason. Adding a new widget stays here</step>

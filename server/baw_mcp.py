@@ -341,19 +341,27 @@ def change_system_db(database: str, sql: str, backup_tables: list[str | dict] | 
 
 
 @mcp.tool()
-def inspect_coaches(twx: str) -> dict:
+def inspect_coaches(twx: str, previous: str | None = None) -> dict:
     """Read every coach of an app's client-side human services into an editable coach spec
     (work/<name>.coaches.json): sections, fields, buttons and where each button goes. Set its "theme"
     to the app's theme file before modernize_app.
-    Reusable groups come back too: the spec's "groups", and a section {"group", "readonly", "hide"} where a coach
-    places one. "groupCandidates" lists sections with at least three fields that appear again on another coach;
-    propose them to the user as groups. "changedInBaw" lists the groups whose fields someone changed in BAW since Bob
-    built them (pass these names to replace_groups to rebuild them)."""
+    Reusable groups come back too: the spec's "groups" list each group's fields once (edit a group's field there, and
+    every placement follows), and a section {"group", "readonly", "hide"} is where a coach places one.
+    "groupCandidates" lists sections with at least three fields that appear again on another coach; propose them to
+    the user as groups. "changedInBaw" lists the groups whose fields someone changed in BAW since Bob built them (pass
+    these names to replace_groups to rebuild them).
+    previous: an earlier coach spec of the same app (e.g. the one you edited before the app was rebuilt). Its edits
+    (theme, labels, types, help, titles and the rest) are carried onto the new spec, so you do not redo them;
+    "carriedOver" says how many values moved, which ones the app changed since (the app's value stays) and which edits
+    found nothing to go to (their field, coach or group is gone). Moving fields between sections is not carried."""
     source = local(twx)
     out = WORK / f"{source.stem}.coaches.json"
-    summary = python("coach_inventory.py", source, "-o", out)
+    summary = python("coach_inventory.py", source, "-o", out, *(["--previous", local(previous)] if previous else []))
     spec = json.loads(out.read_text())
     result = {"coachSpec": rel(out), "summary": summary}
+    carried = re.search(r"^Carried over: (.+)$", summary, re.M)
+    if carried:
+        result["carriedOver"] = dict(json.loads(carried.group(1)), **{"from": previous})
     if spec.get("groupCandidates"):
         result["groupCandidates"] = spec["groupCandidates"]
     changed = [g["name"] for g in spec.get("groupViews", []) if g["changedInBaw"]]
@@ -490,17 +498,28 @@ def build_widget_toolkit(toolkit: str, snapshot: str) -> dict:
     """Build a toolkit of coach widgets for Coach Designer's palette as work/<ACRONYM>-<snapshot>.twx, then install it
     with install_app. toolkit: "modernizer" is Modernizer Widgets (MDW), the React + Carbon widgets of modernized
     coaches (modernize_app); "builder" is App Builder Widgets (ABW), the classic widgets of the coaches create_app
-    builds. Builds the widgets first. Each build is a new snapshot of the same toolkit. An app keeps the snapshot it
-    depends on, also when create_app rebuilds it; it moves to a newer one only when its widgets are placed again."""
+    builds. Builds the widgets first; for "modernizer" it then checks every widget of the contract in a browser
+    (coach-ui/scripts/check-widgets.mjs: renders at runtime and as a Coach Designer preview, Carbon styles present,
+    no page errors) and builds no toolkit when a check fails. Each build is a new snapshot of the same toolkit. An app
+    keeps the snapshot it depends on, also when create_app rebuilds it; it moves to a newer one only when its widgets
+    are placed again."""
     if toolkit not in widget_toolkit.TOOLKITS:
         raise ToolError(f"No toolkit {toolkit!r}; choose one of: {', '.join(sorted(widget_toolkit.TOOLKITS))}")
     acronym = widget_toolkit.TOOLKITS[toolkit]["acronym"]
     require_new_snapshot(acronym, snapshot)
     build = build_screens()
+    checks = ""
+    if toolkit == "modernizer":
+        try:
+            checks = run(["node", "scripts/check-widgets.mjs"], cwd=COACH_UI, timeout=300)
+        except ToolError as e:
+            raise ToolError(f"The widget check failed, so no toolkit was built. Fix the widget and build again:\n{e}")
     WORK.mkdir(exist_ok=True)
     dest = WORK / f"{acronym}-{re.sub(r'[^A-Za-z0-9.]+', '_', snapshot)}.twx"
     summary = python("widget_toolkit.py", "build", toolkit, snapshot, dest)
     result = {"twx": rel(dest), "summary": summary, "build": build[-500:]}
+    if checks:
+        result["checks"] = checks[-500:]
     if not configured():
         result["install"] = IMPORT_STEPS.format(twx=rel(dest))
     return result
