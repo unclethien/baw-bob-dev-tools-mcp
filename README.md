@@ -117,7 +117,7 @@ Settings are read from the environment first, then `.env`:
    - **🏗️ BAW App Builder** turns a written requirement, or screenshots of the screens, into a running app.
    - **✨ BAW Coach Modernizer** gives an existing app a React + Carbon UI built from Modernizer Widgets, with a hand-written screen for any coach that needs one.
 
-   Bob switches between them in the same chat, and from Agent mode into the right one (`.bob/rules/baw-mode-routing.md`): ask for a React UI after building an app and it moves to the Modernizer; ask the Modernizer for a new app or new fields, steps or a workflow and it moves back to the App Builder. To skip the switch prompt, allow **Mode** in Bob's auto-approve settings. Both modes edit only `work/` and `app-specs/` (the Modernizer also `coach-ui/src/screens/`, and `coach-ui/src/widgets/` and `coach-ui/widgets/` to add a widget), and do everything else through the MCP tools.
+   Bob switches between them in the same chat, and from Agent mode into the right one (`.bob/rules/baw-mode-routing.md`): ask for a React UI after building an app and it moves to the Modernizer; ask the Modernizer for a new app or new fields, steps or a workflow and it moves back to the App Builder. Data work (questions, loading a file into a table, exports) needs no switch: every mode, Agent included, does it with the shared `baw-database` skill; only an app that loads and saves a table goes to the App Builder. To skip the switch prompt, allow **Mode** in Bob's auto-approve settings. Both modes edit only `work/` and `app-specs/` (the Modernizer also `coach-ui/src/screens/`, and `coach-ui/src/widgets/` and `coach-ui/widgets/` to add a widget), and do everything else through the MCP tools.
 2. Copy `.bob/mcp.example.json` to `.bob/mcp.json` and set the absolute path to `server/baw_mcp.py`. To switch servers without editing `.env`, add an `"env": { "BAW_URL": "..." }` block there.
 3. Check that `baw-dev-tools` shows as connected in Bob's MCP panel with 21 tools.
 4. Try it in BAW App Builder mode:
@@ -142,6 +142,8 @@ Before building a new app, Bob shows you the design (look, screens, fields, butt
 ## Database access
 
 The CP4BA platform keeps its data in one PostgreSQL server. Six tools (`list_tables`, `describe_table`, `run_sql`, `export_table`, `import_table`, `change_system_db`) let Bob read every database on it, build and fill tables in `bawexternal`, the database the access portal sets aside for app data, and, after you approve it, change a system database. Apps that `create_app` builds can load and save rows in `bawexternal` at run time. Use test data only (see [Risks](#risks)).
+
+Ask for data work in any Bob mode, Agent included: Bob follows the [`baw-database`](.bob/skills/baw-database/SKILL.md) skill and the same rules everywhere, so it needs no mode switch.
 
 ### The two logins
 

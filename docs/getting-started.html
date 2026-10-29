@@ -509,8 +509,9 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
     <li>In Bob's MCP panel, restart <code>baw-dev-tools</code>. You set up nothing else: the first database call creates
     Bob's limited login <code>bob_mcp</code> (about 14 s on a start after the first; once, about 36 s) and writes its
     password to <code>.env</code> itself. Set Bob's tool timeout above 180 s.</li>
-    <li>Ask Bob, e.g. <em>"List the tables in bawexternal"</em>, or <em>"Build an equipment request app that stores its
-    rows in a table"</em> (the <a href="app-spec-reference.html#database">database section</a>).</li>
+    <li>Ask Bob, e.g. <em>"List the tables in bawexternal"</em>, in any mode, Agent included (the
+    <code>baw-database</code> skill), or <em>"Build an equipment request app that stores its rows in a table"</em> in
+    BAW App Builder (the <a href="app-spec-reference.html#database">database section</a>).</li>
   </ol>
   <p>Bob reads every database and writes freely only in <code>bawexternal</code>. A change to any other database goes
   through <code>change_system_db</code>: Bob asks first, names every table it touches, and the rows are backed up to
