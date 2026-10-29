@@ -9,7 +9,7 @@
     optional approval task (Approve / Send Back) follows in a second lane. With a
     "database" section the form task also loads and saves a row of a PostgreSQL table in bawexternal (a Load
     button, and a save on Submit); the database tools (list_tables, describe_table, run_sql, export_table,
-    import_table, change_system_db) let you look at the data and build the table. The
+    import_table, change_system_db) let you look at the data and build the table (the baw-database skill). The
     baw-dev-tools MCP server builds its coaches from App Builder Widgets (the ABW toolkit:
     Theme, App Header, Section, Review List, Button Bar), so authors can rearrange them by drag
     and drop in Coach Designer, then installs and tests it. When the user asks for a React +
