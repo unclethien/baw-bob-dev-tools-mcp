@@ -45,6 +45,21 @@ because `create_app` builds its Load button and its save on Submit.
    256 KB; when it says it was cut, say so in the answer, or narrow the query.
 4. Answer in plain words, with a small table when there are several rows. Show the SQL when the user asks for it.
 
+## BAW's own records
+
+Questions about BAW itself (which apps exist, what was installed, by whom and when, open tasks) read `basdb`, schema
+`basdb`, with `run_sql`. The tables most questions need:
+
+| Table | What it holds | Columns to use |
+|---|---|---|
+| `lsw_project` | Process apps and toolkits | `project_id`, `short_name` (the acronym), `name`, `is_toolkit`, `is_archived`, `created_on` |
+| `lsw_snapshot` | Their versions | `project_id`, `name` (the version, such as `1.0.2`; null for unnamed saves, which are not versions), `created_on`, `created_by_user_id` |
+| `lsw_usr_xref` | Users | `user_id`, `user_name`, `full_name` |
+| `lsw_task` | Tasks of running processes | `snapshot_id`, `status`, `subject`, `user_id`, `rcvd_datetime`, `close_datetime` |
+| `lsw_bpd_instance` | Process instances | `snapshot_id`, `instance_name`, `execution_status`, `create_datetime`, `close_datetime` |
+
+Times are UTC. Run `describe_table` before you use any other table.
+
 ## Create or change a table in bawexternal
 
 1. Check first: `list_tables("bawexternal")`, and `describe_table` when the table exists.
@@ -58,7 +73,8 @@ because `create_app` builds its Load button and its save on Submit.
 ## Load a file into a table
 
 1. The file must be in `work/`: a CSV with a header line, or a `.json` array of objects. The header names (or keys)
-   must be columns of the table.
+   must be columns of the table. Git ignores `work/`, so a file search can miss what is there: never decide a file
+   is missing from a search. Call `import_table` with the path the user gave; it says when the file does not exist.
 2. The table must exist. When it does not and the user asked for it, create it first with `run_sql`, with a column
    for each header name.
 3. `import_table("schema.table", "work/<file>", "append")` adds the rows. Use `"replace"` only when the user asks to
@@ -92,6 +108,7 @@ Only when the task needs a write that `run_sql` refuses, never for a read:
 |---|---|
 | `... is read-only for Bob` | You tried a write outside `bawexternal`. Use `change_system_db` only when the task needs that write |
 | `relation "..." does not exist` | Check the schema and table with `list_tables` |
+| `'work/...' is not a file` | The file is not in `work/`: ask the user where it is |
 | `The file has columns that ... does not` | A header name is not a column: rename the column in a copy of the file, or add the column, as the user prefers |
 | `duplicate key value` during a load | The rows are already there: ask whether to replace them, or load only new rows |
 | `"committed": "unknown"` | Check the data before you try again |
