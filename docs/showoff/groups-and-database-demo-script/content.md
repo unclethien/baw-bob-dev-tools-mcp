@@ -1,11 +1,10 @@
 # Demo script: from pictures to a Quote screen that remembers
 
-A one-hour session for the client's team and their managers. Last session the team asked for **reusable, configurable pieces** they can maintain in IBM Business Automation Workflow (BAW). Today IBM Bob builds the client's Quote screen from pictures, as **reusable groups**, and makes it **remember** every quote. Then Bob adds a modern version with a widget it writes on the spot, fills the app's table with sample quotes right on the server, works on them together with the app, and shows that it cannot change BAW's own database.
+A one-hour session for the client's team and their managers. Last session the team asked for **reusable, configurable pieces** they can maintain in IBM Business Automation Workflow (BAW). Today IBM Bob builds the client's Quote screen from pictures, as **reusable groups**, and makes it **remember** every quote. Then Bob adds a modern version with a widget it writes on the spot, fills the app's table with sample quotes right on the server, and works on them together with the app.
 
 1. **Act 1. Pictures in; a screen that remembers out.** Bob builds the app from pictures of the old screen, every section a reusable group, and saves each quote to the database. Submit a quote, then Load it back.
 2. **Act 2. Modern, with a new widget.** Bob gives the same app a React and Carbon version of every group, and **writes a new Toggle widget** for the yes/no questions.
 3. **Act 3. Your data, live in BAW.** Bob adds 20 quotes straight into the app's table on the server, and a question comes back as a table. A quote typed in the app is read by Bob, and Bob's change shows up in the app.
-4. **Act 4. Safety.** Bob reads BAW's own database, and its attempt to change it is refused.
 
 **How to read this script.** Each step tells you what to **do**, what to **paste** into Bob, what **Bob does**, and what to **say**. Text in quotes is meant to be said out loud. The pictures on the demo page come from a neutral example app; on the day, Bob builds from the client's own pictures.
 
@@ -20,7 +19,6 @@ A one-hour session for the client's team and their managers. Last session the te
 | 07:00 | Act 1: pictures in, a screen that remembers out | The app built from pictures, in groups; a quote saved and loaded back |
 | 23:00 | Act 2: modern, with a new widget | The same groups in React and Carbon, and a new Toggle in the toolkit |
 | 40:00 | Act 3: your data, live in BAW | 20 quotes added on the server, and the table shown there; a question answered as a table; a quote typed in the app read by Bob, and Bob's change shown in the app |
-| 49:00 | Act 4: safety | Bob reads BAW's own record of what we built today; its change there is refused |
 | 52:00 | Questions | |
 | 57:00 | Next steps | |
 
@@ -47,7 +45,7 @@ Thirty minutes before:
    - Apps: ZZQI, ZZLGQ, ZZLGQI, ZZSLX, ZZGRP, ZZGRP2, ZZGWQ, ZZLGG, ZZGQ3, ZZGDEMO, ZZGDBR, ZZQDBR
    - App Builder Widgets (ABW): up to 1.0.4
    - Modernizer Widgets (MDW): up to 2.1.0, so Bob's new widget goes into 2.2.0 or later
-7. In Bob's auto-approve settings, allow mode switches, and keep **change_system_db** off, so Bob must ask. Act 4 relies on it.
+7. In Bob's auto-approve settings, allow mode switches, and keep **change_system_db** off, so Bob must ask before any change to a system database.
 8. Open Workflow Center (Business Automation Studio) in a second browser tab. Nothing else is needed on stage: every step runs on the server.
 9. In Bob, pick the **🏗️ BAW App Builder** mode. Make the font bigger.
 10. Do one full rehearsal, so you know how long each step takes. Then repeat step 3 and pick a new acronym. Afterwards, ask a BAW admin to archive the test apps: Bob cannot delete apps or snapshots.
@@ -197,7 +195,7 @@ Thirty minutes before:
 
 ---
 
-## 7. Act 3: your data, live in BAW (9 min)
+## 7. Act 3: your data, live in BAW (12 min)
 
 ### Step 1. Fill the table, on the server
 
@@ -274,7 +272,7 @@ Thirty minutes before:
 
 ### Full talk track
 
-Word for word, about 9 minutes. Actions are in italics.
+Word for word, about 9 minutes of talk. Actions are in italics.
 
 **Opening** (30 s)
 
@@ -358,9 +356,9 @@ Word for word, about 9 minutes. Actions are in italics.
 
 "So that's the point of this act: one set of data with two ways in. Your team uses the screen, and anyone else can just ask in plain English. Either way, it's the same data on the same server."
 
-**Bridge to Act 4** (15 s)
+**Bridge to questions** (15 s)
 
-"You might be thinking: if Bob can change data this easily, what stops it from changing something it shouldn't? That's exactly what I'll show you next."
+"You might be thinking: if Bob can change data this easily, what stops it from changing something it shouldn't? Let's start the questions with that one."
 
 **If something goes off-script**
 
@@ -372,36 +370,7 @@ Word for word, about 9 minutes. Actions are in italics.
 
 ---
 
-## 8. Act 4: safety (3 min)
-
-**Paste.**
-
-> What did we build in BAW today? Read it from BAW's own database.
-
-**Bob does.** Reads `basdb`, BAW's own records, and lists today's versions with their times: the app's versions from Acts 1 and 2, and the new Modernizer Widgets version that holds the Toggle. In the rehearsal: ZZGDB3 1.0.0 to 1.0.5 and MDW 2.2.0, all within 25 minutes.
-
-**Say.** "That's BAW's own record of the last forty minutes, and Bob reads it directly. The same goes for audits: what was installed, by whom, and when."
-
-**Paste.**
-
-> Now rename the app you built directly in BAW's database. Use run_sql only.
-
-**Bob does.** Tries, and the database refuses: **basdb is read-only for Bob**. In the rehearsal it answered:
-
-```text
-cannot execute UPDATE in a read-only transaction.
-basdb is read-only for Bob. Write in bawexternal, or use change_system_db.
-```
-
-**Say.**
-- "The refusal comes from the database itself, not from Bob being polite. Bob's login there is read-only."
-- "When a change there really is needed, Bob must ask a person first, and it saves a backup before it writes anything."
-
-**If** Bob offers to make the change with its approval tool, say no, or press Deny. "That's the point: a person decides."
-
----
-
-## 9. Safety and questions (5 min)
+## 8. Safety and questions (5 min)
 
 | Safety rule | Why it matters |
 |---|---|
@@ -445,7 +414,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.
 
 ---
 
-## 10. Next steps (3 min)
+## 9. Next steps (3 min)
 
 **Do.** Ask the room, and write the answers down:
 1. Which information repeats across your screens? Those are your first groups.
@@ -454,7 +423,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.
 4. Who on your team will own the groups and the toolkit?
 5. What data must never go into the app database, such as personal or health data?
 
-**Say.** "In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, Bob filled the app's table on the server and read and changed the data the BAW app works with, in plain English. Bob read BAW's own records, which stayed untouched, and a person approved every step that mattered."
+**Say.** "In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, Bob filled the app's table on the server and read and changed the data the BAW app works with, in plain English. BAW's own database stayed untouched, and a person approved every step that mattered."
 
 Project: https://github.com/unclethien/baw-bob-dev-tools-mcp (Apache-2.0). Not an official IBM project; use it with test servers and test apps.
 
@@ -474,8 +443,7 @@ Project: https://github.com/unclethien/baw-bob-dev-tools-mcp (Apache-2.0). Not a
 10. Northwind Logistics loads in the classic app as Self-Funded.
 11. The rating question comes back as a table.
 12. Bob reads back Juniper Street Clinic with the reference number the app showed; after Bob's update, Northwind Logistics loads as Level Funded.
-13. Bob lists today's versions from BAW's database, and its rename there is refused.
-14. Afterwards: the Toggle files and the table are reset (prep step 3), and the test apps are archived.
+13. Afterwards: the Toggle files and the table are reset (prep step 3), and the test apps are archived.
 
 ---
 
