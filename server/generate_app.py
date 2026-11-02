@@ -27,7 +27,7 @@ list of "options". "cancelLabel" on a step or on "form" adds a button that ends 
 "database" stores the form in a PostgreSQL table of the bawexternal database (the data source jdbc/bawexternal), which
 BAW apps may use: {"table": "public.name", "key": "<field>", "columns": {"<field>": "<column>"}}. The key field
 (required) becomes the primary key; a Load button next to it fills the form from the row, and Submit upserts the form
-(a heritage "Load <BO>" and "Save <BO>" service each runs one fixed statement, sql_service.py). The CREATE TABLE statement is printed; run it
+(a "Load <BO>" and a "Save <BO>" service flow each run one fixed statement, sql_service.py). The CREATE TABLE statement is printed; run it
 before testing the app. Every simple field is stored, in a column named by its snake_case name unless "columns" says otherwise.
 An Integer or Decimal field that is not "required" (and is not the key) is a text field in the app, a String in the business object, because
 BAW's number controls turn an empty value into 0: nothing typed is saved as NULL, a number is checked on Submit, and its column is still
