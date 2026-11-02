@@ -272,6 +272,104 @@ Thirty minutes before:
 **Say.** "Bob changed the data, and the BAW screen shows it straight away. One set of data, two ways in: the screen for your team, plain English for everyone else."
 
 
+### Full talk track
+
+Word for word, about 9 minutes. Actions are in italics.
+
+**Opening** (30 s)
+
+"So far we've built a screen, and we've made it look modern. But a screen is only half the story. The other half is the data behind it: every quote your team saves has to live somewhere."
+
+"For the next few minutes, I'll show you where that data lives and how Bob works with it. Everything you'll see runs on the server. Nothing comes from my laptop."
+
+**Step 1. Fill the table** (1½ min)
+
+*Paste the Step 1 request.*
+
+"Right now our app has exactly one quote in it, the one we saved a few minutes ago. To make this realistic, I'm asking Bob to add twenty made-up employer groups, the kind of quotes your team handles every week."
+
+*While Bob works:*
+
+"Notice what I didn't do. I didn't open a spreadsheet, export a file or upload anything. I asked for it in a sentence. Bob looks at the table first, to see what columns it has and which choices the app allows, so every quote it adds is one the app can open."
+
+*When Bob answers with 21 quotes:*
+
+"Twenty-one: the twenty Bob just added, plus ours from earlier. And Bob did it in one step, so it's all or nothing. If one quote had been wrong, none of them would have gone in. You never end up with half a batch."
+
+**Step 2. Look inside the database server** (1½ min)
+
+*Paste the Step 2 request.*
+
+"People always ask me: where is this data, really? Let's look."
+
+*When the list of databases appears:*
+
+"This is the platform's database server, the real one, not a copy. Every product on the platform keeps its data here. This big one, basdb, is BAW itself: every app, every version and every task."
+
+"And this one, bawexternal, is the app database, where our quotes live. It's the only one marked writable. Bob can read everything on this server, but it's only allowed to change data in one place."
+
+*When the quotes table appears:*
+
+"And here are the quotes themselves, straight out of the table: group name, rating method and reference number."
+
+**Step 3. Open one in the app** (1 min)
+
+*In the classic app, type Northwind Logistics and press Load.*
+
+"Now, the question that matters: does the app see it? Northwind Logistics is one of the quotes Bob added a minute ago. I type the name, and press Load."
+
+*When the form fills in:*
+
+"There it is, on every tab, with the rating method set to Self-Funded. The app doesn't know or care that Bob added it. It's simply a quote in the database."
+
+**Step 4. Ask in plain English** (1½ min)
+
+*Paste the Step 4 question.*
+
+"Now imagine you're a manager and you want a quick answer: which rating methods are our quotes using, and what's the average commission for each? Today that's usually a report request, and a few days of waiting."
+
+*When the table appears:*
+
+"Here's the answer, in seconds. The numbers are made up today, but the question is real. And if anyone wants to check the work, Bob can show the exact query it ran, so an analyst can verify it."
+
+**Step 5. The app writes, Bob reads** (1½ min)
+
+*In the classic app, enter Juniper Street Clinic, pick Fully Insured, press Review, then Submit. Leave the confirmation on screen.*
+
+"So far data has gone from Bob into the app. Let's go the other way. I'm a team member entering a brand-new quote, Juniper Street Clinic, the normal way, in BAW. I submit it, and BAW gives me a reference number. Remember it."
+
+*Paste the Step 5 question. When Bob answers:*
+
+"Same group, same rating method, same reference number. I typed that into BAW ten seconds ago, and Bob is reading it straight from the table the app saves to. No export, no copy, no waiting for a nightly job."
+
+**Step 6. Bob writes, the app reads** (1½ min)
+
+*Paste the Step 6 request.*
+
+"Last one. Say Northwind Logistics calls and tells us they're switching to Level Funded. Instead of opening the quote and editing it, I just tell Bob."
+
+*When Bob confirms one row updated:*
+
+"One quote changed, and only that one."
+
+*In the classic app, load Northwind Logistics again.*
+
+"Back in BAW, I load Northwind again. A minute ago it said Self-Funded. Now it says Level Funded."
+
+"So that's the point of this act: one set of data with two ways in. Your team uses the screen, and anyone else can just ask in plain English. Either way, it's the same data on the same server."
+
+**Bridge to Act 4** (15 s)
+
+"You might be thinking: if Bob can change data this easily, what stops it from changing something it shouldn't? That's exactly what I'll show you next."
+
+**If something goes off-script**
+
+- Bob is slow in Step 1: “It's checking the table's design first, so it doesn't add anything the app can't open. That's the careful part.”
+
+- Bob asks which fields to fill: “The rating method, the commissions and the yes/no questions. Leave the rest empty.”
+
+- Short on time: do Steps 1, 2, 3 and 6. Together they still show the data on the server and changes going both ways.
+
 ---
 
 ## 8. Act 4: safety (3 min)
