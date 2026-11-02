@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Demo script · From pictures to a Quote screen that remembers</title>
-  <meta name="description" content="A one-hour demo script for a client team and their managers: IBM Bob builds a Quote screen from pictures as reusable groups that save to the database, adds a modern copy with a new Toggle widget, works on the app's data on the server together with the app, and cannot change BAW's own database.">
+  <meta name="description" content="A one-hour demo script for a client team and their managers: IBM Bob builds a Quote screen from pictures as reusable groups that save to the database, adds a modern copy with a new Toggle widget, and works on the app's data on the server together with the app.">
   <script>
     // Apply the saved theme before first paint.
     try {
@@ -45,7 +45,6 @@
       <li><a href="#act-1"><time>07:00</time><span>Act 1 · build</span></a></li>
       <li><a href="#act-2"><time>23:00</time><span>Act 2 · modern</span></a></li>
       <li><a href="#act-3"><time>40:00</time><span>Act 3 · live data</span></a></li>
-      <li><a href="#act-4"><time>49:00</time><span>Act 4 · safety</span></a></li>
       <li><a href="#close"><time>52:00</time><span>Close</span></a></li>
     </ol>
   </nav>
@@ -56,7 +55,7 @@
       <div class="hero-copy">
         <p class="kicker">IBM Bob × BAW Dev Tools MCP · demo script</p>
         <h1 id="hero-title" class="display">From pictures to a Quote screen that remembers.</h1>
-        <p class="lead">Bob builds the client's Quote screen from pictures, as <b>reusable groups</b> that <b>save every quote</b> to the database. Then a modern copy with a <b>widget Bob writes live</b>, the app's data worked on live on the server, and a change to BAW's own database refused.</p>
+        <p class="lead">Bob builds the client's Quote screen from pictures, as <b>reusable groups</b> that <b>save every quote</b> to the database. Then a modern copy with a <b>widget Bob writes live</b>, and the app's data worked on live on the server.</p>
         <dl class="figures" aria-label="At a glance">
           <div><dt>60</dt><dd>min</dd></div>
           <div><dt>4</dt><dd>acts</dd></div>
@@ -104,7 +103,6 @@
           <li><time>07:00</time><b>Act 1: pictures in, a screen that remembers out</b><span>The app built from pictures, in groups; a quote saved and loaded back</span></li>
           <li class="is-new"><time>23:00</time><b>Act 2: modern, with a new widget</b><span>The same groups in React and Carbon, and a new Toggle in the toolkit</span></li>
           <li><time>40:00</time><b>Act 3: your data, live in BAW</b><span>20 quotes added on the server, and the table shown there; a question answered as a table; a quote typed in the app read by Bob, and Bob's change shown in the app</span></li>
-          <li><time>49:00</time><b>Act 4: safety</b><span>Bob reads BAW's own record of what we built today; its change there is refused</span></li>
           <li><time>52:00</time><b>Questions</b></li>
           <li><time>57:00</time><b>Next steps</b></li>
         </ol>
@@ -130,7 +128,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
               <li>Modernizer Widgets (MDW): up to 2.1.0, so Bob's new widget goes into 2.2.0 or later</li>
             </ul>
           </li>
-          <li>In Bob's auto-approve settings, allow mode switches, and keep <b>change_system_db</b> off, so Bob must ask. Act 4 relies on it.</li>
+          <li>In Bob's auto-approve settings, allow mode switches, and keep <b>change_system_db</b> off, so Bob must ask before any change to a system database.</li>
           <li>Open Workflow Center (Business Automation Studio) in a second browser tab. Nothing else is needed on stage: every step runs on the server.</li>
           <li>In Bob, pick the <b><span class="emoji">🏗️</span> BAW App Builder</b> mode. Make the font bigger.</li>
           <li>Do one full rehearsal, so you know how long each step takes. Then repeat step 3 and pick a new acronym. Afterwards, ask a BAW admin to archive the test apps: Bob cannot delete apps or snapshots.</li>
@@ -571,7 +569,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
     <section id="act-3" class="section act" aria-labelledby="act3-title">
       <div class="act-side">
         <header class="sec-head">
-          <p class="timecode">40:00 <span aria-hidden="true">/</span> 49:00</p>
+          <p class="timecode">40:00 <span aria-hidden="true">/</span> 52:00</p>
           <h2 id="act3-title" class="h2">Act 3. Your data, live in BAW.</h2>
           <p class="lead">Bob adds 20 quotes straight into the app's table on the server, and a question comes back as a table. Then the round trip: a quote typed in the app is read by Bob, and Bob's change shows up in the app.</p>
         </header>
@@ -680,7 +678,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
         </div>
       </div>
       <details class="talk">
-        <summary>Full talk track for Act 3 <span>Word for word, about 9 minutes. Actions in italics.</span></summary>
+        <summary>Full talk track for Act 3 <span>Word for word, about 9 minutes of talk. Actions in italics.</span></summary>
         <div class="talk-body">
             <div class="talk-part">
               <h4>Opening <span>30 s</span></h4>
@@ -738,8 +736,8 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
               <p>“So that’s the point of this act: one set of data with two ways in. Your team uses the screen, and anyone else can just ask in plain English. Either way, it’s the same data on the same server.”</p>
             </div>
             <div class="talk-part">
-              <h4>Bridge to Act 4 <span>15 s</span></h4>
-              <p>“You might be thinking: if Bob can change data this easily, what stops it from changing something it shouldn’t? That’s exactly what I’ll show you next.”</p>
+              <h4>Bridge to questions <span>15 s</span></h4>
+              <p>“You might be thinking: if Bob can change data this easily, what stops it from changing something it shouldn’t? Let’s start the questions with that one.”</p>
             </div>
             <div class="talk-part">
               <h4>If something goes off-script</h4>
@@ -751,55 +749,6 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
       </details>
     </section>
 
-    <!-- ACT 4 ------------------------------------------------------------ -->
-    <section id="act-4" class="section act" aria-labelledby="act4-title">
-      <div class="act-side">
-        <header class="sec-head">
-          <p class="timecode">49:00 <span aria-hidden="true">/</span> 52:00</p>
-          <h2 id="act4-title" class="h2">Act 4. Safety.</h2>
-          <p class="lead">Bob reads BAW's own record of what we built today. When it tries to change that record, the database says no.</p>
-        </header>
-        <figure class="prompt">
-          <figcaption>Step 1 · Bob reads BAW's own database</figcaption>
-          <pre><code>What did we build in BAW today? Read it from BAW's own database.</code></pre>
-          <button class="copy" type="button" data-copy>Copy</button>
-        </figure>
-        <figure class="prompt">
-          <figcaption>Step 2 · Bob tries to change it</figcaption>
-          <pre><code>Now rename the app you built directly in BAW's database. Use run_sql only.</code></pre>
-          <button class="copy" type="button" data-copy>Copy</button>
-        </figure>
-        <figure class="prompt cmd">
-          <figcaption>What the database answers, in the rehearsal</figcaption>
-          <pre><code>cannot execute UPDATE in a read-only transaction.
-basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code></pre>
-        </figure>
-      </div>
-
-      <div class="cues" data-cues>
-        <div class="cue-tabs" role="tablist" aria-label="Act 4 steps">
-          <button role="tab" id="a4-t1" aria-controls="a4-p1" aria-selected="true"><i>1</i><span>Read</span></button>
-          <button role="tab" id="a4-t2" aria-controls="a4-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Try to change</span></button>
-        </div>
-        <div class="cue-panel" role="tabpanel" id="a4-p1" aria-labelledby="a4-t1">
-          <h3 class="step-title">Step 1. Bob reads BAW's own database</h3>
-          <div class="cue-bob"><b>Bob does</b> <span>Reads <code>basdb</code>, BAW's own records, and lists today's versions with their times: the app's versions from Acts 1 and 2, and the new Modernizer Widgets version that holds the Toggle. In the rehearsal: ZZGDB3 1.0.0 to 1.0.5 and MDW 2.2.0, all within 25 minutes.</span></div>
-          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“That's BAW's own record of the last forty minutes, and Bob reads it directly. The same goes for audits: what was installed, by whom, and when.”</li></ul></blockquote>
-        </div>
-        <div class="cue-panel" role="tabpanel" id="a4-p2" aria-labelledby="a4-t2" hidden>
-          <h3 class="step-title">Step 2. Bob tries to change it</h3>
-          <div class="cue-bob"><b>Bob does</b> <span>Tries, and the database refuses: <b>basdb is read-only for Bob</b>.</span></div>
-          <blockquote class="cue-say"><b class="say-label">Say</b>
-            <ul>
-              <li>“The refusal comes from the database itself, not from Bob being polite. Bob's login there is read-only.”</li>
-              <li>“When a change there really is needed, Bob must ask a person first, and it saves a backup before it writes anything.”</li>
-            </ul>
-          </blockquote>
-          <p class="cue-do"><b>If</b> <span>Bob offers to make the change with its approval tool, say no, or press Deny when it asks. “That's the point: a person decides.”</span></p>
-        </div>
-      </div>
-    </section>
-
     <!-- SAFETY, QUESTIONS, NEXT STEPS, REHEARSAL ------------------------------------ -->
     <section id="close" class="section guard" aria-labelledby="close-title">
       <header class="sec-head">
@@ -808,7 +757,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
         <p class="lead">Tick each rehearsal check as it passes. The page remembers them; copy the results when you are done.</p>
         <div class="meter" data-meter>
           <div class="meter-bar"><span data-meter-fill></span></div>
-          <p><output data-meter-read>0 of 14</output> checks passed</p>
+          <p><output data-meter-read>0 of 13</output> checks passed</p>
         </div>
         <div class="cta-row">
           <button class="btn btn-primary" type="button" data-checks-copy>Copy results</button>
@@ -888,7 +837,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
               </ol>
             </div>
           </div>
-          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, Bob filled the app's table on the server and read and changed the data the BAW app works with, in plain English. Bob read BAW's own records, which stayed untouched, and a person approved every step that mattered.”</li></ul></blockquote>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, Bob filled the app's table on the server and read and changed the data the BAW app works with, in plain English. BAW's own database stayed untouched, and a person approved every step that mattered.”</li></ul></blockquote>
           <p class="project">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps.</p>
         </div>
 
@@ -907,8 +856,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
             <label><input type="checkbox" value="10"><span>Northwind Logistics loads in the classic app as Self-Funded.</span></label>
             <label><input type="checkbox" value="11"><span>The rating question comes back as a table.</span></label>
             <label><input type="checkbox" value="12"><span>Bob reads back Juniper Street Clinic with the reference number the app showed; after Bob's update, Northwind Logistics loads as Level Funded.</span></label>
-            <label><input type="checkbox" value="13"><span>Bob lists today's versions from BAW's database, and its rename there is refused.</span></label>
-            <label><input type="checkbox" value="14"><span>Afterwards: the Toggle files and the table are reset (prep step 3), and the test apps are archived.</span></label>
+            <label><input type="checkbox" value="13"><span>Afterwards: the Toggle files and the table are reset (prep step 3), and the test apps are archived.</span></label>
           </fieldset>
         </div>
       </div>
@@ -925,7 +873,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
       <li id="ref-5">Carbon Design System, Toggle usage. <a href="https://carbondesignsystem.com/components/toggle/usage" target="_blank" rel="noopener">https://carbondesignsystem.com/components/toggle/usage</a></li>
       <li id="ref-6">Model Context Protocol, Tools. <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools" target="_blank" rel="noopener">https://modelcontextprotocol.io/specification/2025-06-18/server/tools</a></li>
     </ol>
-    <p class="fine">The app pictures come from neutral example apps; on the day, Bob builds from the client's own pictures, which stay on the presenter's laptop. Bob makes up the sample quotes during the demo, in the test server's app database. The figures in Act 3 are an example; Act 4's list comes from a rehearsal on a test server.</p>
+    <p class="fine">The app pictures come from neutral example apps; on the day, Bob builds from the client's own pictures, which stay on the presenter's laptop. Bob makes up the sample quotes during the demo, in the test server's app database. The figures in Act 3 are an example.</p>
     <p class="fine">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps.</p>
   </footer>
 
