@@ -1,10 +1,10 @@
 # Demo script: from pictures to a Quote screen that remembers
 
-A one-hour session for the client's team and their managers. Last session the team asked for **reusable, configurable pieces** they can maintain in IBM Business Automation Workflow (BAW). Today IBM Bob builds the client's Quote screen from pictures, as **reusable groups**, and makes it **remember** every quote. Then Bob adds a modern version with a widget it writes on the spot, loads a spreadsheet of quotes, answers a question about them, and shows that it cannot change BAW's own database.
+A one-hour session for the client's team and their managers. Last session the team asked for **reusable, configurable pieces** they can maintain in IBM Business Automation Workflow (BAW). Today IBM Bob builds the client's Quote screen from pictures, as **reusable groups**, and makes it **remember** every quote. Then Bob adds a modern version with a widget it writes on the spot, fills the app's table with sample quotes right on the server, works on them together with the app, and shows that it cannot change BAW's own database.
 
 1. **Act 1. Pictures in; a screen that remembers out.** Bob builds the app from pictures of the old screen, every section a reusable group, and saves each quote to the database. Submit a quote, then Load it back.
 2. **Act 2. Modern, with a new widget.** Bob gives the same app a React and Carbon version of every group, and **writes a new Toggle widget** for the yes/no questions.
-3. **Act 3. Your data.** A spreadsheet of 20 quotes goes in with one sentence; any of them opens in the app; a question comes back as a table.
+3. **Act 3. Your data, live in BAW.** Bob adds 20 quotes straight into the app's table on the server, and a question comes back as a table. A quote typed in the app is read by Bob, and Bob's change shows up in the app.
 4. **Act 4. Safety.** Bob reads BAW's own database, and its attempt to change it is refused.
 
 **How to read this script.** Each step tells you what to **do**, what to **paste** into Bob, what **Bob does**, and what to **say**. Text in quotes is meant to be said out loud. The pictures on the demo page come from a neutral example app; on the day, Bob builds from the client's own pictures.
@@ -19,12 +19,12 @@ A one-hour session for the client's team and their managers. Last session the te
 | 02:00 | How it works | Toolkits, groups, and where the data lives |
 | 07:00 | Act 1: pictures in, a screen that remembers out | The app built from pictures, in groups; a quote saved and loaded back |
 | 23:00 | Act 2: modern, with a new widget | The same groups in React and Carbon, and a new Toggle in the toolkit |
-| 40:00 | Act 3: your data, live in BAW | A spreadsheet of 20 quotes in; a question answered as a table; a quote typed in the app read by Bob, and Bob's change shown in the app |
+| 40:00 | Act 3: your data, live in BAW | 20 quotes added on the server; a question answered as a table; a quote typed in the app read by Bob, and Bob's change shown in the app |
 | 49:00 | Act 4: safety | Bob reads BAW's own record of what we built today; its change there is refused |
 | 52:00 | Questions | |
 | 57:00 | Next steps | |
 
-The timings are tight. If Bob runs long in Act 1 or Act 2, shorten Act 3 to the spreadsheet, one Load, and Step 6.
+The timings are tight. If Bob runs long in Act 1 or Act 2, shorten Act 3 to Step 1, one Load, and Step 5.
 
 ---
 
@@ -48,7 +48,7 @@ Thirty minutes before:
    - App Builder Widgets (ABW): up to 1.0.4
    - Modernizer Widgets (MDW): up to 2.1.0, so Bob's new widget goes into 2.2.0 or later
 7. In Bob's auto-approve settings, allow mode switches, and keep **change_system_db** off, so Bob must ask. Act 4 relies on it.
-8. Open Workflow Center (Business Automation Studio) in a second browser tab, a terminal, and a spreadsheet program (Excel or Numbers).
+8. Open Workflow Center (Business Automation Studio) in a second browser tab. Nothing else is needed on stage: every step runs on the server.
 9. In Bob, pick the **🏗️ BAW App Builder** mode. Make the font bigger.
 10. Do one full rehearsal, so you know how long each step takes. Then repeat step 3 and pick a new acronym. Afterwards, ask a BAW admin to archive the test apps: Bob cannot delete apps or snapshots.
 
@@ -185,14 +185,6 @@ Thirty minutes before:
 - "Bob is writing a real BAW widget, not a picture of one. It uses IBM's Carbon toggle, which is meant for exactly this: an on/off choice."[^toggle]
 - "It tests the widget before it builds the toolkit, so a broken widget never reaches BAW."
 
-**Do, while Bob builds.** In the terminal, make the sample spreadsheet for Act 3 from the app Bob built in Act 1 (Bob wrote its design to `work/`; `ls work/*.app.json` shows the name):
-
-```
-python3 docs/showoff/groups-and-database-demo-script/data/make-sample-quotes.py work/ZZGDB.app.json work/demo-quotes.csv
-```
-
-It writes 20 made-up quotes whose columns match the table, whatever Bob named the fields. The file stays in `work/`.
-
 ### Step 4. The reveal
 
 **Do.**
@@ -207,37 +199,31 @@ It writes 20 made-up quotes whose columns match the table, whatever Bob named th
 
 ## 7. Act 3: your data, live in BAW (9 min)
 
-### Step 1. Show the spreadsheet
-
-**Do.** Open `work/demo-quotes.csv` in the spreadsheet program: 20 employer groups, one column per field of the form. All made up for today.
-
-**Say.** "Every team has a spreadsheet like this. Let's put it where the app can use it."
-
-### Step 2. Load it in
+### Step 1. Fill the table, on the server
 
 **Paste.**
 
-> Load the spreadsheet work/demo-quotes.csv into the group_quote table, then tell me how many quotes the table holds.
+> Add 20 made-up employer groups to the group_quote table, directly in the database. Make the first one Northwind Logistics, Self-Funded. Fill the rating method, the commissions and the yes/no questions from the app's own choices, so every quote opens in the app. Then tell me how many quotes the table holds.
 
-**Bob does.** Loads the file into the table (`import_table`) in one go, then counts: **20 rows loaded, 21 quotes in all**, counting Lighthouse Bakery from Act 1.
+**Bob does.** Reads the table's columns (`describe_table`) and the app's choices, adds the 20 quotes in one statement (`run_sql`), then counts: **21 quotes in all**, counting Lighthouse Bakery from Act 1.
 
-**Say.** "A load is all or nothing: if one row were wrong, nothing would go in, and Bob would tell us which row."
+**Say.**
+- "No spreadsheet on anyone's laptop, no upload. Bob wrote straight into the database the BAW app uses, on the server."
+- "One statement, so it's all or nothing: if one quote were wrong, none would go in."
 
-**If** Bob says the file isn't there, say: "The file is at work/demo-quotes.csv. Call import_table on it."
+### Step 2. Open one in the app
 
-### Step 3. Open one in the app
+**Do.** In the classic app, type **Northwind Logistics** and press **Load**. The fields Bob filled come back on every tab, with Self-Funded as the rating method.
 
-**Do.** In the classic app, type **Northwind Logistics** and press **Load**. Every tab fills in from the spreadsheet row.
+**Say.** "Bob put it in the database a minute ago, and the BAW app opens it like any other quote."
 
-**Say.** "From spreadsheet to working app in one sentence."
-
-### Step 4. Ask in plain English
+### Step 3. Ask in plain English
 
 **Paste.**
 
 > Which rating methods do our quotes use, and what is the average medical commission percentage for each?
 
-**Bob does.** Writes a query (`run_sql`) and answers with a table. In the rehearsal, over the 20 sample quotes:
+**Bob does.** Writes a query (`run_sql`) and answers with a table. The numbers depend on the quotes Bob made up; it looks like this:
 
 | Rating method | Quotes | Average medical commission |
 |---|---:|---:|
@@ -247,7 +233,7 @@ It writes 20 made-up quotes whose columns match the table, whatever Bob named th
 
 **Say.** "No report request, no waiting. If you ask, Bob shows the query it ran, so an analyst can check it."
 
-### Step 5. The app writes, Bob reads
+### Step 4. The app writes, Bob reads
 
 **Do.** In the classic app, start a new quote: type **Juniper Street Clinic** as the Group Name, pick **Fully Insured**, press Review, then Submit. Leave the confirmation, with its reference number, on screen.
 
@@ -259,7 +245,7 @@ It writes 20 made-up quotes whose columns match the table, whatever Bob named th
 
 **Say.** "I typed that into BAW a few seconds ago. Bob reads the same table the app saves to: no export, no copy."
 
-### Step 6. Bob writes, the app reads
+### Step 5. Bob writes, the app reads
 
 **Paste.**
 
@@ -267,11 +253,10 @@ It writes 20 made-up quotes whose columns match the table, whatever Bob named th
 
 **Bob does.** Changes that one row (`run_sql`) and confirms: **1 row updated**.
 
-**Do.** Open the classic app again, type **Northwind Logistics** and press **Load**. The rating method now reads **Level Funded**; in Step 3 it was Self-Funded.
+**Do.** Open the classic app again, type **Northwind Logistics** and press **Load**. The rating method now reads **Level Funded**; in Step 2 it was Self-Funded.
 
 **Say.** "Bob changed the data, and the BAW screen shows it straight away. One set of data, two ways in: the screen for your team, plain English for everyone else."
 
-**If** Northwind already read Level Funded in Step 3, ask for Fully Insured instead.
 
 ---
 
@@ -313,7 +298,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.
 | Bob adds widgets, never changes existing ones, and tests a new one first | Apps that depend on a widget keep working; a broken widget never reaches BAW |
 | Bob writes only in the app database | BAW's own records and the other products' databases are read only for its login |
 | A change to a system database asks a person first, and backs up first | Nothing changes there without a decision and a way back |
-| A load is all or nothing | A bad spreadsheet never half-loads |
+| Every write is one statement, all or nothing | A bad batch of data never half-lands |
 | The app's Load and Save run fixed statements | Nobody can make the app run their own SQL |
 | Passwords stay in the connector | Bob never sees them |
 
@@ -339,9 +324,9 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.
 | Bob uses a Checkbox instead of a new widget | Say: "No, add a new Toggle widget to Modernizer Widgets for those three questions." |
 | The modern copy shows a Load button or a "Db Message" tab | Say: "Leave the Load button and the database message out of the modern copy, and rebuild it." Load there would not fill the form |
 | The new widget fails its check twice | Bob falls back to the stock Checkbox and finishes. Carry on; show the Toggle in the rehearsal app instead |
-| The spreadsheet helper says there is no database section | The design file in `work/` is from an earlier run; pick the newest `work/*.app.json` |
-| Bob says `work/demo-quotes.csv` isn't there | Say: "The file is at work/demo-quotes.csv. Call import_table on it." Bob's file search doesn't show `work/` |
-| The load fails with "duplicate key" | The rows are already there. Say: "Replace the rows in group_quote with work/demo-quotes.csv." Bob backs the table up first |
+| Bob asks which fields to fill | Say: "The rating method, the commissions and the yes/no questions. Leave the rest empty." |
+| Bob adds the quotes one at a time | Say: "Add them all in one statement." |
+| Bob's insert fails with "duplicate key" | The quotes are there from a rehearsal: the table was not reset. Carry on with Step 2 |
 | Load says "No record found" | The name must match exactly, including capitals: "Northwind Logistics" |
 | "Snapshot already exists", or the acronym is taken | Give Bob a new acronym: a safety rule working |
 | An install or the first database answer is slow | Talk through the diagram while it runs |
@@ -357,7 +342,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.
 4. Who on your team will own the groups and the toolkit?
 5. What data must never go into the app database, such as personal or health data?
 
-**Say.** "In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, a spreadsheet became app data, and Bob read and changed the data the BAW app works with, in plain English. Bob read BAW's own records, which stayed untouched, and a person approved every step that mattered."
+**Say.** "In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, Bob filled the app's table on the server and read and changed the data the BAW app works with, in plain English. Bob read BAW's own records, which stayed untouched, and a person approved every step that mattered."
 
 Project: https://github.com/unclethien/baw-bob-dev-tools-mcp (Apache-2.0). Not an official IBM project; use it with test servers and test apps.
 
@@ -372,7 +357,7 @@ Project: https://github.com/unclethien/baw-bob-dev-tools-mcp (Apache-2.0). Not a
 5. Bob's plan lists the modern groups and the new Toggle, and leaves Load out of the modern copy.
 6. Bob builds a **new** Modernizer Widgets version and asks before each install.
 7. The modern copy's tabs lay the groups out side by side, a flipped toggle reads "Yes" on the review, and the Toggle is in the palette.
-8. The helper writes `work/demo-quotes.csv`; the load reports 20 rows, and Northwind Logistics loads in the classic app.
+8. Bob adds the 20 quotes in one statement; the table holds 21, and Northwind Logistics loads in the classic app as Self-Funded.
 9. The rating question comes back as a table.
 10. Bob reads back Juniper Street Clinic with the reference number the app showed; after Bob's update, Northwind Logistics loads as Level Funded.
 11. Bob lists today's versions from BAW's database, and its rename there is refused.

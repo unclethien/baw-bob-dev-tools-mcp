@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Demo script · From pictures to a Quote screen that remembers</title>
-  <meta name="description" content="A one-hour demo script for a client team and their managers: IBM Bob builds a Quote screen from pictures as reusable groups that save to the database, adds a modern copy with a new Toggle widget, loads a spreadsheet, answers a question, and cannot change BAW's own database.">
+  <meta name="description" content="A one-hour demo script for a client team and their managers: IBM Bob builds a Quote screen from pictures as reusable groups that save to the database, adds a modern copy with a new Toggle widget, works on the app's data on the server together with the app, and cannot change BAW's own database.">
   <script>
     // Apply the saved theme before first paint.
     try {
@@ -56,7 +56,7 @@
       <div class="hero-copy">
         <p class="kicker">IBM Bob × BAW Dev Tools MCP · demo script</p>
         <h1 id="hero-title" class="display">From pictures to a Quote screen that remembers.</h1>
-        <p class="lead">Bob builds the client's Quote screen from pictures, as <b>reusable groups</b> that <b>save every quote</b> to the database. Then a modern copy with a <b>widget Bob writes live</b>, a spreadsheet brought in, a question answered, and a change to BAW's own database refused.</p>
+        <p class="lead">Bob builds the client's Quote screen from pictures, as <b>reusable groups</b> that <b>save every quote</b> to the database. Then a modern copy with a <b>widget Bob writes live</b>, the app's data worked on live on the server, and a change to BAW's own database refused.</p>
         <dl class="figures" aria-label="At a glance">
           <div><dt>60</dt><dd>min</dd></div>
           <div><dt>4</dt><dd>acts</dd></div>
@@ -103,12 +103,12 @@
           <li><time>02:00</time><b>How it works</b><span>Toolkits, groups, and where the data lives</span></li>
           <li><time>07:00</time><b>Act 1: pictures in, a screen that remembers out</b><span>The app built from pictures, in groups; a quote saved and loaded back</span></li>
           <li class="is-new"><time>23:00</time><b>Act 2: modern, with a new widget</b><span>The same groups in React and Carbon, and a new Toggle in the toolkit</span></li>
-          <li><time>40:00</time><b>Act 3: your data, live in BAW</b><span>A spreadsheet of 20 quotes in; a question answered as a table; a quote typed in the app read by Bob, and Bob's change shown in the app</span></li>
+          <li><time>40:00</time><b>Act 3: your data, live in BAW</b><span>20 quotes added on the server; a question answered as a table; a quote typed in the app read by Bob, and Bob's change shown in the app</span></li>
           <li><time>49:00</time><b>Act 4: safety</b><span>Bob reads BAW's own record of what we built today; its change there is refused</span></li>
           <li><time>52:00</time><b>Questions</b></li>
           <li><time>57:00</time><b>Next steps</b></li>
         </ol>
-        <p class="fine">The timings are tight. If Bob runs long in Act 1 or Act 2, shorten Act 3 to the spreadsheet, one Load, and Step 6.</p>
+        <p class="fine">The timings are tight. If Bob runs long in Act 1 or Act 2, shorten Act 3 to Step 1, one Load, and Step 5.</p>
       </div>
 
       <div class="prep-before">
@@ -131,7 +131,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
             </ul>
           </li>
           <li>In Bob's auto-approve settings, allow mode switches, and keep <b>change_system_db</b> off, so Bob must ask. Act 4 relies on it.</li>
-          <li>Open Workflow Center (Business Automation Studio) in a second browser tab, a terminal, and a spreadsheet program (Excel or Numbers).</li>
+          <li>Open Workflow Center (Business Automation Studio) in a second browser tab. Nothing else is needed on stage: every step runs on the server.</li>
           <li>In Bob, pick the <b><span class="emoji">🏗️</span> BAW App Builder</b> mode. Make the font bigger.</li>
           <li>Do one full rehearsal, so you know how long each step takes. Then repeat step 3 and pick a new acronym. Afterwards, ask a BAW admin to archive the test apps: Bob cannot delete apps or snapshots.</li>
         </ol>
@@ -459,11 +459,6 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
           <pre><code>Approved. Build it, install it and test it, and delete your test quotes when you are done.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
-        <figure class="prompt cmd">
-          <figcaption>Step 3 · in the terminal, while Bob builds: the spreadsheet for Act 3</figcaption>
-          <pre><code>python3 docs/showoff/groups-and-database-demo-script/data/make-sample-quotes.py work/ZZGDB.app.json work/demo-quotes.csv</code></pre>
-          <button class="copy" type="button" data-copy>Copy</button>
-        </figure>
         <ol class="seq" aria-label="What Bob does after the plan is approved, in order">
           <li class="seq-new"><code>(files)</code> <span>write the Toggle</span></li>
           <li class="seq-new"><code>(offline check)</code> <span>test every widget</span></li>
@@ -523,7 +518,6 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
               </tbody>
             </table>
           </div>
-          <p class="cue-do"><b>Do</b> <span>While Bob builds, run the terminal line in the third block: it writes <code>work/demo-quotes.csv</code>, 20 made-up quotes whose columns match the table, whatever Bob named the fields. If the name differs, <code>ls work/*.app.json</code> shows Bob's design file. The file stays in <code>work/</code>.</span></p>
           <blockquote class="cue-say"><b class="say-label">Say, while it works</b>
             <ul>
               <li>“Bob is writing a real BAW widget, not a picture of one. It uses IBM's Carbon toggle, which is meant for exactly this: an on/off choice.”<sup><a href="#ref-5" aria-label="Reference 5">5</a></sup></li>
@@ -579,29 +573,29 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
         <header class="sec-head">
           <p class="timecode">40:00 <span aria-hidden="true">/</span> 49:00</p>
           <h2 id="act3-title" class="h2">Act 3. Your data, live in BAW.</h2>
-          <p class="lead">A spreadsheet of 20 quotes goes in with one sentence, and a question comes back as a table. Then the round trip: a quote typed in the app is read by Bob, and Bob's change shows up in the app.</p>
+          <p class="lead">Bob adds 20 quotes straight into the app's table on the server, and a question comes back as a table. Then the round trip: a quote typed in the app is read by Bob, and Bob's change shows up in the app.</p>
         </header>
         <figure class="prompt">
-          <figcaption>Step 2 · paste in Bob</figcaption>
-          <pre><code>Load the spreadsheet work/demo-quotes.csv into the group_quote table, then tell me how many quotes the table holds.</code></pre>
+          <figcaption>Step 1 · paste in Bob</figcaption>
+          <pre><code>Add 20 made-up employer groups to the group_quote table, directly in the database. Make the first one Northwind Logistics, Self-Funded. Fill the rating method, the commissions and the yes/no questions from the app's own choices, so every quote opens in the app. Then tell me how many quotes the table holds.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
         <figure class="prompt">
-          <figcaption>Step 4 · a question</figcaption>
+          <figcaption>Step 3 · a question</figcaption>
           <pre><code>Which rating methods do our quotes use, and what is the average medical commission percentage for each?</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
         <figure class="prompt">
-          <figcaption>Step 5 · after you submit Juniper Street Clinic in the app</figcaption>
+          <figcaption>Step 4 · after you submit Juniper Street Clinic in the app</figcaption>
           <pre><code>Is Juniper Street Clinic's quote in the table? Give me its rating method and reference number.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
         <figure class="prompt">
-          <figcaption>Step 6 · Bob changes it, the app shows it</figcaption>
+          <figcaption>Step 5 · Bob changes it, the app shows it</figcaption>
           <pre><code>Northwind Logistics is moving to Level Funded. Update its quote in the table.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
-        <div class="pair" aria-label="A quote loaded from the spreadsheet, both parts of the form">
+        <div class="pair" aria-label="A quote loaded by name, both parts of the form">
           <figure>
             <img src="media/03-load-filled.webp" width="1400" height="498" alt="A quote loaded by name: the contact fields filled in">
             <figcaption>Type the name, press Load (example app)</figcaption>
@@ -615,34 +609,32 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
 
       <div class="cues" data-cues>
         <div class="cue-tabs" role="tablist" aria-label="Act 3 steps">
-          <button role="tab" id="a3-t1" aria-controls="a3-p1" aria-selected="true"><i>1</i><span>Spreadsheet</span></button>
-          <button role="tab" id="a3-t2" aria-controls="a3-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Load it in</span></button>
-          <button role="tab" id="a3-t3" aria-controls="a3-p3" aria-selected="false" tabindex="-1"><i>3</i><span>In the app</span></button>
-          <button role="tab" id="a3-t4" aria-controls="a3-p4" aria-selected="false" tabindex="-1"><i>4</i><span>Ask</span></button>
-          <button role="tab" id="a3-t5" aria-controls="a3-p5" aria-selected="false" tabindex="-1"><i>5</i><span>App → Bob</span></button>
-          <button role="tab" id="a3-t6" aria-controls="a3-p6" aria-selected="false" tabindex="-1"><i>6</i><span>Bob → app</span></button>
+          <button role="tab" id="a3-t1" aria-controls="a3-p1" aria-selected="true"><i>1</i><span>Fill the table</span></button>
+          <button role="tab" id="a3-t2" aria-controls="a3-p2" aria-selected="false" tabindex="-1"><i>2</i><span>In the app</span></button>
+          <button role="tab" id="a3-t3" aria-controls="a3-p3" aria-selected="false" tabindex="-1"><i>3</i><span>Ask</span></button>
+          <button role="tab" id="a3-t4" aria-controls="a3-p4" aria-selected="false" tabindex="-1"><i>4</i><span>App → Bob</span></button>
+          <button role="tab" id="a3-t5" aria-controls="a3-p5" aria-selected="false" tabindex="-1"><i>5</i><span>Bob → app</span></button>
         </div>
         <div class="cue-panel" role="tabpanel" id="a3-p1" aria-labelledby="a3-t1">
-          <h3 class="step-title">Step 1. Show the spreadsheet</h3>
-          <p class="cue-do"><b>Do</b> <span>Open <code>work/demo-quotes.csv</code> in the spreadsheet program: 20 employer groups, one column per field of the form. All made up for today.</span></p>
-          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Every team has a spreadsheet like this. Let's put it where the app can use it.”</li></ul></blockquote>
+          <h3 class="step-title">Step 1. Fill the table, on the server</h3>
+          <div class="cue-do"><b>Paste</b> <span>The request in the first Paste block.</span></div>
+          <div class="cue-bob"><b>Bob does</b> <span>Reads the table's columns (<code>describe_table</code>) and the app's choices, adds the 20 quotes in one statement (<code>run_sql</code>), then counts: <b>21 quotes in all</b>, counting Lighthouse Bakery from Act 1.</span></div>
+          <blockquote class="cue-say"><b class="say-label">Say</b>
+            <ul>
+              <li>“No spreadsheet on anyone's laptop, no upload. Bob wrote straight into the database the BAW app uses, on the server.”</li>
+              <li>“One statement, so it's all or nothing: if one quote were wrong, none would go in.”</li>
+            </ul>
+          </blockquote>
         </div>
         <div class="cue-panel" role="tabpanel" id="a3-p2" aria-labelledby="a3-t2" hidden>
-          <h3 class="step-title">Step 2. Load it in</h3>
-          <div class="cue-do"><b>Paste</b> <span>The request in the first Paste block.</span></div>
-          <div class="cue-bob"><b>Bob does</b> <span>Loads the file into the table (<code>import_table</code>) in one go, then counts: <b>20 rows loaded, 21 quotes in all</b>, counting Lighthouse Bakery from Act 1.</span></div>
-          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“A load is all or nothing: if one row were wrong, nothing would go in, and Bob would tell us which row.”</li></ul></blockquote>
-          <p class="cue-do"><b>If</b> <span>Bob says the file isn't there, say: “The file is at work/demo-quotes.csv. Call import_table on it.”</span></p>
+          <h3 class="step-title">Step 2. Open one in the app</h3>
+          <p class="cue-do"><b>Do</b> <span>In the classic app, type <b>Northwind Logistics</b> and press <b>Load</b>. The fields Bob filled come back on every tab, with Self-Funded as the rating method.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Bob put it in the database a minute ago, and the BAW app opens it like any other quote.”</li></ul></blockquote>
         </div>
         <div class="cue-panel" role="tabpanel" id="a3-p3" aria-labelledby="a3-t3" hidden>
-          <h3 class="step-title">Step 3. Open one in the app</h3>
-          <p class="cue-do"><b>Do</b> <span>In the classic app, type <b>Northwind Logistics</b> and press <b>Load</b>. Every group fills in from the spreadsheet row.</span></p>
-          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“From spreadsheet to working app in one sentence.”</li></ul></blockquote>
-        </div>
-        <div class="cue-panel" role="tabpanel" id="a3-p4" aria-labelledby="a3-t4" hidden>
-          <h3 class="step-title">Step 4. Ask in plain English</h3>
+          <h3 class="step-title">Step 3. Ask in plain English</h3>
           <div class="cue-do"><b>Paste</b> <span>The question in the second Paste block.</span></div>
-          <div class="cue-bob"><b>Bob does</b> <span>Writes a query (<code>run_sql</code>) and answers with a table. In the rehearsal, over the 20 sample quotes:</span></div>
+          <div class="cue-bob"><b>Bob does</b> <span>Writes a query (<code>run_sql</code>) and answers with a table. The numbers depend on the quotes Bob made up; it looks like this:</span></div>
           <div class="ledger answer">
             <table>
               <thead><tr><th scope="col">Rating method</th><th scope="col">Quotes</th><th scope="col">Average medical commission</th></tr></thead>
@@ -655,20 +647,19 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
           </div>
           <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“No report request, no waiting. If you ask, Bob shows the query it ran, so an analyst can check it.”</li></ul></blockquote>
         </div>
-        <div class="cue-panel" role="tabpanel" id="a3-p5" aria-labelledby="a3-t5" hidden>
-          <h3 class="step-title">Step 5. The app writes, Bob reads</h3>
+        <div class="cue-panel" role="tabpanel" id="a3-p4" aria-labelledby="a3-t4" hidden>
+          <h3 class="step-title">Step 4. The app writes, Bob reads</h3>
           <p class="cue-do"><b>Do</b> <span>In the classic app, start a new quote: type <b>Juniper Street Clinic</b> as the Group Name, pick <b>Fully Insured</b>, press Review, then Submit. Leave the confirmation, with its reference number, on screen.</span></p>
           <div class="cue-do"><b>Paste</b> <span>The question in the third Paste block.</span></div>
           <div class="cue-bob"><b>Bob does</b> <span>Reads the table (<code>run_sql</code>): Juniper Street Clinic, Fully Insured, and the same reference number as the confirmation.</span></div>
           <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“I typed that into BAW a few seconds ago. Bob reads the same table the app saves to: no export, no copy.”</li></ul></blockquote>
         </div>
-        <div class="cue-panel" role="tabpanel" id="a3-p6" aria-labelledby="a3-t6" hidden>
-          <h3 class="step-title">Step 6. Bob writes, the app reads</h3>
+        <div class="cue-panel" role="tabpanel" id="a3-p5" aria-labelledby="a3-t5" hidden>
+          <h3 class="step-title">Step 5. Bob writes, the app reads</h3>
           <div class="cue-do"><b>Paste</b> <span>The request in the fourth Paste block.</span></div>
           <div class="cue-bob"><b>Bob does</b> <span>Changes that one row (<code>run_sql</code>) and confirms: <b>1 row updated</b>.</span></div>
-          <p class="cue-do"><b>Do</b> <span>Open the classic app again, type <b>Northwind Logistics</b> and press <b>Load</b>. The rating method now reads <b>Level Funded</b>; in Step 3 it was Self-Funded.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Open the classic app again, type <b>Northwind Logistics</b> and press <b>Load</b>. The rating method now reads <b>Level Funded</b>; in Step 2 it was Self-Funded.</span></p>
           <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Bob changed the data, and the BAW screen shows it straight away. One set of data, two ways in: the screen for your team, plain English for everyone else.”</li></ul></blockquote>
-          <p class="cue-do"><b>If</b> <span>Northwind already read Level Funded in Step 3, ask for Fully Insured instead.</span></p>
         </div>
       </div>
     </section>
@@ -756,7 +747,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
               <tr><th scope="row">Bob adds widgets, never changes existing ones, and tests a new one first</th><td>Apps that depend on a widget keep working; a broken widget never reaches BAW</td></tr>
               <tr><th scope="row">Bob writes only in the app database</th><td>BAW's own records and the other products' databases are read only for its login</td></tr>
               <tr><th scope="row">A change to a system database asks a person first, and backs up first</th><td>Nothing changes there without a decision and a way back</td></tr>
-              <tr><th scope="row">A load is all or nothing</th><td>A bad spreadsheet never half-loads</td></tr>
+              <tr><th scope="row">Every write is one statement, all or nothing</th><td>A bad batch of data never half-lands</td></tr>
               <tr><th scope="row">The app's Load and Save run fixed statements</th><td>Nobody can make the app run their own SQL</td></tr>
               <tr><th scope="row">Passwords stay in the connector</th><td>Bob never sees them</td></tr>
             </tbody>
@@ -787,9 +778,9 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
               <tr><th scope="row">Bob uses a Checkbox instead of a new widget</th><td>Say: “No, add a new Toggle widget to Modernizer Widgets for those three questions.”</td></tr>
               <tr><th scope="row">The modern copy shows a Load button or a “Db Message” tab</th><td>Say: “Leave the Load button and the database message out of the modern copy, and rebuild it.” Load there would not fill the form</td></tr>
               <tr><th scope="row">The new widget fails its check twice</th><td>Bob falls back to the stock Checkbox and finishes. Carry on; show the Toggle in the rehearsal app instead</td></tr>
-              <tr><th scope="row">The spreadsheet helper says there is no database section</th><td>The design file is from an earlier run; pick the newest <code>work/*.app.json</code></td></tr>
-              <tr><th scope="row">Bob says <code>work/demo-quotes.csv</code> isn't there</th><td>Say: “The file is at work/demo-quotes.csv. Call import_table on it.” Bob's file search doesn't show <code>work/</code></td></tr>
-              <tr><th scope="row">The load fails with “duplicate key”</th><td>The rows are already there. Say: “Replace the rows in group_quote with work/demo-quotes.csv.” Bob backs the table up first</td></tr>
+              <tr><th scope="row">Bob asks which fields to fill</th><td>Say: “The rating method, the commissions and the yes/no questions. Leave the rest empty.”</td></tr>
+              <tr><th scope="row">Bob adds the quotes one at a time</th><td>Say: “Add them all in one statement.”</td></tr>
+              <tr><th scope="row">Bob's insert fails with “duplicate key”</th><td>The quotes are there from a rehearsal: the table was not reset. Carry on with Step 2</td></tr>
               <tr><th scope="row">Load says “No record found”</th><td>The name must match exactly, including capitals: “Northwind Logistics”</td></tr>
               <tr><th scope="row">“Snapshot already exists”, or the acronym is taken</th><td>Give Bob a new acronym: a safety rule working</td></tr>
               <tr><th scope="row">An install or the first database answer is slow</th><td>Talk through the diagram while it runs</td></tr>
@@ -810,7 +801,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
               </ol>
             </div>
           </div>
-          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, a spreadsheet became app data, and Bob read and changed the data the BAW app works with, in plain English. Bob read BAW's own records, which stayed untouched, and a person approved every step that mattered.”</li></ul></blockquote>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“In one hour: pictures became a BAW app made of reusable groups that remembers every quote, a modern version made of the same groups with a widget Bob wrote, Bob filled the app's table on the server and read and changed the data the BAW app works with, in plain English. Bob read BAW's own records, which stayed untouched, and a person approved every step that mattered.”</li></ul></blockquote>
           <p class="project">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps.</p>
         </div>
 
@@ -824,7 +815,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
             <label><input type="checkbox" value="5"><span>Bob's plan lists the modern groups and the new Toggle, and leaves Load out of the modern copy.</span></label>
             <label><input type="checkbox" value="6"><span>Bob builds a <b>new</b> Modernizer Widgets version and asks before each install.</span></label>
             <label><input type="checkbox" value="7"><span>The modern copy's tabs lay the groups out side by side, a flipped toggle reads “Yes” on the review, and the Toggle is in the palette.</span></label>
-            <label><input type="checkbox" value="8"><span>The helper writes <code>work/demo-quotes.csv</code>; the load reports 20 rows, and Northwind Logistics loads in the classic app.</span></label>
+            <label><input type="checkbox" value="8"><span>Bob adds the 20 quotes in one statement; the table holds 21, and Northwind Logistics loads in the classic app as Self-Funded.</span></label>
             <label><input type="checkbox" value="9"><span>The rating question comes back as a table.</span></label>
             <label><input type="checkbox" value="10"><span>Bob reads back Juniper Street Clinic with the reference number the app showed; after Bob's update, Northwind Logistics loads as Level Funded.</span></label>
             <label><input type="checkbox" value="11"><span>Bob lists today's versions from BAW's database, and its rename there is refused.</span></label>
@@ -845,7 +836,7 @@ basdb is read-only for Bob. Write in bawexternal, or use change_system_db.</code
       <li id="ref-5">Carbon Design System, Toggle usage. <a href="https://carbondesignsystem.com/components/toggle/usage" target="_blank" rel="noopener">https://carbondesignsystem.com/components/toggle/usage</a></li>
       <li id="ref-6">Model Context Protocol, Tools. <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools" target="_blank" rel="noopener">https://modelcontextprotocol.io/specification/2025-06-18/server/tools</a></li>
     </ol>
-    <p class="fine">The app pictures come from neutral example apps; on the day, Bob builds from the client's own pictures, which stay on the presenter's laptop. The sample quotes are made up by <code>data/make-sample-quotes.py</code> and stay in <code>work/</code>. The steps and the figures in Act 3 come from a rehearsal on a test server.</p>
+    <p class="fine">The app pictures come from neutral example apps; on the day, Bob builds from the client's own pictures, which stay on the presenter's laptop. Bob makes up the sample quotes during the demo, in the test server's app database. The figures in Act 3 are an example; Act 4's list comes from a rehearsal on a test server.</p>
     <p class="fine">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps.</p>
   </footer>
 
