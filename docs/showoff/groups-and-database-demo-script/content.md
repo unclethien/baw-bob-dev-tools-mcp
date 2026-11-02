@@ -19,12 +19,12 @@ A one-hour session for the client's team and their managers. Last session the te
 | 02:00 | How it works | Toolkits, groups, and where the data lives |
 | 07:00 | Act 1: pictures in, a screen that remembers out | The app built from pictures, in groups; a quote saved and loaded back |
 | 23:00 | Act 2: modern, with a new widget | The same groups in React and Carbon, and a new Toggle in the toolkit |
-| 40:00 | Act 3: your data, live in BAW | 20 quotes added on the server; a question answered as a table; a quote typed in the app read by Bob, and Bob's change shown in the app |
+| 40:00 | Act 3: your data, live in BAW | 20 quotes added on the server, and the table shown there; a question answered as a table; a quote typed in the app read by Bob, and Bob's change shown in the app |
 | 49:00 | Act 4: safety | Bob reads BAW's own record of what we built today; its change there is refused |
 | 52:00 | Questions | |
 | 57:00 | Next steps | |
 
-The timings are tight. If Bob runs long in Act 1 or Act 2, shorten Act 3 to Step 1, one Load, and Step 5.
+The timings are tight. If Bob runs long in Act 1 or Act 2, shorten Act 3 to Steps 1 and 2, one Load, and Step 6.
 
 ---
 
@@ -211,13 +211,27 @@ Thirty minutes before:
 - "No spreadsheet on anyone's laptop, no upload. Bob wrote straight into the database the BAW app uses, on the server."
 - "One statement, so it's all or nothing: if one quote were wrong, none would go in."
 
-### Step 2. Open one in the app
+### Step 2. Look inside the database server
+
+**Paste.**
+
+> Show me the databases on the server, and which one our app uses. Then show me 10 quotes from group_quote: group name, rating method and reference number.
+
+**Bob does.**
+- Lists the server's databases with their sizes (`list_tables`): 33 on the test server. They include BAW's own `basdb`, the largest, and `bawexternal`, the app database, which is the only one marked writable.
+- Shows 10 quotes as a table (`run_sql`).
+
+**Say.**
+- "This is the platform's database server, not a copy on this laptop. BAW keeps its own records here too, in basdb."
+- "Bob can read all of them, and it writes to one: the app database, where these quotes live."
+
+### Step 3. Open one in the app
 
 **Do.** In the classic app, type **Northwind Logistics** and press **Load**. The fields Bob filled come back on every tab, with Self-Funded as the rating method.
 
 **Say.** "Bob put it in the database a minute ago, and the BAW app opens it like any other quote."
 
-### Step 3. Ask in plain English
+### Step 4. Ask in plain English
 
 **Paste.**
 
@@ -233,7 +247,7 @@ Thirty minutes before:
 
 **Say.** "No report request, no waiting. If you ask, Bob shows the query it ran, so an analyst can check it."
 
-### Step 4. The app writes, Bob reads
+### Step 5. The app writes, Bob reads
 
 **Do.** In the classic app, start a new quote: type **Juniper Street Clinic** as the Group Name, pick **Fully Insured**, press Review, then Submit. Leave the confirmation, with its reference number, on screen.
 
@@ -245,7 +259,7 @@ Thirty minutes before:
 
 **Say.** "I typed that into BAW a few seconds ago. Bob reads the same table the app saves to: no export, no copy."
 
-### Step 5. Bob writes, the app reads
+### Step 6. Bob writes, the app reads
 
 **Paste.**
 
@@ -253,7 +267,7 @@ Thirty minutes before:
 
 **Bob does.** Changes that one row (`run_sql`) and confirms: **1 row updated**.
 
-**Do.** Open the classic app again, type **Northwind Logistics** and press **Load**. The rating method now reads **Level Funded**; in Step 2 it was Self-Funded.
+**Do.** Open the classic app again, type **Northwind Logistics** and press **Load**. The rating method now reads **Level Funded**; in Step 3 it was Self-Funded.
 
 **Say.** "Bob changed the data, and the BAW screen shows it straight away. One set of data, two ways in: the screen for your team, plain English for everyone else."
 
@@ -357,11 +371,13 @@ Project: https://github.com/unclethien/baw-bob-dev-tools-mcp (Apache-2.0). Not a
 5. Bob's plan lists the modern groups and the new Toggle, and leaves Load out of the modern copy.
 6. Bob builds a **new** Modernizer Widgets version and asks before each install.
 7. The modern copy's tabs lay the groups out side by side, a flipped toggle reads "Yes" on the review, and the Toggle is in the palette.
-8. Bob adds the 20 quotes in one statement; the table holds 21, and Northwind Logistics loads in the classic app as Self-Funded.
-9. The rating question comes back as a table.
-10. Bob reads back Juniper Street Clinic with the reference number the app showed; after Bob's update, Northwind Logistics loads as Level Funded.
-11. Bob lists today's versions from BAW's database, and its rename there is refused.
-12. Afterwards: the Toggle files and the table are reset (prep step 3), and the test apps are archived.
+8. Bob adds the 20 quotes in one statement; the table holds 21.
+9. Bob lists the server's databases with `bawexternal` as the only writable one, and shows 10 quotes as a table.
+10. Northwind Logistics loads in the classic app as Self-Funded.
+11. The rating question comes back as a table.
+12. Bob reads back Juniper Street Clinic with the reference number the app showed; after Bob's update, Northwind Logistics loads as Level Funded.
+13. Bob lists today's versions from BAW's database, and its rename there is refused.
+14. Afterwards: the Toggle files and the table are reset (prep step 3), and the test apps are archived.
 
 ---
 
