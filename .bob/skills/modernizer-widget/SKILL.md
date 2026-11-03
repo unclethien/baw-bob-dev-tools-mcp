@@ -137,7 +137,7 @@ registerWidget('link', LinkAction);
 - Then validate the page, when the widget validates. Decide whether that is the default: Button validates by default only when primary.
 - Then call `trigger(done)` and take no more presses until `done` runs.
 - Draw a `button` or an `a` element: the check presses the first one.
-- An action that asks first (a confirm dialog, a menu) runs `eventON_CLICK` and the validation on the first press, then calls `trigger(done)` from the confirm step's primary Carbon Button (`kind="primary"` or `"danger"`, as Carbon Modal's primary button is). The check presses that button when the first press fired nothing.
+- An action that asks first (a confirm dialog, a menu) runs `eventON_CLICK` and the validation on the first press, then calls `trigger(done)` from the confirm step's primary Carbon Button (`kind="primary"` or `"danger"`, as Carbon Modal's primary button is). The check presses that button when the first press fired nothing. Render the dialog inside the widget, keep it closed in a preview, and treat every other way out (the secondary button, Escape, the close icon: Modal's `onSecondarySubmit` and `onRequestClose`) as cancel, which fires nothing.
 
 ### Display
 
@@ -217,7 +217,7 @@ No other list, map or shared file needs editing. The build, the check, the toolk
 
    When a check fails, it builds no toolkit and returns the failures, each with the widget's kind and what to change: fix the widget and call it again. A check named "every ..." covers each contract widget, the new one included. Its `checks` lists what passed. It returns `work/MDW-<snapshot>.twx`.
 
-   To fix one failure at a time faster, run the same check yourself: `cd coach-ui && npm run build && node scripts/check-widgets.mjs | grep -v '^PASS'`. Then call `build_widget_toolkit` once it passes.
+   To fix one failure at a time faster, run the same check yourself: `cd coach-ui && npm run build && node scripts/check-widgets.mjs | grep -E '^FAIL|checks passed'`. Then call `build_widget_toolkit` once it passes.
 3. Call `install_app` with that `.twx` (the user approves). Continue only when `"ok": true`. With no BAW server, give the user the `.twx` and its import steps.
 
 The check does not test what is particular to the new widget. Check that with `test_service` and its screenshots of the modernized app. With `fill`, it turns on every switch that is off and ticks every checkbox on screen. A field on a tab that is not open is reached through its group's Preview service.
