@@ -32,6 +32,7 @@ from xml.sax.saxutils import escape, unescape
 import app_template
 from coach_builder import SYSTEM_TYPES, TWSYS
 from coach_views import managed_asset_xml, view_xml
+from group_views import selection_type
 
 PROJECT = Path(__file__).resolve().parent.parent
 COACH_UI = PROJECT / "coach-ui"
@@ -65,6 +66,20 @@ def widgets(toolkit):
 
 # System Data types that widget bindings and options use, beyond the ones generated apps use.
 TYPES = {**SYSTEM_TYPES, "NameValuePair": "12.d2e5a15a-ea53-4793-9e93-29af5bd80b13"}
+
+
+@functools.cache
+def contract_types(toolkit):
+    """The toolkit's own dropdown types: {name: [(value, label)]}, as the UI Toolkit's of the same name, so an option
+    of one shows the same choices and keeps the value a UI Toolkit control stored."""
+    contract = json.loads((WIDGETS_DIR / f"{toolkit}-widgets.json").read_text())
+    return {name: [(c["value"], c["label"]) for c in choices] for name, choices in contract.get("types", {}).items()}
+
+
+@functools.cache
+def ui_toolkit_names(toolkit):
+    """{UI Toolkit setting: the option a widget holds it under}, for the settings the widgets name otherwise."""
+    return json.loads((WIDGETS_DIR / f"{toolkit}-widgets.json").read_text()).get("uiToolkitNames", {})
 
 
 BUNDLE_FILES = [("mdw.js", "application/javascript"), ("mdw.css", "text/css")]
@@ -257,6 +272,16 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
     asset = lambda name, mime, data: managed_file(name, mime, data, files, objects, file_entries, stable_ids(toolkit, f"file/{name}"))  # noqa: E731
     assets = [] if classic else [asset(name, mime, (bundle / name).read_bytes()) for name, mime in BUNDLE_FILES]
     shared_preview = None if classic else asset("mdw-preview.html", "text/html", PREVIEW_HTML.encode())
+    type_refs = {}
+    for name, values in contract_types(toolkit).items():
+        class_id, version, xml = selection_type(stable_ids(toolkit, f"type/{name}"), tk["acronym"], name, values,
+                                                f"{tk['name']}: the UI Toolkit's {name} choices", author)
+        files[f"objects/{class_id}.xml"] = xml
+        objects.append((class_id, version, name, "twClass"))
+        type_refs[name] = f"/{class_id}"
+
+    def type_ref(t):
+        return type_refs.get(t) or f"{TWSYS}/{TYPES[t]}"
     for kind, w in widgets(toolkit).items():
         icon_path = tk["icons"] / f"{kind}.svg"
         icon = asset(f"{kind}.svg", "image/svg+xml", icon_path.read_bytes()) if icon_path.exists() else None
@@ -274,7 +299,7 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
         view_id, version = "64." + new_id(), uid()
         files[f"objects/{view_id}.xml"] = view_xml(
             view_id, version, escape(w["view"]), binding_ref=f"{TWSYS}/{TYPES[w['binding']]}" if w["binding"] else None,
-            options=[(o, label, f"{TWSYS}/{TYPES[t]}", is_list, w["groups"].get(o)) for o, label, t, is_list in w["options"]]
+            options=[(o, label, type_ref(t), is_list, w["groups"].get(o)) for o, label, t, is_list in w["options"]]
             + [(name, label, f"{TWSYS}/{TYPES['String']}", False, "Events", "EVENT") for name, label, _ in w["events"]], asset_ids=assets,
             description=f"{tk['name']}: {w['view']}", palette_icon=icon, preview_html=preview_html, preview_js=preview,
             has_label=w["label"], emit_boundary=w["boundary"], new_id=new_id, **code)

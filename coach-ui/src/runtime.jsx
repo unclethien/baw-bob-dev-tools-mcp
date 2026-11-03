@@ -8,6 +8,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { ClassPrefix } from '@carbon/react';
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { cssLength } from './components/values.js';
 import { page } from './page-registry.js';
 import './styles.scss';
 
@@ -107,6 +108,18 @@ function useTabIndex(root, tabIndex) {
   });
 }
 
+// Width, Label placement and Label width, as the UI Toolkit applies them: on the widget, for any widget that declares
+// them (styles.scss lays out pp-label-left). Size is a class too, for widgets whose Carbon component has no size prop.
+function layout(options) {
+  const left = options.labelPlacement === 'L';
+  const width = cssLength(options.width);
+  const labelWidth = left && cssLength(options.labelWidth);
+  return {
+    className: `${left ? ' pp-label-left' : ''}${options.sizeStyle && options.sizeStyle !== 'D' ? ` pp-size-${options.sizeStyle}` : ''}${width ? ' pp-has-width' : ''}`,
+    style: { ...(width && { width }), ...(labelWidth && { '--pp-label-width': labelWidth }) },
+  };
+}
+
 function WidgetHost({ kind, widget: Widget, store, ctx }) {
   useSyncExternalStore(store.subscribe, store.snapshot);
   const theme = useSyncExternalStore(page.subscribe, () => page.theme);
@@ -115,10 +128,11 @@ function WidgetHost({ kind, widget: Widget, store, ctx }) {
   useTabIndex(root, props.options.tabIndex);
   if (props.visibility === 'HIDDEN' || props.visibility === 'NONE') return null;
   const binding = { value: ctx.binding.get(), set: (value) => { ctx.binding.set(value); store.notify(); } };
-  const className = `pp-app pp-widget pp-widget-${kind}${Widget.field ? ' pp-widget-field' : ''}${props.visibility === 'READONLY' ? ' pp-widget-readonly' : ''}`;
+  const own = layout(props.options);
+  const className = `pp-app pp-widget pp-widget-${kind}${Widget.field ? ' pp-widget-field' : ''}${props.visibility === 'READONLY' ? ' pp-widget-readonly' : ''}${own.className}`;
   return (
     <ClassPrefix prefix="pp">
-      <div ref={root} className={className} style={themeStyle({ ...theme, width: undefined })}>
+      <div ref={root} className={className} style={{ ...themeStyle({ ...theme, width: undefined }), ...own.style }}>
         <Widget {...props} binding={binding} trigger={ctx.trigger} fire={ctx.fire || noEvent} />
       </div>
     </ClassPrefix>

@@ -5,13 +5,20 @@ description: Add one new widget to the Modernizer Widgets (MDW) toolkit while mo
 
 # Modernizer widget
 
-A new Modernizer Widget is one Coach View of the MDW toolkit. Authors find it in Coach Designer's palette like the stock widgets. Its options appear in Configuration under Behavior, Items and Appearance, and its events in the Events tab, as on a UI Toolkit control. You add it only when the approved plan names it.
+A new Modernizer Widget is one Coach View of the MDW toolkit. Authors find it in Coach Designer's palette like the stock widgets. You add it only when the approved plan names it.
+
+It stands for a UI Toolkit control, its counterpart, and by default it has that control's whole Configuration and Events tabs: the same settings, under the same names and labels, in the same sections, with the same dropdowns. An author with no code then changes it the way they change the UI Toolkit control. A setting is left out only when it cannot work in a Carbon widget, and then the contract says why.
 
 ## 1. Decide
 
 - Add a widget only when no widget in `coach-ui/widgets/modernizer-widgets.json` does the job. Read the contract first.
 - Never edit or remove an existing widget, its file, or its contract entry. When the request is to change one, stop and hand it to Agent mode.
-- Settle: the `kind` (lower-case letters and digits, unique, the file name), the palette name (`view`), which of the four kinds below it is, the options authors can set, a preview value and the tags.
+- Settle: the `kind` (lower-case letters and digits, unique, the file name), the palette name (`view`), which of the four kinds below it is, a preview value and the tags.
+- Find its UI Toolkit counterpart: the control authors use for the same job today (Slider, Progress Bar, Switch, Output Text). Print its settings and events:
+  ```
+  python3 server/ui_toolkit_reference.py show "Progress Bar"
+  ```
+  Each line is `name: label | section | type`, and a dropdown type lists its choices (`value label`). Without a name it lists every control. These settings and events are what the widget declares (step 3). When no UI Toolkit control does the same job, the widget has no counterpart.
 
 | Kind | What it does | `binding` | `label` | `boundary` | Copy from | Stock examples |
 |---|---|---|---|---|---|---|
@@ -45,6 +52,7 @@ Every widget calls `registerWidget('<kind>', Component)` from `'../runtime.jsx'`
 
 The widget host already does the shared work, so the component does none of it:
 - It applies `tabIndex` to every input, select, textarea and button the widget draws.
+- It applies `width` (Width: any CSS length, a bare number is pixels) to the widget, and `labelPlacement` (`L` puts the label in a column of `labelWidth` beside the input) to every Carbon input and to a `pp--form-item` holding a `pp--label`. A widget with a `sizeStyle` option gets the class `pp-size-S` or `pp-size-L` too.
 - It runs `eventON_LOAD` once the widget is drawn, `eventON_CHANGE` when the binding changes, and `eventON_FOCUS`, `eventON_BLUR` and `eventON_INPUT` from the DOM. It also runs `eventON_BOUNDARYEVT` once `trigger` is done.
 - It adds the `me` methods (getData, setData, label, help, visibility, the placeholder when there is an `example` option, and the contract's `accessor`).
 
@@ -52,15 +60,17 @@ The component fires only `eventON_CLICK`, and only on an action.
 
 Carbon styles in this toolkit use the class prefix `pp`, not `cds`: write `pp--label`, `pp--form-item`, `pp--form__helper-text`, `pp--form-requirement`. A `cds--` class has no styles here, and the check fails it. Carbon's own components add the prefix by themselves.
 
-Options can arrive as text, so read a number with `Number(options.max)` and a Boolean as `options.validate === true || options.validate === 'true'`. An option the author did not set is `null`: choose its default in the component.
+Options can arrive as text, so read a number with `Number(options.max)` and a Boolean with `on(options.validate)`. An option the author did not set is `null`: choose its default in the component.
+
+Helpers from `'../components.jsx'`: `on(flag)`; `cssLength(value)`; `carbonSize(field.sizeStyle)`, which gives a Carbon input's `size` prop for Size (`S` sm, `L` lg). From `'../components/fields/validation-marker.jsx'`: `validationMarker(field, validity)`, the Show validation marker icon, to pass as a Carbon component's `decorator` (Checkbox and RadioButtonGroup take one).
 
 ### Field
 
 The shared helper `fieldWidget` gives a field its label, help text, REQUIRED, READONLY, page validation, error message and read-only view. You write only the input:
 
 ```jsx
-// Yes/No Toggle: a Carbon switch bound to one Boolean. Off is a valid "No", so REQUIRED is ignored
-// (unlike Checkbox, where REQUIRED means "must be ticked").
+// Yes/No Toggle: a Carbon switch bound to one Boolean, standing for the UI Toolkit Switch. Off is a valid "No", so
+// REQUIRED is ignored (unlike Checkbox, where REQUIRED means "must be ticked").
 import { Toggle } from '@carbon/react';
 import { registerWidget } from '../runtime.jsx';
 import { fieldWidget } from './field-widget.js';
@@ -69,8 +79,8 @@ import { fieldWidget } from './field-widget.js';
 function ToggleInput({ id, field, binding, readOnly }) {
   return (
     <div className="pp--form-item">
-      <Toggle id={id} labelText={field.label} toggled={!!binding.value} labelA={field.offText || 'No'} labelB={field.onText || 'Yes'}
-        readOnly={readOnly} onToggle={(on) => binding.set(on)} />
+      <Toggle id={id} size={field.sizeStyle === 'S' ? 'sm' : 'md'} labelText={field.label} toggled={!!binding.value}
+        labelA={field.offLabel || 'No'} labelB={field.onLabel || 'Yes'} readOnly={readOnly} onToggle={(on) => binding.set(on)} />
       {field.help && <div className="pp--form__helper-text">{field.help}</div>}
     </div>
   );
@@ -78,7 +88,7 @@ function ToggleInput({ id, field, binding, readOnly }) {
 
 registerWidget('toggle', fieldWidget('toggle', {
   Input: ToggleInput,
-  display: (field, value) => (value ? field.onText || 'Yes' : field.offText || 'No'),
+  display: (field, value) => (value ? field.onLabel || 'Yes' : field.offLabel || 'No'),
   isEmpty: () => false,
 }));
 ```
@@ -87,7 +97,8 @@ registerWidget('toggle', fieldWidget('toggle', {
   - `binding.value` reads and `binding.set(value)` writes.
   - `validity` is `{ invalid, invalidText }`. Pass it on only when the Carbon component takes those props (Toggle does not).
   - `field.label` is the label and `field.help` the help text. Show both, because the helper does not draw them around a custom input.
-  - Every option the contract declares reaches `field` under its own name (`field.onText`). `field.example` is the placeholder.
+  - Every option the contract declares reaches `field` under its own name (`field.onLabel`). `field.example` is the placeholder.
+  - Pass `size={carbonSize(field.sizeStyle)}` to a Carbon input that takes `size`. When it takes none, style `.pp-size-S` and `.pp-size-L` in the widget's scss.
 - A choice field declares an `options` option (`"type": "NameValuePair", "list": true, "group": "Items"`). It then reads the choices as `field.options`, a list of `{ value, label }`.
 - When the Carbon component takes no `invalid` and `invalidText` props, draw the error and the label yourself:
   ```jsx
@@ -174,13 +185,26 @@ Add one entry at the end of the `widgets` array in `coach-ui/widgets/modernizer-
 | Key | What to write |
 |---|---|
 | `kind`, `view`, `binding`, `label`, `boundary` | As decided in step 1 |
-| `options` | Each option has a `name`, a `label`, a `type` (a binding type, or `NameValuePair`), `"list": true` for a list, and a `group`. The group is one of these: `Behavior` (what it does, checks or shows as data: `tabIndex`, `message`, `min`, `max`, `example`, `validate`, a display's `value`), `Items` (the choices, `options`) or `Appearance` (how it looks: texts, `kind`, `height`). The names `label`, `helpText`, `help`, `visibility`, `path`, `type`, `readonly`, `required` and `binding` are taken: name a display's own label after what it holds, such as `barLabel` |
+| `options` | Each option has a `name`, a `label`, a `type` (a binding type, `NameValuePair`, or a dropdown type from the top-level `types`), `"list": true` for a list, and a `group`. The group is the counterpart's section for that setting. Otherwise it is one of these: `Behavior` (what it does, checks or shows as data: `tabIndex`, `message`, `min`, `max`, `example`, `validate`, a display's `value`), `Items` (the choices, `options`) or `Appearance` (how it looks: texts, `kind`, `height`). The names `label`, `helpText`, `help`, `visibility`, `path`, `type`, `readonly`, `required` and `binding` are taken: name a display's own label after what it holds, such as `barLabel` |
+| `uiToolkit` | The counterpart's name as `show` prints it, such as `"Progress Bar"`. Leave it out when there is none |
+| `leftOut` | `{ setting or event name: reason }`, for each of the counterpart's settings and events the widget does not have. The reason is one sentence an author understands, such as `"Carbon's date picker has no time picker"` |
 | `events` | `{ event: [argument names] }`, from the table below |
 | `accessor` | `[getter, setter]`, the names a handler calls on `me` for the value, from the table below. Leave it out on display and page-level widgets |
 | `preview` | `{ "value": ... }`, the value a Coach Designer preview shows (`null` when it binds nothing) |
 | `tags` | One of Coach Designer's categories (`Input`, `Informational`, `Layout`, `Operational`, `Chart`), plus `Basic` or `Advanced` as the other entries use |
 
-Use the UI Toolkit's name for an option the UI Toolkit also has. The modernizer then carries the old control's value over, and authors know the name. The names are `tabIndex`, `selectAll`, `height`, `decimalPlaces`, `startDate`, `endDate`, and `example` for a placeholder. Use `message` for the author's own error message, and `options` for a choice list. Give every field and every action a `tabIndex` option (`Integer`, `Behavior`).
+**Settings.** Declare every setting `show` prints for the counterpart, and make each one work:
+- Use its name, its label and its section as printed. The modernizer then carries the old control's value over, and authors find it where they expect.
+- The top-level `uiToolkitNames` lists the three settings a widget holds under another name: `placeHolder` is `example`, `regExp` is `pattern`, `staticList` is `options`.
+- For a dropdown type (one with choices), use the type's name as the option's `type`. Copy the type into the top-level `types` from `coach-ui/widgets/ui-toolkit-reference.json` when it is not there yet, choices unchanged. A carried-over value then means the same.
+- For any other type, use the printed type, or `String` when it says `type not read`.
+- Leave a setting out only when it cannot work in a Carbon widget, such as a calendar type Carbon lacks, or items loaded from a service. Put it in `leftOut` with the reason. Never declare a setting the widget ignores.
+
+**Events.** Declare every event of the counterpart that the widget host or the component fires. The host fires load, change, focus, blur, input, click and boundary. The component fires any other with `fire(name, ...args)`, and the top-level `events` needs its label. An event the widget cannot fire, such as a formula (`expression`), goes in `leftOut`.
+
+**No counterpart.** Give a field `width` (`String`), `labelPlacement` (`LabelPlacement`), `labelWidth` (`String`), all in `Appearance`, and `tabIndex` (`Integer`, `Behavior`). Give an action `width` and `tabIndex`. Add `sizeStyle` (`TextSizeStyle`, `Appearance`) when its Carbon component has sizes.
+
+Use `message` for the author's own error message, and `options` for a choice list. Give every field and every action a `tabIndex` option (`Integer`, `Behavior`).
 
 | Kind | `events` | `accessor` |
 |---|---|---|
@@ -211,6 +235,7 @@ No other list, map or shared file needs editing. The build, the check, the toolk
 1. Call `list_snapshots("MDW")` and take the next name after the newest one. Never reuse a name: BAW silently keeps the old content of an existing snapshot name.
 2. Call `build_widget_toolkit("modernizer", <new snapshot>)`. It compiles the widgets and checks every contract widget in a browser before it builds anything:
    - The entry is complete: every option in a group, the events its kind needs and in the catalog, the accessor of a widget with a binding, and the icon file.
+   - It has its counterpart's settings and events, in the same sections and with the same dropdown types, or lists each missing one in `leftOut` with a reason.
    - It renders at runtime and as a Coach Designer preview, its Carbon component has styles, and no page error occurs.
    - Its `eventON_LOAD` runs with `me`, and its accessor writes and reads the value (or the label). A field fires `eventON_CHANGE`, focus, blur and input. An action, once pressed, fires `eventON_CLICK`, the boundary event and `eventON_BOUNDARYEVT`.
    - Every option and event shows in the built view's Configuration groups and Events tab.
@@ -249,7 +274,8 @@ If the widget check fails twice, do not stall:
 
 List these:
 - the files you added and the one added contract entry (you added only new files and changed only `modernizer-widgets.json`);
-- the widget's kind (field, action, display or page-level);
+- the widget's kind (field, action, display or page-level), and its UI Toolkit counterpart;
+- each `leftOut` setting and event, with its reason, so the user knows what authors cannot change;
 - the MDW snapshot, and what `checks` reported;
 - the fields or buttons that use it, or that authors place it themselves;
 - whether the fallback was taken.

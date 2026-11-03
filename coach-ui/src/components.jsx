@@ -3,7 +3,7 @@
 export { Brand, Header, Steps } from './components/header.jsx';
 export { Field } from './components/field.jsx';
 export { ReadOnlyValue } from './components/read-only-value.jsx';
-export { fieldKind, formatValue, isEmpty, toDate } from './components/values.js';
+export { carbonSize, cssLength, fieldKind, formatValue, isEmpty, on, toDate } from './components/values.js';
 export { fieldError, useValidation, validate } from './components/use-validation.js';
 export { ErrorSummary } from './components/error-summary.jsx';
 export { EditSection } from './components/edit-section.jsx';

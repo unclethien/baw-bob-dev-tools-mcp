@@ -46,12 +46,21 @@ try {
   {
     const full = JSON.parse(fs.readFileSync(new URL('../widgets/modernizer-widgets.json', import.meta.url), 'utf8'));
     const catalog = full.events || {};
-    const TYPES = ['String', 'Integer', 'Decimal', 'Boolean', 'Date', 'NameValuePair'];
+    // The UI Toolkit's controls, read from BAW (server/ui_toolkit_reference.py): a widget with a uiToolkit counterpart
+    // has its settings and events, or says in leftOut why one cannot work.
+    const reference = JSON.parse(fs.readFileSync(new URL('../widgets/ui-toolkit-reference.json', import.meta.url), 'utf8'));
+    const ownTypes = full.types || {};
+    const aliases = full.uiToolkitNames || {};
+    const TYPES = ['String', 'Integer', 'Decimal', 'Boolean', 'Date', 'NameValuePair', ...Object.keys(ownTypes)];
     const GROUPS = ['Behavior', 'Items', 'Appearance'];
     const CATEGORIES = ['Input', 'Informational', 'Layout', 'Operational', 'Chart'];
     // Names the view or the coach spec already uses for something else.
     const RESERVED = ['label', 'helpText', 'help', 'visibility', 'path', 'type', 'readonly', 'required', 'binding'];
     const problems = [];
+    for (const [name, choices] of Object.entries(ownTypes)) {
+      if (!reference.types[name]) problems.push(`type ${name}: the UI Toolkit has no dropdown type of that name (ui-toolkit-reference.json types)`);
+      else if (JSON.stringify(choices) !== JSON.stringify(reference.types[name])) problems.push(`type ${name}: copy its choices from ui-toolkit-reference.json, so a value carried over from a UI Toolkit coach means the same`);
+    }
     const seen = { kind: new Set(), view: new Set() };
     for (const w of contract) {
       const at = w.kind || JSON.stringify(w).slice(0, 40);
@@ -62,10 +71,14 @@ try {
       if (typeof w.label !== 'boolean' || typeof w.boundary !== 'boolean') bad('label and boundary must be true or false');
       if (!w.preview || !('value' in w.preview)) bad('preview needs a value (null when it binds nothing)');
       if (!Array.isArray(w.tags) || !w.tags.some((t) => CATEGORIES.includes(t))) bad(`tags need one of ${CATEGORIES.join(', ')}`);
+      const control = w.uiToolkit === undefined ? null : reference.controls[w.uiToolkit];
+      if (w.uiToolkit !== undefined && !control) bad(`uiToolkit ${w.uiToolkit} is not a UI Toolkit control (python3 server/ui_toolkit_reference.py show <control> lists them)`);
+      if (w.leftOut && w.uiToolkit === undefined) bad('leftOut lists a counterpart\'s settings, so it needs uiToolkit');
+      const groups = new Set([...GROUPS, ...(control ? control.settings.map((st) => st.group).filter(Boolean) : [])]);
       for (const o of w.options || []) {
         if (!o.name || !o.label) bad('an option needs a name and a label');
-        if (!TYPES.includes(o.type || 'String')) bad(`option ${o.name}: type ${o.type} is not one of ${TYPES.join(', ')}`);
-        if (!GROUPS.includes(o.group)) bad(`option ${o.name}: group must be ${GROUPS.join(', ')}`);
+        if (!TYPES.includes(o.type || 'String')) bad(`option ${o.name}: type ${o.type} is not one of ${TYPES.join(', ')} (copy a UI Toolkit dropdown type into the top-level types)`);
+        if (!groups.has(o.group)) bad(`option ${o.name}: group must be ${[...groups].join(', ')}`);
         if (o.name && o.name.startsWith('eventON_')) bad(`option ${o.name}: an event goes in events, not options`);
         if (RESERVED.includes(o.name) || (o.name || '').startsWith('@')) bad(`option ${o.name}: the name is taken (${RESERVED.join(', ')}); name it after what it holds, e.g. barLabel`);
       }
@@ -81,8 +94,32 @@ try {
       if (w.accessor && !(Array.isArray(w.accessor) && w.accessor.length === 2 && w.accessor.every((m) => /^[a-z][A-Za-z]*$/.test(m)))) bad('accessor must be [getter, setter] method names');
       if (w.accessor && w.binding === null && !w.label) bad('an accessor of a widget with no binding reads the label, so label must be true');
       if (!fs.existsSync(new URL(`../widgets/icons/${w.kind}.svg`, import.meta.url))) bad(`no icon widgets/icons/${w.kind}.svg`);
+      if (control) {
+        const left = w.leftOut || {};
+        const reason = (name) => typeof left[name] === 'string' && left[name].trim() !== '';
+        const mine = Object.fromEntries((w.options || []).map((o) => [o.name, o]));
+        for (const st of control.settings) {
+          const o = mine[aliases[st.name] || st.name];
+          if (!o) {
+            if (!reason(st.name)) bad(`the UI Toolkit ${w.uiToolkit} has "${st.label}" (${st.name}, ${st.group || 'no section'}): add it as an option, or list it in leftOut with the reason it cannot work`);
+            continue;
+          }
+          if ((o.group || null) !== (st.group || null)) bad(`option ${o.name}: the UI Toolkit ${w.uiToolkit} shows it under ${st.group || 'no section'}, so use that group`);
+          if (reference.types[st.type] && o.type !== st.type) bad(`option ${o.name}: give it the UI Toolkit's type ${st.type} (copied into the top-level types), so authors get the same dropdown`);
+          if (st.name in left) bad(`leftOut ${st.name}: the widget has it, so take it out of leftOut`);
+        }
+        for (const e of control.events) {
+          if (e.name in events) { if (e.name in left) bad(`leftOut ${e.name}: the widget has it, so take it out of leftOut`); }
+          else if (!reason(e.name)) bad(`the UI Toolkit ${w.uiToolkit} has the event "${e.label}" (${e.name}): add it to events (and the top-level events), or list it in leftOut with the reason it cannot work`);
+        }
+        for (const name of Object.keys(left)) {
+          if (!control.settings.some((st) => st.name === name) && !control.events.some((e) => e.name === name)) bad(`leftOut ${name} is not a setting or event of the UI Toolkit ${w.uiToolkit}`);
+        }
+      }
     }
-    check('every contract entry is complete (groups, events, accessor, icon)', problems.length === 0, problems);
+    const parity = (pr) => /UI Toolkit|leftOut|type /.test(pr);
+    check('every contract entry is complete (groups, events, accessor, icon)', !problems.some((pr) => !parity(pr)), problems.filter((pr) => !parity(pr)));
+    check('every widget has its UI Toolkit counterpart\'s settings and events, or says why not (leftOut)', !problems.some(parity), problems.filter(parity));
   }
 
   // 1. Every widget renders at runtime, through the widget host.
@@ -257,6 +294,79 @@ try {
     check('the button takes presses again when the coach stays', !(await page.$eval('[data-kind=button] button', (b) => b.disabled)));
     check('the error summary clears', ((await text(page, '[data-kind=errors]')) || '') === '');
     check('no page errors (validation)', errors.length === 0, errors);
+    await page.close();
+  }
+
+  // 3b. Show validation marker: on an error, a checkbox with the option shows a warning icon whose tooltip gives the
+  // error; one without it shows only the error text. The marker goes once the error is fixed.
+  {
+    const { page, errors } = await fresh();
+    await page.evaluate(() => {
+      harness.view({ kind: 'checkbox', id: 'Marked', label: 'Marked', visibility: 'REQUIRED', value: false, options: { showValidationMarker: true } });
+      harness.view({ kind: 'checkbox', id: 'Plain', label: 'Plain', visibility: 'REQUIRED', value: false, options: { showValidationMarker: 'false' } });
+      harness.view({ kind: 'button', id: 'Next', label: 'Next' });
+    });
+    await sleep(200);
+    const marker = (id) => page.evaluate((i) => {
+      const cell = document.getElementById(`pp-${i}`).closest('[data-kind=checkbox]');
+      const m = cell.querySelector('.pp-validation-marker');
+      return m && { label: m.getAttribute('aria-label'), tooltip: cell.querySelector('.pp--popover-content')?.textContent, icon: !!m.querySelector('svg') };
+    }, id);
+    check('no marker before validation', !(await marker('Marked')));
+    await page.click('[data-kind=button] button');
+    await sleep(100);
+    const shown = await marker('Marked');
+    check('showValidationMarker shows a warning icon on an error', shown?.icon === true, shown);
+    check('the marker\'s tooltip gives the error', shown?.label === 'Marked is required' && shown?.tooltip === 'Marked is required', shown);
+    check('without showValidationMarker there is no marker', !(await marker('Plain')));
+    check('the error text still shows with the marker', (await page.$$eval('[data-kind=checkbox] .pp--form-requirement', (els) => els.map((e) => e.textContent))).includes('Marked is required'));
+    await page.click('label[for=pp-Marked]');
+    await page.click('label[for=pp-Plain]');
+    await page.click('[data-kind=button] button');
+    await sleep(100);
+    check('the marker goes once the error is fixed', !(await marker('Marked')));
+    check('no page errors (validation marker)', errors.length === 0, errors);
+    await page.close();
+  }
+
+  // 3c. The UI Toolkit's common settings: Width, Label placement and Label width (any widget that declares them, by
+  // the widget host), Size (a Carbon size), the Radio validation marker and the Toggle's On and Off labels.
+  {
+    const { page, errors } = await fresh();
+    await page.evaluate(() => {
+      const items = [{ name: 'Alpha', value: 'A' }, { name: 'Beta', value: 'B' }];
+      harness.view({ kind: 'text', id: 'Wide', label: 'Wide', options: { width: '320' } });
+      harness.view({ kind: 'select', id: 'Left', label: 'Left', options: { labelPlacement: 'L', labelWidth: '160px', options: items } });
+      harness.view({ kind: 'text', id: 'Top', label: 'Top', options: { labelPlacement: 'T', labelWidth: '160px' } });
+      harness.view({ kind: 'text', id: 'Small', label: 'Small', options: { sizeStyle: 'S' } });
+      harness.view({ kind: 'number', id: 'Large', label: 'Large', options: { sizeStyle: 'L' } });
+      harness.view({ kind: 'textarea', id: 'Notes', label: 'Notes', options: { sizeStyle: 'L' } });
+      harness.view({ kind: 'button', id: 'Tiny', label: 'Tiny', options: { sizeStyle: 'X', width: '300px' } });
+      harness.view({ kind: 'toggle', id: 'Switch', label: 'Switch', value: true, options: { onLabel: 'Enabled', offLabel: 'Disabled', sizeStyle: 'L' } });
+      harness.view({ kind: 'radio', id: 'Tier', label: 'Tier', visibility: 'REQUIRED', options: { options: items, showValidationMarker: true, labelPlacement: 'L' } });
+      harness.view({ kind: 'button', id: 'Next', label: 'Next' });
+    });
+    await sleep(200);
+    const box = (selector) => page.$eval(selector, (el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width, height: r.height }; });
+    const root = (id) => `#pp-${id}`;
+    const host = (id) => page.$eval(root(id), (el) => el.closest('.pp-widget').className);
+    check('Width sets the widget\'s width (a bare number is pixels)', Math.round((await page.$eval(root('Wide'), (el) => el.closest('.pp-widget').getBoundingClientRect().width))) === 320);
+    const label = await page.$eval(root('Left'), (el) => { const r = el.closest('.pp-widget').querySelector('.pp--label').getBoundingClientRect(); return { right: r.right, width: r.width }; });
+    const input = await box(root('Left'));
+    check('Label placement Left puts the label beside the input', (await host('Left')).includes('pp-label-left') && label.right <= input.left, { label, input });
+    check('Label width sets the label column', Math.round(label.width) === 160, label);
+    check('Label placement Top keeps the label above', !(await host('Top')).includes('pp-label-left'));
+    check('Size Small and Large reach the Carbon input', await page.$eval(root('Small'), (el) => el.className.includes('pp--text-input--sm'))
+      && await page.$eval('[data-kind=number] .pp--number', (el) => el.className.includes('pp--number--lg')));
+    check('Size on a Text Area is styled on the widget', (await host('Notes')).includes('pp-size-L'));
+    const tiny = await page.$eval('[data-kind=button] .pp--btn', (el) => ({ small: el.className.includes('pp--btn--sm'), width: Math.round(el.getBoundingClientRect().width) }));
+    check('a Button takes the UI Toolkit\'s Size and Width', tiny.small && tiny.width === 300, tiny);
+    check('the Toggle shows its On label and takes Size', (await text(page, '[data-kind=toggle] .pp--toggle__text')) === 'Enabled' && (await host('Switch')).includes('pp-size-L'));
+    await page.$$eval('[data-kind=button] button', (els) => els[els.length - 1].click());
+    await sleep(100);
+    check('a Radio group with Show validation marker shows it on an error',
+      await page.$eval('[data-kind=radio]', (el) => !!el.querySelector('.pp-validation-marker') && el.querySelector('.pp-validation-marker').getAttribute('aria-label') === 'Tier is required'));
+    check('no page errors (common settings)', errors.length === 0, errors);
     await page.close();
   }
 

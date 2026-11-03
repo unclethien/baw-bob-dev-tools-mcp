@@ -1,5 +1,5 @@
 import { DatePicker, DatePickerInput } from '@carbon/react';
-import { toDate } from '../values.js';
+import { carbonSize, toDate } from '../values.js';
 
 // A date typed as mm/dd/yyyy, or null when it is not a real date (02/31/2026). whole: only the full two-digit form,
 // for use while typing, when 1/2/2026 may still be on its way to 1/28/2026.
@@ -23,7 +23,7 @@ export function DateField({ id, field, binding, validity, readOnly }) {
   return (
     <DatePicker datePickerType="single" value={toDate(binding.value) || undefined} readOnly={readOnly} onChange={([d]) => d && binding.set(d)}
       minDate={toDate(field.startDate) || undefined} maxDate={toDate(field.endDate) || undefined}>
-      <DatePickerInput id={id} labelText={field.label} helperText={field.help} placeholder="mm/dd/yyyy" onChange={(e) => commit(e.target.value, true)} onBlur={(e) => commit(e.target.value, false)} {...validity} />
+      <DatePickerInput id={id} size={carbonSize(field.sizeStyle)} labelText={field.label} helperText={field.help} placeholder="mm/dd/yyyy" onChange={(e) => commit(e.target.value, true)} onBlur={(e) => commit(e.target.value, false)} {...validity} />
     </DatePicker>
   );
 }
