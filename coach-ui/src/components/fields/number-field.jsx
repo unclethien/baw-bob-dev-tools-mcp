@@ -1,4 +1,5 @@
 import { NumberInput } from '@carbon/react';
+import { carbonSize } from '../values.js';
 
 // type="text": the user types freely and Carbon parses the number on blur. With type="number" Carbon keeps its own
 // copy of the value, which a bound value written back on every keystroke resets, so decimals could not be typed.
@@ -16,7 +17,7 @@ export function NumberField({ id, field, binding, validity, readOnly }) {
   const format = decimals === null ? NO_GROUPING : { useGrouping: false, minimumFractionDigits: decimals, maximumFractionDigits: decimals };
   const keep = (n) => (decimals === null ? n : Number(n.toFixed(decimals)));
   return (
-    <NumberInput id={id} type="text" inputMode="decimal" allowEmpty formatOptions={format} label={field.label} helperText={field.help} placeholder={field.example}
+    <NumberInput id={id} size={carbonSize(field.sizeStyle)} type="text" inputMode="decimal" allowEmpty formatOptions={format} label={field.label} helperText={field.help} placeholder={field.example}
       hideSteppers readOnly={readOnly} value={binding.value ?? ''} {...validity}
       onChange={(_, { value }) => binding.set(value === '' || value === null || value === undefined || Number.isNaN(Number(value)) ? null : keep(Number(value)))} />
   );

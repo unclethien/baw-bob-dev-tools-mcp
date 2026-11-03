@@ -46,7 +46,7 @@ from xml.etree import ElementTree as ET
 
 import group_views
 from app_template import SYSTEM_VIEWS
-from widget_toolkit import widget_kinds, widgets
+from widget_toolkit import ui_toolkit_names, widget_kinds, widgets
 
 XSI_TYPE = "{http://www.w3.org/2001/XMLSchema-instance}type"
 FIELD_TYPES = {
@@ -64,9 +64,10 @@ CHOICE_WIDGETS = {kind for kind in FIELD_WIDGETS
                   if any((name, type_, is_list) == ("options", "NameValuePair", True) for name, _, type_, is_list in CONTRACT[kind]["options"])}
 SPEC_KEYS_FIRST = ("pattern", "message", "example", "min", "max")  # the order a spec has always listed these; other options follow
 SPEC_RESERVED = {"path", "label", "type", "readonly", "required", "help", "options"}  # spec keys an option must not overwrite
-# A UI Toolkit option whose value the widget takes under another name. The widgets name their other options as the
-# UI Toolkit does (tabIndex, selectAll, ...), so those carry over under their own name, and so do the event handlers.
-UI_TOOLKIT_NAMES = {"regExp": "pattern", "placeHolder": "example"}
+# A UI Toolkit option whose value the widget takes under another name (the contract's uiToolkitNames). The widgets
+# name their other options as the UI Toolkit does (tabIndex, selectAll, ...), so those carry over under their own
+# name, and so do the event handlers.
+UI_TOOLKIT_NAMES = ui_toolkit_names("modernizer")
 SCREEN_VIEWS = ("Coach Screen (", "PP React ")  # the screen view, and its name in apps modernized before the rename
 CONTAINERS = {"Panel", "Tab Section", "Vertical Layout", "Horizontal Layout", "Collapsible Panel", "Well"}
 BACKWARD = re.compile(r"\b(back|previous|prev|cancel|close)\b", re.I)
