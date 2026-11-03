@@ -472,7 +472,7 @@ def inventory(twx_path: Path):
         "source": twx_path.name, "app": project.group(1), "acronym": project.group(2), "snapshot": snapshot.group(1),
         "theme": None, "services": services,
         "groups": [{"name": name, "fields": fields} for name, fields in placed.items()],
-        "groupViews": [{"name": g["name"], "changedInBaw": g["changedInBaw"]} for g in groups.values()],
+        "groupViews": [{"name": g["name"], "fieldCount": len(g["items"]), "changedInBaw": g["changedInBaw"]} for g in groups.values()],
         "groupCandidates": candidates,
     }
 
@@ -549,7 +549,9 @@ def carry_over(spec, previous, base):
 
 def summary(spec):
     lines = [f'{spec["app"]} ({spec["acronym"]} {spec["snapshot"]}): {len(spec["services"])} client-side human service(s)']
-    sizes = {g["name"]: len(g["fields"]) for g in spec.get("groups") or []}
+    # A group placed only by services that are not modernized is not under "groups"; its View still has the fields.
+    sizes = {g["name"]: g.get("fieldCount", 0) for g in spec.get("groupViews") or []}
+    sizes.update({g["name"]: len(g["fields"]) for g in spec.get("groups") or []})
     for s in spec["services"]:
         state = "modernize" if s["modernize"] else f'skip: {s["reason"]}'
         lines.append(f'  {s["name"]} [{state}] variable tw.local.{s["variable"]}')
