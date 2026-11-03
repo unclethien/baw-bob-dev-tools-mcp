@@ -371,7 +371,8 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono"><a href="#theme">theme</a></td><td>Yes</td><td></td><td>Path of the theme file: colours, font, shapes, field icons, width, button placement, header product name and logo</td></tr>
         <tr><td class="mono"><a href="#banner">banner</a></td><td>No</td><td>off</td><td>The header strip's title and text</td></tr>
         <tr><td class="mono"><a href="#process">process</a></td><td>No</td><td>off</td><td>A workflow on top of the form: lanes, an optional approval task, and Send Back to the form</td></tr>
-        <tr><td class="mono"><a href="#groups">groups</a></td><td>No</td><td>none</td><td>Reusable groups of fields, each a View in the app that sections place</td></tr>
+        <tr><td class="mono"><a href="#groups">groups</a></td><td>No</td><td>none</td><td>Reusable groups of fields, each a View in the app that sections place. Every other section becomes a group too, unless <code>reusableViews</code> is <code>false</code></td></tr>
+        <tr><td class="mono"><a href="#default-views">reusableViews</a></td><td>No</td><td>on</td><td><code>false</code> keeps every section's fields inline on the coach instead of in a reusable View</td></tr>
         <tr><td class="mono"><a href="#database">database</a></td><td>No</td><td>off</td><td>Stores the form in a PostgreSQL table: a Load button fills the form from a row, Submit saves it</td></tr>
       </tbody>
     </table>
@@ -460,7 +461,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
       <tbody>
         <tr><td class="mono">title</td><td>Yes</td><td>Screen title (or tab name with <code>"tabs"</code>)</td></tr>
         <tr><td class="mono">intro</td><td>No</td><td>Text under the title. <code>"steps"</code> layout only</td></tr>
-        <tr><td class="mono">fields</td><td>One of the two</td><td>The step's <a href="#fields">fields</a>, in one panel</td></tr>
+        <tr><td class="mono">fields</td><td>One of the two</td><td>The step's <a href="#fields">fields</a>, in one panel (a <a href="#default-views">reusable View</a> named after the step; <code>"reusable": false</code> on the step keeps them inline)</td></tr>
         <tr><td class="mono">sections</td><td>One of the two</td><td>Titled panels, each with its own fields and <a href="#sections">columns</a>. When both are given, <code>sections</code> wins</td></tr>
         <tr><td class="mono">columns</td><td>No</td><td>With <code>fields</code>: 1 to 6 columns (default 1)</td></tr>
         <tr><td class="mono">widths</td><td>No</td><td>With <code>fields</code>: relative column widths, one number per column</td></tr>
@@ -490,6 +491,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono">columns</td><td>No</td><td>1 to 6, default 1</td></tr>
         <tr><td class="mono">widths</td><td>No</td><td>One positive number per column, relative to each other: <code>[1, 1.6, 1]</code> makes the middle column 1.6 times as wide</td></tr>
         <tr><td class="mono">fields</td><td>Yes</td><td>At least one field</td></tr>
+        <tr><td class="mono">reusable</td><td>No</td><td><code>false</code> keeps this section's fields inline instead of in a <a href="#default-views">reusable View</a></td></tr>
       </tbody>
     </table>
   </div>
@@ -532,6 +534,16 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
   coach places it. Users can open the View in Coach Designer and add, remove or move fields; every coach that places
   it follows. Each group also gets a client-side human service, <strong>&lt;group&gt; Preview</strong>, that shows
   only the group.</p>
+  <h3 id="default-views">Reusable Views by default</h3>
+  <p>A section that lists its own fields becomes a group as well, so every field of the app sits in a reusable View
+  even when the spec names no groups. A step without sections counts as one section. The View takes the section's
+  title (the step's title for a step without sections), with <code>&amp;</code> and <code>+</code> read as "and" and
+  other punctuation dropped, so "Reporting &amp; Location" is the View <strong>Reporting and Location</strong>. The
+  panel keeps the original title. When a name is taken by a service, another group or its Preview, the step's title
+  goes in front ("Spouse Details"), then a number ("Details 2"). The build reports these Views with the named ones,
+  and a rebuild finds them again by name, so keep a section's title to keep its View. Set
+  <code>"reusableViews": false</code> on the spec, or <code>"reusable": false</code> on a section or a step without
+  sections, to keep those fields inline on the coach.</p>
   <div class="tablewrap" role="region" tabindex="0" aria-label="group keys, scrollable">
     <table>
       <thead><tr><th scope="col">Key</th><th scope="col">Required</th><th scope="col">What it does</th></tr></thead>
