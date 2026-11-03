@@ -1,9 +1,10 @@
 import { Select, SelectItem } from '@carbon/react';
+import { carbonSize } from '../values.js';
 
 export function SelectField({ id, field, binding, validity, readOnly }) {
   return (
-    <Select id={id} labelText={field.label} helperText={field.help} readOnly={readOnly} value={binding.value ?? ''} onChange={(e) => binding.set(e.target.value)} {...validity}>
-      <SelectItem value="" text="Choose an option" />
+    <Select id={id} size={carbonSize(field.sizeStyle)} labelText={field.label} helperText={field.help} readOnly={readOnly} value={binding.value ?? ''} onChange={(e) => binding.set(e.target.value)} {...validity}>
+      <SelectItem value="" text={field.example || 'Choose an option'} />
       {(field.options || []).map((o) => <SelectItem key={o.value} value={o.value} text={o.label} />)}
     </Select>
   );

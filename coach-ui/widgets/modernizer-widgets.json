@@ -1,6 +1,78 @@
 {
   "toolkit": "Modernizer Widgets",
-  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; label: the view has a Label property; options: configuration options (type: a System Data type or NameValuePair; list: a list of them); boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart; the toolkit's name is added so a palette search for it lists every widget). A new widget needs only its component (coach-ui/src/widgets/<kind>.jsx), its entry here and its icon (icons/<kind>.svg), plus coach-ui/src/widgets/<kind>.scss when it uses a Carbon component the stock widgets do not: the build, the harness, the inspector and the modernizer read this file and that folder.",
+  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; label: the view has a Label property; options: configuration options (type: a System Data type or NameValuePair; list: a list of them; group: the Configuration section Coach Designer shows it in, as the UI Toolkit's Behavior, Items and Appearance; an option the UI Toolkit also has takes its UI Toolkit name, so the modernizer can carry its value over); events: the view's events, listed in Coach Designer's Events tab, each with the names of the arguments its handler gets, as the UI Toolkit names them (labels: the top-level events); accessor: the UI Toolkit's names of the getter and setter a handler calls on me for the widget's value (its label when it has no binding), as isChecked and setChecked on a Checkbox; boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; uiToolkit: the UI Toolkit control the widget stands for, whose settings and events it has (ui-toolkit-reference.json); leftOut: the counterpart's settings and events it does not have, each with the reason; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart; the toolkit's name is added so a palette search for it lists every widget). A new widget needs only its component (coach-ui/src/widgets/<kind>.jsx), its entry here and its icon (icons/<kind>.svg), plus coach-ui/src/widgets/<kind>.scss when it uses a Carbon component the stock widgets do not: the build, the harness, the inspector and the modernizer read this file and that folder.",
+  "types": {
+    "LabelPlacement": [
+      {
+        "value": "T",
+        "label": "Top"
+      },
+      {
+        "value": "L",
+        "label": "Left"
+      }
+    ],
+    "TextSizeStyle": [
+      {
+        "value": "D",
+        "label": "Default"
+      },
+      {
+        "value": "L",
+        "label": "Large"
+      },
+      {
+        "value": "S",
+        "label": "Small"
+      }
+    ],
+    "ButtonSizeStyle": [
+      {
+        "value": "D",
+        "label": "Default"
+      },
+      {
+        "value": "L",
+        "label": "Large"
+      },
+      {
+        "value": "S",
+        "label": "Small"
+      },
+      {
+        "value": "X",
+        "label": "Extra-Small"
+      }
+    ],
+    "SwitchSizeStyle": [
+      {
+        "value": "D",
+        "label": "Default"
+      },
+      {
+        "value": "L",
+        "label": "Large"
+      },
+      {
+        "value": "S",
+        "label": "Small"
+      }
+    ]
+  },
+  "uiToolkitNames": {
+    "placeHolder": "example",
+    "regExp": "pattern",
+    "staticList": "options"
+  },
+  "events": {
+    "eventON_LOAD": "On load",
+    "eventON_CHANGE": "On change",
+    "eventON_FOCUS": "On focus",
+    "eventON_BLUR": "On blur",
+    "eventON_INPUT": "On input",
+    "eventON_CLICK": "On click",
+    "eventON_BOUNDARYEVT": "On boundary event"
+  },
   "widgets": [
     {
       "kind": "text",
@@ -11,17 +83,56 @@
         {
           "name": "example",
           "label": "Example",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "pattern",
           "label": "Pattern",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "selectAll",
+          "label": "Select all text on focus",
+          "type": "Boolean",
+          "group": "Behavior"
+        },
+        {
+          "name": "width",
+          "label": "Width",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "sizeStyle",
+          "label": "Size",
+          "type": "TextSizeStyle",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelPlacement",
+          "label": "Label placement",
+          "type": "LabelPlacement",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelWidth",
+          "label": "Label width",
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -31,6 +142,30 @@
       "tags": [
         "Basic",
         "Input"
+      ],
+      "uiToolkit": "Text",
+      "leftOut": {
+        "showOverflowTooltip": "Not in this widget yet",
+        "expression": "Formulas are not supported: set the value from an event handler or the binding"
+      },
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newText",
+          "oldText"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": [],
+        "eventON_INPUT": [
+          "current",
+          "potential",
+          "selection",
+          "type"
+        ]
+      },
+      "accessor": [
+        "getText",
+        "setText"
       ]
     },
     {
@@ -42,17 +177,56 @@
         {
           "name": "example",
           "label": "Example",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "pattern",
           "label": "Pattern",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "height",
+          "label": "Height (CSS, e.g. 120px)",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "width",
+          "label": "Width",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "sizeStyle",
+          "label": "Size",
+          "type": "TextSizeStyle",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelPlacement",
+          "label": "Label placement",
+          "type": "LabelPlacement",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelWidth",
+          "label": "Label width",
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -62,6 +236,29 @@
       "tags": [
         "Basic",
         "Input"
+      ],
+      "uiToolkit": "Text Area",
+      "leftOut": {
+        "printOverflow": "Not in this widget yet"
+      },
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newText",
+          "oldText"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": [],
+        "eventON_INPUT": [
+          "current",
+          "potential",
+          "selection",
+          "type"
+        ]
+      },
+      "accessor": [
+        "getText",
+        "setText"
       ]
     },
     {
@@ -73,22 +270,62 @@
         {
           "name": "example",
           "label": "Example",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "min",
           "label": "Minimum",
-          "type": "Decimal"
+          "type": "Decimal",
+          "group": "Behavior"
         },
         {
           "name": "max",
           "label": "Maximum",
-          "type": "Decimal"
+          "type": "Decimal",
+          "group": "Behavior"
         },
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "decimalPlaces",
+          "label": "Decimal places",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "width",
+          "label": "Width",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "sizeStyle",
+          "label": "Size",
+          "type": "TextSizeStyle",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelPlacement",
+          "label": "Label placement",
+          "type": "LabelPlacement",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelWidth",
+          "label": "Label width",
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -98,6 +335,38 @@
       "tags": [
         "Basic",
         "Input"
+      ],
+      "uiToolkit": "Decimal",
+      "leftOut": {
+        "decimalSep": "Not in this widget yet",
+        "prefix": "Not in this widget yet",
+        "postfix": "Not in this widget yet",
+        "numericFormatting": "Not in this widget yet",
+        "thousandsSep": "Not in this widget yet",
+        "hideThousandsSeparator": "Not in this widget yet",
+        "currency": "Not in this widget yet",
+        "currencySymbol": "Not in this widget yet",
+        "expression": "Formulas are not supported: set the value from an event handler or the binding",
+        "eventON_FORMAT": "Not in this widget yet"
+      },
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newValue",
+          "oldValue"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": [],
+        "eventON_INPUT": [
+          "current",
+          "potential",
+          "selection",
+          "type"
+        ]
+      },
+      "accessor": [
+        "getValue",
+        "setValue"
       ]
     },
     {
@@ -109,7 +378,50 @@
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "startDate",
+          "label": "Earliest date",
+          "type": "Date",
+          "group": "Behavior"
+        },
+        {
+          "name": "endDate",
+          "label": "Latest date",
+          "type": "Date",
+          "group": "Behavior"
+        },
+        {
+          "name": "width",
+          "label": "Width",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "sizeStyle",
+          "label": "Size",
+          "type": "TextSizeStyle",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelPlacement",
+          "label": "Label placement",
+          "type": "LabelPlacement",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelWidth",
+          "label": "Label width",
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -119,6 +431,48 @@
       "tags": [
         "Basic",
         "Input"
+      ],
+      "uiToolkit": "Date Time Picker",
+      "leftOut": {
+        "type": "Carbon's date picker has one picker",
+        "customPickerOnly": "Carbon's date picker has one picker",
+        "includeTimePicker": "Carbon's date picker has no time picker",
+        "calendarType": "Carbon's date picker has the Gregorian calendar only",
+        "format": "Not in this widget yet",
+        "placeHolder": "Not in this widget yet",
+        "weekStart": "Not in this widget yet",
+        "disabledWeekDays": "Not in this widget yet",
+        "blackoutDates": "Not in this widget yet",
+        "blackoutDateStart": "Not in this widget yet",
+        "blackoutDateEnd": "Not in this widget yet",
+        "startView": "Not in this widget yet",
+        "minViewMode": "Not in this widget yet",
+        "enableTodayButton": "Not in this widget yet",
+        "enableClearButton": "Not in this widget yet",
+        "orientation": "Not in this widget yet",
+        "colorStyle": "Colors come from the Theme widget",
+        "showWeeks": "Not in this widget yet",
+        "noAutoclose": "Not in this widget yet",
+        "highlightToday": "Not in this widget yet",
+        "hideHeader": "Not in this widget yet",
+        "enableCalendarIcon": "Not in this widget yet",
+        "yearSelectorStyle": "Not in this widget yet",
+        "centuryRange": "Not in this widget yet",
+        "disableSmartParsing": "Not in this widget yet",
+        "eventON_BEFORE_SHOW_DAY": "Not in this widget yet"
+      },
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newVal",
+          "oldVal"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      },
+      "accessor": [
+        "getDate",
+        "setDate"
       ]
     },
     {
@@ -130,7 +484,20 @@
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "showValidationMarker",
+          "label": "Show validation marker",
+          "type": "Boolean",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -140,6 +507,20 @@
       "tags": [
         "Basic",
         "Input"
+      ],
+      "uiToolkit": "Checkbox",
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newValue",
+          "oldValue"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      },
+      "accessor": [
+        "isChecked",
+        "setChecked"
       ]
     },
     {
@@ -149,15 +530,53 @@
       "label": true,
       "options": [
         {
+          "name": "message",
+          "label": "Error message",
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "example",
+          "label": "Placeholder",
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
           "name": "options",
           "label": "Options",
           "type": "NameValuePair",
-          "list": true
+          "list": true,
+          "group": "Items"
         },
         {
-          "name": "message",
-          "label": "Error message",
-          "type": "String"
+          "name": "sizeStyle",
+          "label": "Size",
+          "type": "TextSizeStyle",
+          "group": "Appearance"
+        },
+        {
+          "name": "width",
+          "label": "Width",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelPlacement",
+          "label": "Label placement",
+          "type": "LabelPlacement",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelWidth",
+          "label": "Label width",
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -167,6 +586,34 @@
       "tags": [
         "Basic",
         "Input"
+      ],
+      "uiToolkit": "Single Select",
+      "leftOut": {
+        "enableTypeaheadBehaviour": "Not in this widget yet",
+        "itemLookupMode": "Items come from the static list; loading them from a service is not supported yet",
+        "itemService": "Items come from the static list; loading them from a service is not supported yet",
+        "inputData": "Items come from the static list; loading them from a service is not supported yet",
+        "disableAutoCall": "Items come from the static list; loading them from a service is not supported yet",
+        "itemList": "Items come from the static list; loading them from a service is not supported yet",
+        "dataMapping": "Items come from the static list; loading them from a service is not supported yet",
+        "businessDataMapping": "Items come from the static list; loading them from a service is not supported yet",
+        "enableClearingSelections": "Not in this widget yet",
+        "hideSupplementalText": "Not in this widget yet",
+        "eventON_SVCITEMS": "Items come from the static list; loading them from a service is not supported yet",
+        "eventON_SVCERROR": "Items come from the static list; loading them from a service is not supported yet"
+      },
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newVal",
+          "oldVal"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      },
+      "accessor": [
+        "getSelectedItem",
+        "setSelectedItem"
       ]
     },
     {
@@ -176,15 +623,47 @@
       "label": true,
       "options": [
         {
+          "name": "message",
+          "label": "Error message",
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
           "name": "options",
           "label": "Options",
           "type": "NameValuePair",
-          "list": true
+          "list": true,
+          "group": "Items"
         },
         {
-          "name": "message",
-          "label": "Error message",
-          "type": "String"
+          "name": "width",
+          "label": "Width",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelPlacement",
+          "label": "Label placement",
+          "type": "LabelPlacement",
+          "group": "Appearance"
+        },
+        {
+          "name": "labelWidth",
+          "label": "Label width",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "showValidationMarker",
+          "label": "Show validation marker",
+          "type": "Boolean",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -194,6 +673,30 @@
       "tags": [
         "Basic",
         "Input"
+      ],
+      "uiToolkit": "Radio Button Group",
+      "leftOut": {
+        "itemLookupMode": "Items come from the static list; loading them from a service is not supported yet",
+        "itemService": "Items come from the static list; loading them from a service is not supported yet",
+        "inputData": "Items come from the static list; loading them from a service is not supported yet",
+        "disableAutoCall": "Items come from the static list; loading them from a service is not supported yet",
+        "itemList": "Items come from the static list; loading them from a service is not supported yet",
+        "dataMapping": "Items come from the static list; loading them from a service is not supported yet",
+        "eventON_SVCITEMS": "Items come from the static list; loading them from a service is not supported yet",
+        "eventON_SVCERROR": "Items come from the static list; loading them from a service is not supported yet"
+      },
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newVal",
+          "oldVal"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      },
+      "accessor": [
+        "getSelectedItem",
+        "setSelectedItem"
       ]
     },
     {
@@ -205,28 +708,33 @@
         {
           "name": "title",
           "label": "Title",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         },
         {
           "name": "subtitle",
           "label": "Subtitle",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         },
         {
           "name": "intro",
           "label": "Intro text",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         },
         {
           "name": "steps",
           "label": "Steps",
           "type": "String",
-          "list": true
+          "list": true,
+          "group": "Appearance"
         },
         {
           "name": "step",
           "label": "Current step (0 = first)",
-          "type": "Integer"
+          "type": "Integer",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -236,7 +744,10 @@
       "tags": [
         "Basic",
         "Informational"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": []
+      }
     },
     {
       "kind": "errors",
@@ -251,7 +762,10 @@
       "tags": [
         "Basic",
         "Informational"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": []
+      }
     },
     {
       "kind": "button",
@@ -260,14 +774,34 @@
       "label": true,
       "options": [
         {
-          "name": "kind",
-          "label": "Kind (primary or secondary)",
-          "type": "String"
-        },
-        {
           "name": "validate",
           "label": "Check the fields first",
-          "type": "Boolean"
+          "type": "Boolean",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "kind",
+          "label": "Kind (primary, secondary, tertiary, ghost or danger)",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "sizeStyle",
+          "label": "Size",
+          "type": "ButtonSizeStyle",
+          "group": "Appearance"
+        },
+        {
+          "name": "width",
+          "label": "Width",
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": true,
@@ -277,6 +811,28 @@
       "tags": [
         "Basic",
         "Input"
+      ],
+      "uiToolkit": "Button",
+      "leftOut": {
+        "preventMultipleClicks": "Always on: the button takes no press while BAW handles the last one",
+        "colorStyle": "The Carbon style is set with Kind",
+        "shapeStyle": "Carbon has one shape",
+        "outline": "The Carbon style is set with Kind",
+        "icon": "Not in this widget yet",
+        "iconLocation": "Not in this widget yet",
+        "ghostMode": "The Carbon style is set with Kind",
+        "expression": "Formulas are not supported: set the value from an event handler or the binding"
+      },
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CLICK": [],
+        "eventON_BOUNDARYEVT": [
+          "status"
+        ]
+      },
+      "accessor": [
+        "getText",
+        "setText"
       ]
     },
     {
@@ -288,7 +844,8 @@
         {
           "name": "theme",
           "label": "Theme file (JSON)",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -298,6 +855,68 @@
       "tags": [
         "Advanced",
         "Informational"
+      ],
+      "events": {
+        "eventON_LOAD": []
+      }
+    },
+    {
+      "kind": "toggle",
+      "view": "Toggle",
+      "binding": "Boolean",
+      "label": true,
+      "options": [
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "onLabel",
+          "label": "On label",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "offLabel",
+          "label": "Off label",
+          "type": "String",
+          "group": "Appearance"
+        },
+        {
+          "name": "sizeStyle",
+          "label": "Size",
+          "type": "SwitchSizeStyle",
+          "group": "Appearance"
+        }
+      ],
+      "boundary": false,
+      "preview": {
+        "value": true
+      },
+      "tags": [
+        "Basic",
+        "Input"
+      ],
+      "uiToolkit": "Switch",
+      "leftOut": {
+        "colorStyle": "Colors come from the Theme widget",
+        "shapeStyle": "Carbon has one shape",
+        "labelType": "The labels are set with On label and Off label"
+      },
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newValue",
+          "oldValue"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      },
+      "accessor": [
+        "isChecked",
+        "setChecked"
       ]
     }
   ]

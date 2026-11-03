@@ -34,6 +34,8 @@ import uuid
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
+QUOTE = {'"': "&quot;"}
+
 from coach_builder import coachflow, service_xml
 from coach_views import view_xml
 
@@ -145,19 +147,25 @@ def stable_ids(acronym, name):
     return lambda: str(uuid.uuid5(space, f"{name}/{next(count)}"))
 
 
-def visibility_type(acronym, author="group_views"):
-    """The app's Selection type for a group field's visibility option: (class id, version, xml)."""
-    new_id = stable_ids(acronym, f"type/{VISIBILITY_TYPE}")
+def selection_type(new_id, namespace, name, values, description, author):
+    """A Selection type (a dropdown in Coach Designer): (class id, version, xml). values: [(value, label)];
+    new_id: the IDs that keep the type the same object in every build."""
     class_id, version = "12." + new_id(), uid()
-    enum = ",".join('{"annotation":{"appinfo":[{"displayName":["%s"]}]},"value":"%s"}' % (label, value) for value, label in VISIBILITY_VALUES)
+    enum = ",".join('{"annotation":{"appinfo":[{"displayName":["%s"]}]},"value":"%s"}' % (label, value) for value, label in values)
     json = ('{"simpleType":[{"annotation":{"documentation":[{}],"appinfo":[{"advancedProperties":[{}]}]},"name":"%s",'
             '"restriction":{"annotation":{"appinfo":[{"simpleBaseType":["Selection"]}]},"enumeration":[%s],'
             '"base":"{http:\\/\\/www.w3.org\\/2001\\/XMLSchema}string"}}],"attributeFormDefault":"unqualified",'
-            '"elementFormDefault":"unqualified","targetNamespace":"http:\\/\\/%s","id":"_%s"}') % (VISIBILITY_TYPE, enum, acronym, class_id)
-    options = "\n".join(f'                                <option value="{value}" display="{label}" />' for value, label in VISIBILITY_VALUES)
-    xml = SELECTION_TYPE.format(id=class_id, name=VISIBILITY_TYPE, author=author, json=escape(json), guid=new_id(), version=version,
-                                options=options, description="Visibility of a field in a reusable group: Same as parent, or Hidden.")
+            '"elementFormDefault":"unqualified","targetNamespace":"http:\\/\\/%s","id":"_%s"}') % (name, enum, namespace, class_id)
+    options = "\n".join(f'                                <option value="{escape(value, QUOTE)}" display="{escape(label, QUOTE)}" />' for value, label in values)
+    xml = SELECTION_TYPE.format(id=class_id, name=name, author=author, json=escape(json), guid=new_id(), version=version,
+                                options=options, description=escape(description))
     return class_id, version, xml
+
+
+def visibility_type(acronym, author="group_views"):
+    """The app's Selection type for a group field's visibility option: (class id, version, xml)."""
+    return selection_type(stable_ids(acronym, f"type/{VISIBILITY_TYPE}"), acronym, VISIBILITY_TYPE, VISIBILITY_VALUES,
+                          "Visibility of a field in a reusable group: Same as parent, or Hidden.", author)
 
 
 def binding_name(view_text):
