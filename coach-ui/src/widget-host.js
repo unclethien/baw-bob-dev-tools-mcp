@@ -10,7 +10,8 @@ export function plain(value) {
   return { name: get(value, 'name'), value: get(value, 'value') };
 }
 
-export function widgetContext(view, optionNames) {
+// fire(event, ...args) runs one of the view's event handlers (src/widget-events.js).
+export function widgetContext(view, optionNames, fire = () => undefined) {
   const { context } = view;
   const options = context.options;
   const meta = (name, fallback) => {
@@ -41,7 +42,11 @@ export function widgetContext(view, optionNames) {
       set: (value) => { if (context.binding) context.binding.set('value', value); },
     },
     // done() runs once BAW has handled the boundary event, whether the coach moved on or stayed (a validation
-    // failure, a loop back), so a button can take presses again.
-    trigger: (done) => (done ? context.trigger(() => done(), { callBackForAll: true }) : context.trigger()),
+    // failure, a loop back), so a button can take presses again; eventON_BOUNDARYEVT gets BAW's status first.
+    trigger: (done) => context.trigger((result) => {
+      fire('eventON_BOUNDARYEVT', result && result.status);
+      if (done) done();
+    }, { callBackForAll: true }),
+    fire,
   };
 }

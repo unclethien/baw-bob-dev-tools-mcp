@@ -1,6 +1,15 @@
 {
   "toolkit": "Modernizer Widgets",
-  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; label: the view has a Label property; options: configuration options (type: a System Data type or NameValuePair; list: a list of them); boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart; the toolkit's name is added so a palette search for it lists every widget). A new widget needs only its component (coach-ui/src/widgets/<kind>.jsx), its entry here and its icon (icons/<kind>.svg), plus coach-ui/src/widgets/<kind>.scss when it uses a Carbon component the stock widgets do not: the build, the harness, the inspector and the modernizer read this file and that folder.",
+  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; label: the view has a Label property; options: configuration options (type: a System Data type or NameValuePair; list: a list of them; group: the Configuration section Coach Designer shows it in, as the UI Toolkit's Behavior, Items and Appearance; an option the UI Toolkit also has takes its UI Toolkit name, so the modernizer can carry its value over); events: the view's events, listed in Coach Designer's Events tab, each with the names of the arguments its handler gets, as the UI Toolkit names them (labels: the top-level events); boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart; the toolkit's name is added so a palette search for it lists every widget). A new widget needs only its component (coach-ui/src/widgets/<kind>.jsx), its entry here and its icon (icons/<kind>.svg), plus coach-ui/src/widgets/<kind>.scss when it uses a Carbon component the stock widgets do not: the build, the harness, the inspector and the modernizer read this file and that folder.",
+  "events": {
+    "eventON_LOAD": "On load",
+    "eventON_CHANGE": "On change",
+    "eventON_FOCUS": "On focus",
+    "eventON_BLUR": "On blur",
+    "eventON_INPUT": "On input",
+    "eventON_CLICK": "On click",
+    "eventON_BOUNDARYEVT": "On boundary event"
+  },
   "widgets": [
     {
       "kind": "text",
@@ -11,17 +20,32 @@
         {
           "name": "example",
           "label": "Example",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "pattern",
           "label": "Pattern",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "selectAll",
+          "label": "Select all text on focus",
+          "type": "Boolean",
+          "group": "Behavior"
         }
       ],
       "boundary": false,
@@ -31,7 +55,22 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newText",
+          "oldText"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": [],
+        "eventON_INPUT": [
+          "current",
+          "potential",
+          "selection",
+          "type"
+        ]
+      }
     },
     {
       "kind": "textarea",
@@ -42,17 +81,32 @@
         {
           "name": "example",
           "label": "Example",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "pattern",
           "label": "Pattern",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "height",
+          "label": "Height (CSS, e.g. 120px)",
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -62,7 +116,22 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newText",
+          "oldText"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": [],
+        "eventON_INPUT": [
+          "current",
+          "potential",
+          "selection",
+          "type"
+        ]
+      }
     },
     {
       "kind": "number",
@@ -73,22 +142,38 @@
         {
           "name": "example",
           "label": "Example",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
         },
         {
           "name": "min",
           "label": "Minimum",
-          "type": "Decimal"
+          "type": "Decimal",
+          "group": "Behavior"
         },
         {
           "name": "max",
           "label": "Maximum",
-          "type": "Decimal"
+          "type": "Decimal",
+          "group": "Behavior"
         },
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "decimalPlaces",
+          "label": "Decimal places",
+          "type": "Integer",
+          "group": "Behavior"
         }
       ],
       "boundary": false,
@@ -98,7 +183,22 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newValue",
+          "oldValue"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": [],
+        "eventON_INPUT": [
+          "current",
+          "potential",
+          "selection",
+          "type"
+        ]
+      }
     },
     {
       "kind": "date",
@@ -109,7 +209,26 @@
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "startDate",
+          "label": "Earliest date",
+          "type": "Date",
+          "group": "Behavior"
+        },
+        {
+          "name": "endDate",
+          "label": "Latest date",
+          "type": "Date",
+          "group": "Behavior"
         }
       ],
       "boundary": false,
@@ -119,7 +238,16 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newVal",
+          "oldVal"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      }
     },
     {
       "kind": "checkbox",
@@ -130,7 +258,14 @@
         {
           "name": "message",
           "label": "Error message",
-          "type": "String"
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
         }
       ],
       "boundary": false,
@@ -140,7 +275,16 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newValue",
+          "oldValue"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      }
     },
     {
       "kind": "select",
@@ -149,15 +293,29 @@
       "label": true,
       "options": [
         {
+          "name": "message",
+          "label": "Error message",
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "example",
+          "label": "Placeholder",
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
           "name": "options",
           "label": "Options",
           "type": "NameValuePair",
-          "list": true
-        },
-        {
-          "name": "message",
-          "label": "Error message",
-          "type": "String"
+          "list": true,
+          "group": "Items"
         }
       ],
       "boundary": false,
@@ -167,7 +325,16 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newVal",
+          "oldVal"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      }
     },
     {
       "kind": "radio",
@@ -176,15 +343,23 @@
       "label": true,
       "options": [
         {
+          "name": "message",
+          "label": "Error message",
+          "type": "String",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
           "name": "options",
           "label": "Options",
           "type": "NameValuePair",
-          "list": true
-        },
-        {
-          "name": "message",
-          "label": "Error message",
-          "type": "String"
+          "list": true,
+          "group": "Items"
         }
       ],
       "boundary": false,
@@ -194,7 +369,16 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newVal",
+          "oldVal"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      }
     },
     {
       "kind": "header",
@@ -205,28 +389,33 @@
         {
           "name": "title",
           "label": "Title",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         },
         {
           "name": "subtitle",
           "label": "Subtitle",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         },
         {
           "name": "intro",
           "label": "Intro text",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         },
         {
           "name": "steps",
           "label": "Steps",
           "type": "String",
-          "list": true
+          "list": true,
+          "group": "Appearance"
         },
         {
           "name": "step",
           "label": "Current step (0 = first)",
-          "type": "Integer"
+          "type": "Integer",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -236,7 +425,10 @@
       "tags": [
         "Basic",
         "Informational"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": []
+      }
     },
     {
       "kind": "errors",
@@ -251,7 +443,10 @@
       "tags": [
         "Basic",
         "Informational"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": []
+      }
     },
     {
       "kind": "button",
@@ -260,14 +455,22 @@
       "label": true,
       "options": [
         {
-          "name": "kind",
-          "label": "Kind (primary or secondary)",
-          "type": "String"
-        },
-        {
           "name": "validate",
           "label": "Check the fields first",
-          "type": "Boolean"
+          "type": "Boolean",
+          "group": "Behavior"
+        },
+        {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
+          "name": "kind",
+          "label": "Kind (primary, secondary, tertiary, ghost or danger)",
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": true,
@@ -277,7 +480,14 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CLICK": [],
+        "eventON_BOUNDARYEVT": [
+          "status"
+        ]
+      }
     },
     {
       "kind": "theme",
@@ -288,7 +498,8 @@
         {
           "name": "theme",
           "label": "Theme file (JSON)",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -298,7 +509,10 @@
       "tags": [
         "Advanced",
         "Informational"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": []
+      }
     },
     {
       "kind": "toggle",
@@ -307,14 +521,22 @@
       "label": true,
       "options": [
         {
+          "name": "tabIndex",
+          "label": "Tab index",
+          "type": "Integer",
+          "group": "Behavior"
+        },
+        {
           "name": "onText",
           "label": "On text",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         },
         {
           "name": "offText",
           "label": "Off text",
-          "type": "String"
+          "type": "String",
+          "group": "Appearance"
         }
       ],
       "boundary": false,
@@ -324,7 +546,16 @@
       "tags": [
         "Basic",
         "Input"
-      ]
+      ],
+      "events": {
+        "eventON_LOAD": [],
+        "eventON_CHANGE": [
+          "newValue",
+          "oldValue"
+        ],
+        "eventON_FOCUS": [],
+        "eventON_BLUR": []
+      }
     }
   ]
 }

@@ -32,6 +32,8 @@ async function fresh() {
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(harness);
+  await page.evaluate((events, names) => { window.harness.events = events; window.harness.optionNames = names; },
+    Object.fromEntries(contract.map((w) => [w.kind, w.events || {}])), Object.fromEntries(contract.map((w) => [w.kind, w.options.map((o) => o.name)])));
   return { page, errors };
 }
 const text = (page, selector) => page.$eval(selector, (el) => el.textContent.trim()).catch(() => null);
@@ -355,6 +357,196 @@ try {
       && JSON.stringify(await page.$$eval('[data-generated=select] option', (o) => o.map((x) => x.textContent))) === JSON.stringify(['Choose an option', 'One']));
     check('no page errors (generated previews)', errors.length === 0, errors);
     await page.close();
+  }
+  // 8. Events without BPM UI on the page: the handlers are compiled by the widgets, with me, view and the arguments
+  //    the UI Toolkit names; the me API; a handler that returns false cancels; a failing handler breaks nothing.
+  {
+    const { page, errors } = await fresh();
+    await page.evaluate(() => {
+      window.log = [];
+      window.name1 = harness.view({ kind: 'text', id: 'Name', label: 'Name', value: '', options: {
+        eventON_LOAD: 'log.push(["load", me.getText(), view === me, !!me.context.element.querySelector("input")]);',
+        eventON_CHANGE: 'log.push(["change", newText, oldText]);',
+        eventON_FOCUS: 'log.push(["focus"]);',
+        eventON_BLUR: 'log.push(["blur"]);',
+        eventON_INPUT: 'if (potential.length > 5) { log.push(["input refused", current, potential, type]); return false; }',
+      } });
+      window.agree = harness.view({ kind: 'checkbox', id: 'Agree', label: 'Agree', value: false, options: {
+        eventON_CHANGE: 'log.push(["checked", me.isChecked(), newValue, oldValue]);' } });
+      window.broken = harness.view({ kind: 'text', id: 'Broken', label: 'Broken', value: '', options: { eventON_CHANGE: 'throw new Error("boom")' } });
+      window.bad = harness.view({ kind: 'text', id: 'Bad', label: 'Bad', value: '', options: { eventON_CHANGE: 'this is not javascript' } });
+      window.fill = harness.view({ kind: 'button', id: 'Fill', label: 'Fill', options: { kind: 'secondary',
+        eventON_CLICK: 'name1.view.setText("Set"); log.push(["click"]); return false;' } });
+      window.go = harness.view({ kind: 'button', id: 'Go', label: 'Go', options: { kind: 'secondary',
+        eventON_CLICK: 'log.push(["go"]);', eventON_BOUNDARYEVT: 'log.push(["boundary", status]);' } });
+    });
+    await sleep(200);
+    const log = () => page.evaluate(() => window.log.splice(0));
+    const loaded = await log();
+    check('eventON_LOAD runs once the widget is drawn, with me as the view', JSON.stringify(loaded) === JSON.stringify([['load', '', true, true]]), loaded);
+    await page.click('#pp-Name');
+    await page.type('#pp-Name', 'Adam');
+    const typed = await log();
+    check('eventON_FOCUS runs when the field takes the focus', JSON.stringify(typed[0]) === '["focus"]', typed);
+    check('eventON_CHANGE gets newText and oldText', JSON.stringify(typed.at(-1)) === '["change","Adam","Ada"]', typed);
+    await page.type('#pp-Name', 'sXY');
+    const refused = await log();
+    check('eventON_INPUT returning false refuses the keystroke', (await page.evaluate(() => name1.value())) === 'Adams'
+      && JSON.stringify(refused.at(-1)) === '["input refused","Adams","AdamsY","insertText"]', [await page.evaluate(() => name1.value()), refused]);
+    await page.keyboard.press('Tab');
+    check('eventON_BLUR runs when the focus leaves the field', JSON.stringify(await log()) === '[["blur"]]');
+    await page.click('[data-kind=checkbox] label');
+    const checked = await log();
+    check('a Checkbox handler reads me.isChecked() and the new value', JSON.stringify(checked) === '[["checked",true,true,false]]', checked);
+    await page.click('[data-kind=button]:nth-of-type(5) button');
+    await sleep(50);
+    const filled = await log();
+    check("a handler's me.setText() sets the other widget, which fires its eventON_CHANGE", (await page.evaluate(() => name1.value())) === 'Set'
+      && JSON.stringify(filled) === '[["change","Set","Adams"],["click"]]', filled);
+    check('eventON_CLICK returning false cancels the boundary event', (await page.evaluate(() => harness.triggered.length)) === 0);
+    await page.click('[data-kind=button]:nth-of-type(6) button');
+    await sleep(80);
+    const went = await log();
+    check('eventON_BOUNDARYEVT runs after BAW handled the boundary event, with its status', JSON.stringify(went) === '[["go"],["boundary","ok"]]'
+      && (await page.evaluate(() => harness.triggered.map((t) => t.id))).join() === 'Go', went);
+    await page.type('#pp-Broken', 'x');
+    await page.type('#pp-Bad', 'y');
+    check('a failing or broken handler leaves its widget working', (await page.evaluate(() => [broken.value(), bad.value()].join())) === 'x,y');
+    check('a failing or broken handler is logged', errors.some((e) => e.includes('eventON_CHANGE handler of Broken failed'))
+      && errors.some((e) => e.includes('eventON_CHANGE handler of Bad does not compile')), errors);
+    await page.evaluate(() => { name1.view.setLabel('Full name'); agree.view.setEnabled(false); });
+    await sleep(50);
+    check('me.setLabel() relabels the widget', (await text(page, '[data-kind=text] label')) === 'Full name');
+    check('me.setEnabled(false) makes the widget read-only', (await text(page, '[data-kind=checkbox] dd')) === 'Yes');
+    await page.evaluate(() => name1.view.setPlaceholder('Your full name'));
+    await sleep(50);
+    check('me.setPlaceholder() works on an option the layout did not set', await page.$eval('#pp-Name', (i) => i.placeholder) === 'Your full name');
+    await page.evaluate(() => name1.view.setVisible(false));
+    await sleep(50);
+    check('me.setVisible(false) hides the widget', (await page.$eval('[data-kind=text]', (el) => el.textContent.trim())) === ''
+      && !(await page.evaluate(() => name1.view.isVisible())));
+    const unexpected = errors.filter((e) => !e.includes('handler of Broken') && !e.includes('handler of Bad') && !e.includes('boom') && !e.includes('Unexpected identifier'));
+    check('no other page errors (events)', unexpected.length === 0, unexpected);
+    await page.close();
+  }
+
+  // 9. Events with BPM UI on the page: the view is registered with bpmext, which runs the handlers (${Control}
+  //    references, page.ui), with the argument names the UI Toolkit uses; its result still cancels a click.
+  {
+    const { page, errors } = await fresh();
+    await page.evaluate(() => {
+      window.calls = [];
+      const registered = new Map();
+      window.bpmext = { ui: {
+        loadView(view) {
+          calls.push(['loadView', view.context.viewid]);
+          const code = view.context.options.eventON_LOAD && view.context.options.eventON_LOAD.get('value');
+          if (code) new Function('me', code)(view);
+        },
+        registerEventHandlingFunction(view, name, ...args) { calls.push(['register', view.context.viewid, name, ...args]); registered.set(`${view.context.viewid}/${name}`, args); },
+        executeEventHandlingFunction(view, name, ...values) {
+          calls.push(['execute', view.context.viewid, name, ...values]);
+          const code = view.context.options[name].get('value').replace(/\$\{(\w+)\}/g, 'page.ui.get("$1")');
+          return new Function('me', 'page', ...registered.get(`${view.context.viewid}/${name}`), code)(view, { ui: { get: (id) => ({ id }) } }, ...values);
+        },
+        unloadView(view) { calls.push(['unloadView', view.context.viewid]); },
+      } };
+      window.seen = [];
+      window.city = harness.view({ kind: 'text', id: 'City', label: 'City', value: 'Oslo', options: {
+        eventON_LOAD: 'seen.push("load " + me.getText());', eventON_CHANGE: 'seen.push(${Other}.id + " " + newText + " " + oldText);' } });
+      window.stop = harness.view({ kind: 'button', id: 'Stop', label: 'Stop', options: { kind: 'secondary', eventON_CLICK: 'return false;' } });
+      window.thrower = harness.view({ kind: 'text', id: 'Thrower', label: 'Thrower', value: '', options: { eventON_CHANGE: 'throw new Error("bpm boom")' } });
+    });
+    await sleep(150);
+    await page.click('#pp-City', { clickCount: 3 });
+    await page.keyboard.type('Rome');
+    await page.click('[data-kind=button] button');
+    await sleep(50);
+    await page.type('#pp-Thrower', 'z');
+    check('a handler that throws under BPM UI leaves its widget working', (await page.evaluate(() => thrower.value())) === 'z');
+    check('a handler that throws under BPM UI is logged', errors.some((e) => e.includes('eventON_CHANGE handler of Thrower failed')), errors);
+    errors.splice(0, errors.length, ...errors.filter((e) => !e.includes('Thrower') && !e.includes('bpm boom')));
+    await page.evaluate(() => city.handle.unmount());
+    const calls = await page.evaluate(() => window.calls);
+    const seen = await page.evaluate(() => window.seen);
+    const registers = calls.filter((c) => c[0] === 'register' && c[1] === 'City').map((c) => c.slice(2).join(' '));
+    check('the view is loaded into BPM UI, which runs eventON_LOAD', calls[0]?.join() === 'loadView,City' && seen[0] === 'load Oslo', [calls[0], seen]);
+    check('each other event is registered with the UI Toolkit argument names', JSON.stringify(registers)
+      === JSON.stringify(['eventON_CHANGE newText oldText', 'eventON_FOCUS', 'eventON_BLUR', 'eventON_INPUT current potential selection type']), registers);
+    check('BPM UI runs eventON_CHANGE, with ${Control} references', seen.at(-1) === 'Other Rome Rom', seen);
+    check('only events that have code are run', !calls.some((c) => c[0] === 'execute' && c[2] !== 'eventON_CHANGE' && c[2] !== 'eventON_CLICK'), calls.filter((c) => c[0] === 'execute').map((c) => c[2]));
+    check('a BPM UI click handler returning false cancels the boundary event', (await page.evaluate(() => harness.triggered.length)) === 0);
+    check('unmounting unloads the view from BPM UI', calls.at(-1)?.join() === 'unloadView,City', calls.at(-1));
+    check('no page errors (BPM UI events)', errors.length === 0, errors);
+    await page.close();
+  }
+
+  // 10. The options the widgets take from the UI Toolkit: tab index, select all, height, decimal places, date range,
+  //     select placeholder, and the Carbon button kinds.
+  {
+    const { page, errors } = await fresh();
+    await page.evaluate(() => {
+      harness.view({ kind: 'text', id: 'Code', label: 'Code', value: 'ABC123', options: { tabIndex: 3, selectAll: true } });
+      harness.view({ kind: 'textarea', id: 'Notes', label: 'Notes', value: '', options: { height: '150px' } });
+      window.price = harness.view({ kind: 'number', id: 'Price', label: 'Price', value: null, options: { decimalPlaces: 2 } });
+      window.start = harness.view({ kind: 'date', id: 'Start', label: 'Start', value: new Date(2026, 0, 1), options: { startDate: new Date(2026, 0, 10), endDate: new Date(2026, 11, 31) } });
+      harness.view({ kind: 'select', id: 'Plan', label: 'Plan', value: '', options: { example: 'Pick a plan', options: { items: [{ name: 'A', value: 'a' }] } } });
+      harness.view({ kind: 'checkbox', id: 'Ok', label: 'Ok', value: false, options: { tabIndex: 4 } });
+      harness.view({ kind: 'button', id: 'Save', label: 'Save', options: { kind: 'ghost', validate: true, tabIndex: 5 } });
+    });
+    await sleep(200);
+    check('tabIndex reaches the input', await page.$eval('#pp-Code', (i) => i.tabIndex) === 3);
+    check('tabIndex reaches a checkbox and a button', await page.$eval('[data-kind=checkbox] input', (i) => i.tabIndex) === 4
+      && await page.$eval('[data-kind=button] button', (b) => b.tabIndex) === 5);
+    await page.focus('#pp-Code');
+    check('selectAll selects the text on focus', JSON.stringify(await page.$eval('#pp-Code', (i) => [i.selectionStart, i.selectionEnd])) === '[0,6]');
+    check('height sizes the text area', await page.$eval('#pp-Notes', (t) => t.style.height) === '150px');
+    await page.type('#pp-Price', '3.14159');
+    await page.keyboard.press('Tab');
+    await sleep(50);
+    check('decimalPlaces keeps the number to that many decimals', (await page.evaluate(() => price.value())) === 3.14, await page.evaluate(() => price.value()));
+    check('decimalPlaces shows that many decimals', (await page.$eval('#pp-Price', (i) => i.value)) === '3.14', await page.$eval('#pp-Price', (i) => i.value));
+    check('the select shows its placeholder', (await page.$$eval('[data-kind=select] option', (o) => o[0].textContent)) === 'Pick a plan');
+    check('a ghost button draws as a Carbon ghost button', await page.$eval('[data-kind=button] button', (b) => b.className.includes('pp--btn--ghost')));
+    await page.click('[data-kind=button] button');
+    await sleep(50);
+    const errs = await page.evaluate(() => ModernizerWidgets.page.errors.map((e) => e.message));
+    check('a date before startDate is flagged', errs.some((m) => m.startsWith('Start must be on or after')), errs);
+    check('the flagged date blocks the validating button', (await page.evaluate(() => harness.triggered.length)) === 0);
+    check('no page errors (options)', errors.length === 0, errors);
+    await page.close();
+  }
+
+  // 11. The generated toolkit: every option sits in a Configuration group, every contract event is an EVENT option
+  //     (Coach Designer's Events tab), and the preview script runs no event code.
+  {
+    const out = path.join(os.tmpdir(), `mdw-check-${process.pid}.twx`);
+    execFileSync('python3', ['../server/widget_toolkit.py', 'build', 'modernizer', '0.0.0', out]);
+    const views = JSON.parse(execFileSync('python3', ['-I', '-c', `
+import json, re, sys, zipfile
+z = zipfile.ZipFile(sys.argv[1])
+views = {}
+for n in z.namelist():
+    t = z.read(n).decode('utf-8', 'replace')
+    m = re.search(r'<coachView id="[^"]+" name="([^"]+)"', t)
+    if m:
+        views[m.group(1)] = {
+            "options": re.findall(r'<configOption name="([^"]+)">.*?<propertyType>(\\w+)</propertyType>.*?<groupName(?: isNull="true" />|>([^<]*)</groupName>)', t),
+            "load": re.search(r'<loadJsFunction>(.*?)</loadJsFunction>', t, re.S).group(1)}
+print(json.dumps(views))`, out], { encoding: 'utf8' }));
+    fs.rmSync(out, { force: true });
+    const problems = [];
+    for (const w of contract) {
+      const v = views[w.view];
+      if (!v) { problems.push(`${w.view}: not built`); continue; }
+      const byName = Object.fromEntries(v.options.map(([name, type, group]) => [name, { type, group }]));
+      for (const o of w.options) if (byName[o.name]?.type !== 'OBJECT' || byName[o.name]?.group !== o.group) problems.push(`${w.view}.${o.name}: ${JSON.stringify(byName[o.name])}`);
+      for (const e of Object.keys(w.events || {})) if (byName[e]?.type !== 'EVENT' || byName[e]?.group !== 'Events') problems.push(`${w.view}.${e}: ${JSON.stringify(byName[e])}`);
+      if (!v.load.includes('eventON_LOAD')) problems.push(`${w.view}: load does not pass the events`);
+    }
+    check('every option is in its Configuration group and every event is an EVENT option', problems.length === 0, problems);
+    const preview = execFileSync('python3', ['../server/widget_toolkit.py', 'preview', 'modernizer', 'text'], { encoding: 'utf8' });
+    check('the Coach Designer preview runs no event code', !preview.includes('eventON_'));
   }
 } catch (e) {
   check('harness ran', false, String(e).slice(0, 500));
