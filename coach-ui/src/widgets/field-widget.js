@@ -1,6 +1,8 @@
 // The shared behaviour of the Modernizer Widgets that bind one value: label, help text, visibility (REQUIRED,
 // READONLY, HIDDEN), page validation, the error and the read-only view. A widget file passes its own input:
 //   registerWidget('toggle', fieldWidget('toggle', { Input: ToggleInput, display, isEmpty }));
+// and, when it checks more than REQUIRED and the pattern, its own validate (rangeError for min and max,
+// dateRangeError for startDate and endDate, or a function of its own).
 // Kept as .js (no JSX) so build.mjs does not take it for a widget: only src/widgets/*.jsx are bundled as widgets.
 import { createElement, useEffect, useRef, useState } from 'react';
 import { Field, fieldError, fieldKind, ReadOnlyValue, toDate } from '../components.jsx';
@@ -9,7 +11,8 @@ import { page } from '../page-registry.js';
 const choices = (list) => (Array.isArray(list) ? list.map((o) => ({ value: o.value, label: o.name ?? o.value })) : []);
 const blank = (value) => value === null || value === undefined || value === '';
 
-function rangeError(field, value) {
+// min and max, for a widget that binds a number.
+export function rangeError(field, value) {
   if (blank(value)) return null;
   if (!blank(field.min) && Number(value) < Number(field.min)) return field.message || `${field.label} must be at least ${field.min}`;
   if (!blank(field.max) && Number(value) > Number(field.max)) return field.message || `${field.label} must be at most ${field.max}`;
@@ -19,7 +22,7 @@ function rangeError(field, value) {
 // The earliest and latest date a Date widget takes (startDate, endDate), compared by calendar day.
 const day = (value) => { const d = toDate(value); return d && !Number.isNaN(d.getTime()) ? new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() : null; };
 
-function dateRangeError(field, value) {
+export function dateRangeError(field, value) {
   const at = day(value);
   if (at === null) return null;
   const start = day(field.startDate);
@@ -35,7 +38,8 @@ function dateRangeError(field, value) {
 //   contract declares for the kind. Without it the kind must be one of the stock kinds.
 // display(field, value): the value as text, for the read-only view.
 // isEmpty(field, value): the test REQUIRED uses.
-export function fieldWidget(type, { Input, display, isEmpty } = {}) {
+// validate(field, value): the widget's own check after REQUIRED and the pattern, returning an error message or null.
+export function fieldWidget(type, { Input, display, isEmpty, validate } = {}) {
   if (!Input && fieldKind({ type }) === 'text' && type !== 'text') {
     throw new Error(`Modernizer Widgets: "${type}" is not a stock field kind, so fieldWidget needs an Input for it`);
   }
@@ -58,7 +62,7 @@ export function fieldWidget(type, { Input, display, isEmpty } = {}) {
         get element() { return element.current; },
         validate() {
           const { field: f, value } = latest.current;
-          const message = fieldError(f, value) || (type === 'number' ? rangeError(f, value) : type === 'date' ? dateRangeError(f, value) : null);
+          const message = fieldError(f, value) || (validate ? validate(f, value) : null);
           setError(message);
           return message && { message };
         },

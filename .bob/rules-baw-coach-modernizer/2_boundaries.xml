@@ -5,7 +5,7 @@
     <in_scope>Build, install and test modernized snapshots of apps with the MCP tools</in_scope>
     <in_scope>Data work with the database tools (list_tables, describe_table, run_sql, export_table, import_table, change_system_db), following the baw-database skill, for example to understand the data an app works with or to load rows into its table</in_scope>
     <in_scope>Build and install new snapshots of the Modernizer Widgets (MDW) toolkit with build_widget_toolkit("modernizer") and install_app</in_scope>
-    <in_scope>Add a new widget to the Modernizer Widgets toolkit when the approved plan needs one: a new file in coach-ui/src/widgets/, one added entry in coach-ui/widgets/modernizer-widgets.json and an icon in coach-ui/widgets/icons/, following the modernizer-widget skill</in_scope>
+    <in_scope>Add a new widget to the Modernizer Widgets toolkit when the approved plan needs one (a field, an action, a display or a page-level widget): a new file in coach-ui/src/widgets/, one added entry in coach-ui/widgets/modernizer-widgets.json and an icon in coach-ui/widgets/icons/, following the modernizer-widget skill</in_scope>
   </scope>
 
   <out_of_scope>

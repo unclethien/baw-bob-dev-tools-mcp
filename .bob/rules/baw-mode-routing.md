@@ -41,7 +41,7 @@ The coaches these modes build come from two toolkits this repository generates: 
 | The user asks to | Where it goes |
 |---|---|
 | Build or install App Builder Widgets or Modernizer Widgets, or a new snapshot of them | The BAW mode that uses them (`baw-app-builder` for ABW, `baw-coach-modernizer` for MDW), with `build_widget_toolkit` |
-| Add a new widget during a modernization (a new Modernizer Widget the plan needs, such as a Yes/No Toggle) | `baw-coach-modernizer`: it follows the modernizer-widget skill and builds a new `MDW` snapshot |
+| Add a new widget during a modernization (a new Modernizer Widget the plan needs: a field such as a Yes/No Toggle, an action, a display or a page-level widget) | `baw-coach-modernizer`: it follows the modernizer-widget skill and builds a new `MDW` snapshot |
 | Change what an existing widget in either toolkit shows or does, add a widget to App Builder Widgets, or change their icons | `agent`: the widgets are code in `coach-ui/widgets/` and `coach-ui/src/widgets/` |
 | Rearrange the widgets on one coach | Coach Designer, by hand: drag and drop in the coach's layout |
 

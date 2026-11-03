@@ -19,6 +19,7 @@
       triggered: [],
       events: {},  // { kind: { event: [argument names] } }, from the contract; scripts/check-widgets.mjs sets it
       optionNames: {},  // { kind: [option name] }, from the contract: the names the generated load handler passes
+      accessors: {},  // { kind: [getter, setter] }, from the contract
       status: 'ok',  // the status BAW hands a boundary event's callback
       // spec: { kind, label, help, visibility, inherited, options: {name: value}, value, id (viewid), path (controlidpath), parent };
       // an event handler is an option too: options: { eventON_CHANGE: 'code' }
@@ -45,7 +46,7 @@
         var events = harness.events[spec.kind] || {};
         var names = (harness.optionNames[spec.kind] || []).concat(Object.keys(spec.options || {}))
           .filter(function (name, i, all) { return !(name in events) && all.indexOf(name) === i; });
-        handle = ModernizerWidgets.attach(view, spec.kind, names, events);
+        handle = ModernizerWidgets.attach(view, spec.kind, names, events, harness.accessors[spec.kind] || null);
         return { element: element, handle: handle, view: view, value: function () { return bound.get('value'); },
                  setOption: function (name, value) { options[name] = holder(value); handle.update(); } };
       },
