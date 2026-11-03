@@ -299,6 +299,32 @@
         "Advanced",
         "Informational"
       ]
+    },
+    {
+      "kind": "toggle",
+      "view": "Toggle",
+      "binding": "Boolean",
+      "label": true,
+      "options": [
+        {
+          "name": "onText",
+          "label": "On text",
+          "type": "String"
+        },
+        {
+          "name": "offText",
+          "label": "Off text",
+          "type": "String"
+        }
+      ],
+      "boundary": false,
+      "preview": {
+        "value": true
+      },
+      "tags": [
+        "Basic",
+        "Input"
+      ]
     }
   ]
 }
