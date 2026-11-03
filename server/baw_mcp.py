@@ -370,6 +370,19 @@ def inspect_coaches(twx: str, previous: str | None = None) -> dict:
     return result
 
 
+def base_package(base: str, tmp: Path) -> Path:
+    """The .twx a build takes its BAW build from: base is an exported .twx in the project, or an app or toolkit on
+    the server (its acronym), exported into tmp."""
+    if base.endswith(".twx"):
+        return local(base)
+    found = snapshots(base)
+    if not found:
+        raise ToolError(f"No process app or toolkit {base} on the server; list_apps shows them")
+    path = tmp / "base.twx"
+    ops().export(base, newest(found)["version"], path, toolkits=False)
+    return path
+
+
 @mcp.tool()
 def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | None = None, replace_groups: list[str] | None = None) -> dict:
     """Build an installable .twx from an app spec (see app-specs/example-equipment-request.json, and
@@ -424,11 +437,7 @@ def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | N
             note = (f"Built as snapshot {snapshot} of {acronym} (from {base})" if target_of(base_twx)["acronym"] == acronym
                     else f"Packaged to match {base}")
         elif base:
-            found = snapshots(base)
-            if not found:
-                raise ToolError(f"No process app or toolkit {base} on the server; list_apps shows them")
-            base_twx = Path(tmp) / "base.twx"
-            ops().export(base, newest(found)["version"], base_twx, toolkits=False)
+            base_twx = base_package(base, Path(tmp))
             note = f"Packaged to match {base} on the server"
         database_json = Path(tmp) / "database.json"
         summary = python("generate_app.py", spec_path, dest, "--toolkit", toolkit, "--database-json", database_json,
@@ -494,7 +503,7 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: st
 
 
 @mcp.tool()
-def build_widget_toolkit(toolkit: str, snapshot: str) -> dict:
+def build_widget_toolkit(toolkit: str, snapshot: str, base: str | None = None) -> dict:
     """Build a toolkit of coach widgets for Coach Designer's palette as work/<ACRONYM>-<snapshot>.twx, then install it
     with install_app. toolkit: "modernizer" is Modernizer Widgets (MDW), the React + Carbon widgets of modernized
     coaches (modernize_app); "builder" is App Builder Widgets (ABW), the classic widgets of the coaches create_app
@@ -502,7 +511,10 @@ def build_widget_toolkit(toolkit: str, snapshot: str) -> dict:
     (coach-ui/scripts/check-widgets.mjs: renders at runtime and as a Coach Designer preview, Carbon styles present,
     no page errors) and builds no toolkit when a check fails. Each build is a new snapshot of the same toolkit. An app
     keeps the snapshot it depends on, also when create_app rebuilds it; it moves to a newer one only when its widgets
-    are placed again."""
+    are placed again.
+    The toolkit is packaged for BAW 26.0.0. For an older server (24.0.x, 25.0.x), which does not import a package
+    from a newer BAW, pass base: an app on the server (its acronym) or an exported .twx in the project; the toolkit
+    then takes that server's BAW build, system toolkit snapshots and settings fields."""
     if toolkit not in widget_toolkit.TOOLKITS:
         raise ToolError(f"No toolkit {toolkit!r}; choose one of: {', '.join(sorted(widget_toolkit.TOOLKITS))}")
     acronym = widget_toolkit.TOOLKITS[toolkit]["acronym"]
@@ -516,7 +528,11 @@ def build_widget_toolkit(toolkit: str, snapshot: str) -> dict:
             raise ToolError(f"The widget check failed, so no toolkit was built. Fix the widget and build again:\n{e}")
     WORK.mkdir(exist_ok=True)
     dest = WORK / f"{acronym}-{re.sub(r'[^A-Za-z0-9.]+', '_', snapshot)}.twx"
-    summary = python("widget_toolkit.py", "build", toolkit, snapshot, dest)
+    with tempfile.TemporaryDirectory() as tmp:
+        base_args = ["--base", base_package(base, Path(tmp))] if base else []
+        summary = python("widget_toolkit.py", "build", toolkit, snapshot, dest, *base_args)
+        if base:
+            summary += f"\nPackaged to match {base}"
     result = {"twx": rel(dest), "summary": summary, "build": build[-500:]}
     if checks:
         result["checks"] = checks[-500:]
