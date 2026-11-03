@@ -16,6 +16,7 @@ does for UI Toolkit views; only type references (classId) carry a "<dependency u
 
     python3 server/widget_toolkit.py build modernizer 0.0.1 work/MDW-0.0.1.twx
     python3 server/widget_toolkit.py build builder 1.0.0 work/ABW-1.0.0.twx
+    python3 server/widget_toolkit.py build builder 1.0.0 work/ABW-1.0.0.twx --base work/any-app-from-that-server.twx
     python3 server/widget_toolkit.py use work/app.twx work/MDW-0.0.1.twx work/app-widgets.twx --swap "Requester:Text1=text" --swap "Requester:Button1=button"
 """
 
@@ -239,12 +240,14 @@ def managed_file(name, mime, data, files, objects, file_entries, new_id):
     return asset_id
 
 
-def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author="widget_toolkit"):
+def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author="widget_toolkit", base_twx: Path | None = None):
     """Write the toolkit .twx. Returns the names of its widgets. Object IDs are the same in every build;
-    versionIds and the snapshot ID are new, so BAW installs the new content as a new snapshot."""
+    versionIds and the snapshot ID are new, so BAW installs the new content as a new snapshot.
+    base_twx: an app exported from the target server, to package the toolkit for that server's BAW build
+    (needed before BAW 26.0.0); without it the built-in BAW 26.0.0 packaging."""
     tk = TOOLKITS[toolkit]
     classic = tk.get("classic")
-    base = app_template.builtin()
+    base = app_template.read_base(base_twx) if base_twx else app_template.builtin()
     files, objects, file_entries, tags = {}, [], [], {}
     asset = lambda name, mime, data: managed_file(name, mime, data, files, objects, file_entries, stable_ids(toolkit, f"file/{name}"))  # noqa: E731
     assets = [] if classic else [asset(name, mime, (bundle / name).read_bytes()) for name, mime in BUNDLE_FILES]
@@ -273,8 +276,8 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
         tags[view_id] = w["tags"] + [tk["name"]]
     settings_id = stable_ids(toolkit, "settings")
     defaults = ("63." + settings_id(), uid())
-    files[f"objects/{defaults[0]}.xml"] = app_template.PROJECT_DEFAULTS.format(
-        id=defaults[0], version=defaults[1], guid=settings_id(), author=author, theme=app_template.DEFAULT_THEME, environment=base["environment"]
+    files[f"objects/{defaults[0]}.xml"] = app_template.project_defaults(
+        base, id=defaults[0], version=defaults[1], guid=settings_id(), author=author, theme=app_template.DEFAULT_THEME, environment=base["environment"]
     ).replace('name="Process App Settings"', 'name="Toolkit Settings"')
     objects.insert(0, (*defaults, "Toolkit Settings", "projectDefaults"))
     ids = {"projectId": tk["projectId"], "branchId": tk["branchId"], "branchName": "Main", "snapshotId": "2064." + uid()}
@@ -422,6 +425,7 @@ def main():
     b.add_argument("toolkit", choices=sorted(TOOLKITS))
     b.add_argument("snapshot")
     b.add_argument("dest", type=Path)
+    b.add_argument("--base", type=Path, help="An app exported from the target server, to match its BAW build (needed before BAW 26.0.0)")
     v = sub.add_parser("preview", help="Print a widget's Coach Designer preview script (for offline checks)")
     v.add_argument("toolkit", choices=sorted(TOOLKITS))
     v.add_argument("kind")
@@ -437,7 +441,7 @@ def main():
         w = widgets(args.toolkit)[args.kind]
         print(preview_js(args.kind, TOOLKITS[args.toolkit]["acronym"], w["sample"], w["options"]))
     elif args.command == "build":
-        names = build(args.toolkit, args.snapshot, args.dest)
+        names = build(args.toolkit, args.snapshot, args.dest, base_twx=args.base)
         print(f"Wrote {args.dest}: {TOOLKITS[args.toolkit]['name']} ({TOOLKITS[args.toolkit]['acronym']}) {args.snapshot}, widgets: {', '.join(names)}")
     else:
         swaps = []
