@@ -445,7 +445,7 @@ def columns(lay, var, fields, count, weights=None, make=input_view):
 
 def section(lay, var, s):
     content = [place_group(lay, var, s)] if "group" in s else columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"))
-    return widget(lay, "section", s["title"], children=content, options=[("intro", s.get("intro", ""))])
+    return widget(lay, "section", s["title"], children=content, options=[("intro", s.get("intro", ""))], show_label=not s.get("hideTitle"))
 
 
 def sections(lay, var, step):
