@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sprint 2 vs Sprint 3 · From single widgets to whole sections that remember</title>
+  <meta name="description" content="A five-slide sprint review: in Sprint 2 the Quote screen was built from small widgets, dragged one field at a time; in Sprint 3 whole sections are reusable groups you drag in once, and the screen saves and loads every quote.">
+  <script>
+    // Apply the saved theme before first paint.
+    try {
+      const t = localStorage.getItem('sprint-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@300;400;600&display=swap">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/slides.css">
+</head>
+<body>
+  <a class="skip" href="#hero">Skip to the slides</a>
+
+  <header class="masthead">
+    <a class="wordmark" href="#hero"><span class="wordmark-ibm">IBM</span><span>Sprint review</span><span class="wordmark-sub">Sprint 2 vs Sprint 3</span></a>
+    <div class="controls">
+      <button class="ctl ctl-step" type="button" data-step="-1" aria-label="Previous slide">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <output class="counter" data-counter aria-live="polite">1 / 5</output>
+      <button class="ctl ctl-step" type="button" data-step="1" aria-label="Next slide">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="ctl notes-btn" type="button" data-notes-toggle aria-pressed="false" aria-controls="notes-panel" title="Talk track (N)">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>
+        <span>Notes</span>
+      </button>
+      <button class="ctl theme" type="button" data-theme-toggle aria-label="Theme: system">
+        <svg class="ico ico-system" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12"/><path d="M8 20h8M12 16v4"/></svg>
+        <svg class="ico ico-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="ico ico-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        <span class="theme-label" data-theme-label>System</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 1. HERO --------------------------------------------------------- -->
+    <section id="hero" class="slide hero" aria-labelledby="hero-title" data-slide>
+      <div class="hero-copy">
+        <p class="kicker">IBM Bob × BAW Dev Tools · sprint review</p>
+        <h1 id="hero-title" class="display">From single widgets to whole sections that remember.</h1>
+        <p class="lead">Sprint 2 gave us small widgets, one drag per field. Sprint 3 drags whole sections and saves every quote.</p>
+        <a class="btn" href="#glance">See the change
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+        </a>
+      </div>
+
+      <figure class="hero-art" aria-label="Sprint 2: four separate widgets. Sprint 3: the same widgets inside one group, saved to a table.">
+        <div class="era era-2">
+          <span class="numeral">2</span>
+          <div class="bricks" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <p class="era-cap">Widgets, one at a time</p>
+        </div>
+        <svg class="era-arrow" viewBox="0 0 48 24" aria-hidden="true"><path d="M2 12h42M34 4l10 8-10 8"/></svg>
+        <div class="era era-3">
+          <span class="numeral">3</span>
+          <div class="wall" aria-hidden="true">
+            <span class="wall-name">Group Contact</span>
+            <div class="bricks"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="link-db" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+            <span>saved</span>
+          </div>
+          <p class="era-cap">Whole sections that remember</p>
+        </div>
+      </figure>
+      <template data-notes data-time="45 s">
+        <p>“Thanks for joining. In the next few minutes I want to show you one thing: what changed between Sprint 2 and Sprint 3, and why it matters for your team.”</p>
+        <p class="act">Point at the grey 2 and the loose pieces under it.</p>
+        <p>“A quick reminder of where we were. In Sprint 2, Bob rebuilt your Quote screen from small widgets: a text field, a checkbox, a button. Each one is a piece your developers can drag around in BAW’s Coach Designer.”</p>
+        <p>“That was a big step forward. But you asked for bigger pieces. The same block of fields shows up on several screens, and nobody wants to build it again every time. And there was a second gap: nothing the screen collected was saved to a database.”</p>
+        <p class="act">Point at the blue 3 and the group under it.</p>
+        <p>“Sprint 3 closes both gaps. A whole section is now one piece you drag in, and the screen remembers every quote.”</p>
+      </template>
+    </section>
+
+    <!-- 2. AT A GLANCE -------------------------------------------------- -->
+    <section id="glance" class="slide glance" aria-labelledby="glance-title" data-slide>
+      <h2 id="glance-title" class="h2">At a glance</h2>
+      <div class="compare-wrap">
+        <table class="compare">
+          <thead>
+            <tr>
+              <th scope="col"><span class="sr-only">Topic</span></th>
+              <th scope="col" class="col-2"><span class="tag tag-2">Sprint 2</span> Quote widgets</th>
+              <th scope="col" class="col-3"><span class="tag tag-3">Sprint 3</span> Groups and the database</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">What you drag in Coach Designer</th><td>One widget: a text field, a checkbox, a button</td><td class="col-3">A whole section, a group such as “Group Contact”</td></tr>
+            <tr><th scope="row">Where it lives</th><td>A toolkit every app can use<sup><a href="#ref-toolkits">2</a></sup></td><td class="col-3">Inside your app, as a View under User interface<sup><a href="#ref-reuse">1</a></sup></td></tr>
+            <tr><th scope="row">Reuse across steps</th><td>Rebuild the same fields on each screen</td><td class="col-3">Place the same group on the form and on the review</td></tr>
+            <tr><th scope="row">Read-only review</th><td>A separate review list</td><td class="col-3">The same group, placed read-only<sup><a href="#ref-visibility">5</a></sup></td></tr>
+            <tr><th scope="row">Change it once</th><td>Change each screen</td><td class="col-3">Change the group; every screen follows</td></tr>
+            <tr><th scope="row">Data</th><td>Nothing saved to a database</td><td class="col-3">Submit saves the quote; Load brings it back</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="say">“Sprint 2 was about the pieces. Sprint 3 puts the pieces together, and keeps the data.”</p>
+      <template data-notes data-time="1 min">
+        <p>“Here is the whole story in one table. Grey is Sprint 2, blue is Sprint 3.”</p>
+        <p class="act">Go down the rows.</p>
+        <p>“What you drag: before, one field at a time. Now, a whole section, like Group Contact.”</p>
+        <p>“Where it lives: the widgets live in a shared toolkit that every app can use. The new groups live inside your own app, where your team finds them under User interface.”</p>
+        <p>“The review screen: before, it had its own separate list. Now we drop the same group on the review, set to read-only.”</p>
+        <p>“And the last two rows are the ones I’d ask you to remember. Change a group once, and every screen follows. And the data is saved.”</p>
+        <p>“So: Sprint 2 was about the pieces. Sprint 3 puts the pieces together, and keeps the data.”</p>
+      </template>
+    </section>
+
+    <!-- 3. DRAG AND DROP ------------------------------------------------ -->
+    <section id="drag" class="slide drag" aria-labelledby="drag-title" data-slide>
+      <div class="drag-head">
+        <h2 id="drag-title" class="h2">Drag a whole section, not one field.</h2>
+        <button class="btn btn-ghost" type="button" data-replay>
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></svg>
+          Replay
+        </button>
+      </div>
+
+      <div class="designers">
+        <!-- Sprint 2 -->
+        <figure class="designer designer-2" aria-labelledby="d2-cap">
+          <figcaption id="d2-cap"><span class="tag tag-2">Sprint 2</span> One widget per drag<sup><a href="#ref-preview">3</a></sup></figcaption>
+          <div class="studio">
+            <div class="canvas">
+              <p class="screen-name">Quote form</p>
+              <div class="section-box drop d1">
+                <p class="section-title">Section</p>
+                <div class="fields">
+                  <span class="field drop d2"><b>Group Name</b><i></i></span>
+                  <span class="field drop d3"><b>Contact Name</b><i></i></span>
+                  <span class="field drop d4"><b>Contact Email</b><i></i></span>
+                  <span class="field drop d5"><b>Contact Phone</b><i></i></span>
+                </div>
+              </div>
+            </div>
+            <ul class="palette" aria-label="Palette">
+              <li>Section</li><li>Text Field</li><li>Checkbox</li><li>Button</li>
+            </ul>
+          </div>
+          <p class="tally"><strong>5 drags</strong> on the form, and again on the review.</p>
+        </figure>
+
+        <!-- Sprint 3 -->
+        <figure class="designer designer-3" aria-labelledby="d3-cap">
+          <figcaption id="d3-cap"><span class="tag tag-3">Sprint 3</span> One group per drag<sup><a href="#ref-palette">4</a></sup></figcaption>
+          <div class="studio">
+            <div class="canvas canvas-split">
+              <div class="mini">
+                <p class="screen-name">Quote form</p>
+                <div class="group-box drop d1">
+                  <p class="section-title">Group Contact</p>
+                  <div class="fields">
+                    <span class="field"><b>Group Name</b><i></i></span>
+                    <span class="field"><b>Contact Name</b><i></i></span>
+                    <span class="field"><b>Contact Email</b><i></i></span>
+                    <span class="field"><b>Contact Phone</b><i></i></span>
+                  </div>
+                </div>
+              </div>
+              <div class="mini">
+                <p class="screen-name">Review <span class="ro">read-only</span></p>
+                <div class="group-box is-readonly drop d3">
+                  <p class="section-title">Group Contact</p>
+                  <div class="fields">
+                    <span class="field"><b>Group Name</b><em>Northwind Logistics</em></span>
+                    <span class="field"><b>Contact Name</b><em>Maria Alvarez</em></span>
+                    <span class="field"><b>Contact Email</b><em>maria.alvarez@…</em></span>
+                    <span class="field"><b>Contact Phone</b><em>555-0101</em></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <ul class="palette" aria-label="Palette">
+              <li class="is-group">Group Contact <small>View</small></li>
+            </ul>
+          </div>
+          <p class="tally"><strong>1 drag</strong> on the form, <strong>1</strong> on the review.</p>
+        </figure>
+      </div>
+
+      <ul class="points">
+        <li><b>Configure each placement.</b> Editable on the form, read-only on the review, optional fields hidden.<sup><a href="#ref-options">6</a></sup></li>
+        <li><b>Change it in one place.</b> Move or relabel a field and every screen follows. Bob keeps the change on a rebuild.</li>
+        <li><b>Test it alone.</b> Each group has its own Preview service.</li>
+        <li><b>Modern too.</b> The React + Carbon copy gets a “(Modernized)” version of every group.</li>
+      </ul>
+      <template data-notes data-time="1½ min">
+        <p class="act">Press Replay, so the room sees both sides move.</p>
+        <p>“On the left is Sprint 2. To build the contact section, a developer drags in a Section, then four fields, one at a time. Five drags. And the review screen needs all of that again.”</p>
+        <p>“On the right is Sprint 3. Group Contact is one item in the palette. One drag on the form, one on the review, and all four fields come along.”</p>
+        <p class="act">Point at the read-only review.</p>
+        <p>“Same group, two settings. On the form, people can type. On the review it’s read-only, so nobody changes a quote by accident. And optional fields can be hidden where they aren’t needed.”</p>
+        <p>“Here’s the part that matters for maintenance. If your team adds, moves or renames a field in the group, every screen that uses it follows. Once they save a snapshot, Bob sees the change, and when it rebuilds the app later it keeps their work. It tells you what changed, and asks before replacing anything.”</p>
+        <p>“Two more things. Each group can be tested on its own. And the modern React and Carbon version of the app gets a matching modern copy of every group.”</p>
+      </template>
+    </section>
+
+    <!-- 4. DATABASE ----------------------------------------------------- -->
+    <section id="database" class="slide database" aria-labelledby="db-title" data-slide>
+      <div class="db-head">
+        <h2 id="db-title" class="h2">The screen now remembers.</h2>
+        <p class="lead">In Sprint 2 the form saved nothing to a database. In Sprint 3 every quote is a row in the app database.</p>
+      </div>
+
+      <div class="flow">
+        <figure class="shot">
+          <img src="media/02-quote-saved.webp" width="1400" height="492" alt="The Quote Submitted page: reference number GQ-16286665 for Lighthouse Bakery Co.">
+          <figcaption><span class="step-no">1</span> Submit saves the quote</figcaption>
+        </figure>
+
+        <div class="pipe pipe-save" aria-hidden="true"><span>Save</span><svg viewBox="0 0 48 24"><path d="M2 12h42M34 4l10 8-10 8"/></svg></div>
+
+        <figure class="table-viz" aria-label="The quote table in the app database, one column per field. The newest row, Lighthouse Bakery Co, was just saved.">
+          <figcaption>
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+            Quote table · app database
+          </figcaption>
+          <div class="grid" role="table">
+            <div class="row head" role="row"><span role="columnheader">group_name</span><span role="columnheader">contact_name</span><span role="columnheader">rating_method</span></div>
+            <div class="row is-loaded" role="row"><span role="cell">Northwind Logistics</span><span role="cell">Maria Alvarez</span><span role="cell">Experience</span></div>
+            <div class="row" role="row"><span role="cell">Harbor Dental Group</span><span role="cell">Sam Okafor</span><span role="cell">Manual</span></div>
+            <div class="row is-new" role="row"><span role="cell">Lighthouse Bakery Co</span><span role="cell">Dana Reyes</span><span role="cell">Blended</span></div>
+          </div>
+        </figure>
+
+        <div class="pipe pipe-load" aria-hidden="true"><span>Load</span><svg viewBox="0 0 48 24"><path d="M2 12h42M34 4l10 8-10 8"/></svg></div>
+
+        <figure class="shot">
+          <img src="media/03-load-filled.webp" width="1400" height="498" alt="The quote form filled again after pressing Load with the Group Name Northwind Logistics.">
+          <figcaption><span class="step-no">2</span> Load fills the form again</figcaption>
+        </figure>
+      </div>
+
+      <dl class="facts">
+        <div><dt>No Bob at run time</dt><dd>The app saves and loads through BAW’s own connection.<sup><a href="#ref-sql">7</a></sup> Load and Save are service flows a developer can run in the designer.</dd></div>
+        <div><dt>Safe by design</dt><dd>Bob writes to the app database only. Changing BAW’s own records needs a person’s approval and a backup first.</dd></div>
+        <div><dt>No database code</dt><dd>Bob designs the table from the form itself: one column per field, keyed by Group Name.</dd></div>
+      </dl>
+      <template data-notes data-time="1½ min">
+        <p>“Now the second change. In Sprint 2 the form collected the data, but nothing went into a database. In Sprint 3 every quote becomes a row in a table.”</p>
+        <p class="act">Point at the first picture, then the green row.</p>
+        <p>“Someone fills in a quote and presses Submit. The quote is saved, and they get a reference number. That’s the green row in the middle: Lighthouse Bakery, just saved.”</p>
+        <p class="act">Point at the blue row, then the last picture.</p>
+        <p>“Later, anyone opens an empty form, types the group name and presses Load. The whole quote comes back. That’s the blue row, Northwind Logistics, loaded back into the form.”</p>
+        <p class="act">Point at the three notes along the bottom.</p>
+        <p>“Three things I want everyone to hear. One: the app doesn’t need Bob to run. It saves and loads through BAW’s own connection to the database, and your developers can open and run those steps in BAW themselves.”</p>
+        <p>“Two: it’s safe. Bob only writes to the database set aside for apps. Changing BAW’s own records needs a person to approve it, and Bob backs up first.”</p>
+        <p>“Three: nobody wrote database code. Bob designed the table from the form itself, one column for each field.”</p>
+      </template>
+    </section>
+
+    <!-- 5. FOR THE TEAM ------------------------------------------------- -->
+    <section id="team" class="slide team" aria-labelledby="team-title" data-slide>
+      <h2 id="team-title" class="h2">What changes for your team.</h2>
+      <dl class="outcomes">
+        <div>
+          <dt>Build faster</dt>
+          <dd>One group replaces the same fields rebuilt on every screen. Bob proposes groups for fields that repeat, and shows them before building.</dd>
+        </div>
+        <div>
+          <dt>Maintain in BAW</dt>
+          <dd>Groups are ordinary BAW Views. Your developers change them in Coach Designer, without going back to Bob.</dd>
+        </div>
+        <div>
+          <dt>Keep the data</dt>
+          <dd>Every quote is saved and can be loaded again, ready for reports and for the next step of the work.</dd>
+        </div>
+      </dl>
+      <blockquote class="closing">
+        <p>Sprint 2 proved Bob can build with your toolkit. Sprint 3 makes the result reusable, maintainable and connected to your data.</p>
+      </blockquote>
+      <template data-notes data-time="1 min">
+        <p>“So what does this mean for your team?”</p>
+        <p>“Build faster. A section is built once and reused, instead of rebuilt on every screen. Bob suggests which sections should become groups, and shows you before it builds anything.”</p>
+        <p>“Maintain in BAW. Groups are normal BAW building blocks. Your developers change them in the designer, without going back to Bob.”</p>
+        <p>“Keep the data. Every quote is saved and can be loaded again, ready for reports and for the next step of the work.”</p>
+        <p class="act">Pause on the closing line.</p>
+        <p>“Sprint 2 proved Bob can build with your toolkit. Sprint 3 makes the result reusable, maintainable and connected to your data. Thank you. Happy to take questions.”</p>
+        <p class="act">If asked: single widgets are still in the toolkits; a changed group survives a rebuild once a snapshot is saved; the data sits in the platform’s database set aside for apps; Bob proposes groups for 3+ fields on 2+ screens and shows them first.</p>
+      </template>
+    </section>
+  </main>
+
+  <footer id="refs" class="refs" aria-labelledby="refs-title">
+    <h2 id="refs-title" class="refs-title">References</h2>
+    <ol>
+      <li id="ref-reuse">IBM, <a href="https://www.ibm.com/docs/en/baw/SS8JB4_26.0.x/com.ibm.wbpm.wle.editor.doc/topics/tcreatingviews.html">Developing reusable views (BAW 26.0.x)</a></li>
+      <li id="ref-toolkits">IBM, <a href="https://www.ibm.com/docs/en/baw/19.0.0?topic=mut-creating-changing-deleting-toolkit-dependency-in-designer-view">Creating, changing, and deleting a toolkit dependency</a></li>
+      <li id="ref-preview">IBM, <a href="https://www.ibm.com/docs/en/baw/26.0.x?topic=api-event-handlers-view-design-time-preview">Event handlers for view design-time preview (BAW 26.0.x)</a></li>
+      <li id="ref-palette">IBM, <a href="https://www.ibm.com/docs/en/bpm/8.6.0?topic=cui-laying-out-coach-coach-view-using-grid-layout">Laying out a coach or coach view using the grid layout</a></li>
+      <li id="ref-visibility">IBM, <a href="https://www.ibm.com/docs/en/bpm/8.6.0?topic=views-setting-visibility-coach">Setting the visibility of coach views</a></li>
+      <li id="ref-options">IBM, <a href="https://www.ibm.com/docs/en/SSFPJS_8.6.0/com.ibm.wbpm.wle.editor.doc/topics/c_config_options.html">Configuration properties and configuration options</a></li>
+      <li id="ref-sql">IBM, <a href="https://www.ibm.com/docs/en/baw/20.0.0?topic=service-invoking-sql-integration-flows">Invoking SQL integration flows</a></li>
+    </ol>
+    <p class="refs-note">Pictures come from a neutral example app, “Quote Desk”. Sample names are fictional.</p>
+  </footer>
+
+  <aside id="notes-panel" class="notes-panel" aria-label="Talk track for this slide" hidden>
+    <p class="notes-head"><span data-notes-title>Talk track</span> <span class="notes-time" data-notes-time></span></p>
+    <div class="notes-body" data-notes-body></div>
+  </aside>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+/* Design tokens, mapped to the IBM Carbon Design System (White and Gray 100 themes),
+   the same family as the other demo pages. Every colour, size, space and easing comes from here.
+   light-dark() picks the value for the active colour scheme; main.js sets data-theme. */
+:root {
+  color-scheme: light dark;
+
+  /* colour: Carbon theme tokens, White (light) and Gray 100 (dark) */
+  --paper:       light-dark(#ffffff, #161616);  /* background */
+  --paper-2:     light-dark(#f4f4f4, #262626);  /* layer-01 */
+  --paper-3:     light-dark(#e0e0e0, #393939);  /* layer-accent-01 */
+  --ink:         light-dark(#161616, #f4f4f4);  /* text-primary */
+  --ink-2:       light-dark(#525252, #c6c6c6);  /* text-secondary */
+  --ink-3:       light-dark(#6f6f6f, #a8a8a8);  /* text-helper */
+  --rule:        light-dark(#e0e0e0, #393939);  /* border-subtle */
+  --rule-strong: light-dark(#8d8d8d, #6f6f6f);  /* border-strong */
+  --accent:      light-dark(#0f62fe, #78a9ff);  /* interactive: Sprint 3 */
+  --accent-soft: light-dark(#edf5ff, #001d6c);  /* support-info background */
+  --accent-ink:  light-dark(#0043ce, #a6c8ff);  /* readable text on --accent-soft */
+  --past:        light-dark(#8d8d8d, #6f6f6f);  /* Sprint 2, deliberately quiet */
+  --past-soft:   light-dark(#f4f4f4, #262626);
+  --new:         #24a148;                       /* support-success: a saved row */
+  --new-soft:    light-dark(#defbe6, #044317);
+  --new-ink:     light-dark(#0e6027, #a7f0ba);
+  --focus:       light-dark(#0f62fe, #ffffff);
+  --hover:       light-dark(#e8e8e8, #333333);  /* layer-hover-01 */
+  --shell:       #161616;                       /* UI shell header, Gray 100 in both themes */
+  --shell-hover: #2e2e2e;
+  --shell-text:  #f4f4f4;
+  --shell-text-2:#c6c6c6;
+  --shell-rule:  #393939;
+
+  /* type: IBM Plex, Carbon type tokens. Display is Plex Sans Light, body Plex Sans Regular. */
+  --font-sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-code: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* Carbon fluid scale, sized from the smaller viewport side so a slide fits 16:9, 9:16 and 1:1 */
+  --t-xs: 0.75rem;
+  --t-sm: clamp(0.8125rem, 0.5vmin + 0.6rem, 1rem);
+  --t-base: clamp(0.9375rem, 0.6vmin + 0.7rem, 1.25rem);
+  --t-md: clamp(1.0625rem, 0.9vmin + 0.75rem, 1.5rem);
+  --t-lg: clamp(1.25rem, 1.4vmin + 0.8rem, 2rem);
+  --t-xl: clamp(1.75rem, 2.6vmin + 1rem, 3.5rem);
+  --t-display: clamp(2.75rem, 4.6vmin + 1.4rem, 6rem);
+  --t-numeral: clamp(6rem, 22vmin, 20rem);
+
+  /* Carbon spacing scale (4pt) */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-6: 24px;
+  --s-8: 32px; --s-12: 48px; --s-16: 64px; --s-24: 96px;
+
+  /* shape and depth: square corners, hairlines only */
+  --radius: 0;
+  --hairline: 1px solid var(--rule);
+  --hairline-strong: 1px solid var(--rule-strong);
+
+  /* Carbon motion */
+  --ease-productive: cubic-bezier(0.2, 0, 0.38, 0.9);
+  --ease-expressive: cubic-bezier(0.4, 0.14, 0.3, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.38, 0.9);
+  --d-press: 70ms;
+  --d-state: 110ms;
+  --d-layout: 240ms;
+  --d-drop: 520ms;
+  --d-enter: 700ms;
+
+  /* chrome */
+  --header-h: 48px;
+  --gutter: clamp(16px, 4vw, 96px);
+  --measure: 60ch;
+  --z-header: 30;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
