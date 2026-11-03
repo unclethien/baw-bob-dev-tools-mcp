@@ -283,8 +283,8 @@ def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, 
             out.writestr(name, text)
         out.writestr("META-INF/package.xml", app_template.package_xml(base, app, ids, objects, dependencies=base.get("dependencies", ()) if same_app else ()))
         out.writestr(f"objects/{env[0]}.xml", app_template.ENV_VARS.format(id=env[0], version=env[1], guid=uid(), author=author))
-        out.writestr(f"objects/{defaults[0]}.xml", app_template.PROJECT_DEFAULTS.format(
-            id=defaults[0], version=defaults[1], guid=uid(), author=author, theme=app_template.DEFAULT_THEME, environment=base["environment"]))
+        out.writestr(f"objects/{defaults[0]}.xml", app_template.project_defaults(
+            base, id=defaults[0], version=defaults[1], guid=uid(), author=author, theme=app_template.DEFAULT_THEME, environment=base["environment"]))
         out.writestr(f"objects/{bo['id']}.xml", business_object_xml(bo["id"], bo["version"], bo["name"], bo["props"], author))
         for pid, version, var_id, service, flow in services:
             out.writestr(f"objects/{pid}.xml", service_xml(pid, version, bo["id"], var_id, service, flow(bo["id"], var_id), var, author))
