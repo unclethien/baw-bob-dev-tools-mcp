@@ -40,6 +40,7 @@ IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 sys.path.insert(0, str(SERVER))
 
 import app_template  # noqa: E402
+import generate_app  # noqa: E402
 import widget_toolkit  # noqa: E402
 from baw_ops import BawOps, ConfigError, configured, missing_settings  # noqa: E402
 
@@ -395,6 +396,9 @@ def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | N
     the server (its acronym) or an exported .twx in the project, to match that server's BAW build and
     toolkit versions; ask the user which app to use. When the app already exists on the server, the
     build becomes a new snapshot of it, and base is not needed.
+    Every section becomes a reusable View by default (named after its title, with its Preview service), so the
+    coaches place Views instead of listing fields; "reusableViews": false on the spec, or "reusable": false on a
+    section, keeps its fields inline. The result's "groups" lists every View, named or default.
     "groups" (app-specs/example-grouped-quote.json) are reusable groups of fields: each becomes a View in the app,
     listed under its User interface, with a "<group> Preview" service that shows it alone. A section
     {"group": "<name>"} places the group instead of listing fields; "readonly": true and "hide": [field names] set
@@ -445,7 +449,7 @@ def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | N
                          *[a for g in replace_groups or [] for a in ("--replace-group", g)])
         database = json.loads(database_json.read_text()) if database_json.exists() else None
     result = {"twx": rel(dest), "newApp": not existing, "summary": summary + (f"\n{note}" if note else "")}
-    groups = json.loads(spec_path.read_text()).get("groups") or []
+    groups = generate_app.load_spec(spec_path)["groups"]  # with the default ones: a View per section
     if groups:
         result["groups"] = [{"name": g["name"], "view": g["name"], "preview": f"{g['name']} Preview"} for g in groups]
     kept = re.search(r"^Changed in BAW, kept: (.+)$", summary, re.M)
