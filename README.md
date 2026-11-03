@@ -6,6 +6,8 @@ An MCP server that lets an AI coding agent such as [IBM Bob](https://bob.ibm.com
 
 **Documentation:** <https://unclethien.github.io/baw-bob-dev-tools-mcp/>: getting started, the app spec reference, a terminal guide for exporting and importing apps, and the BAW REST API usage reference.
 
+**For contributors:** [project overview](docs/project-overview-pdr.md), [codebase summary](docs/codebase-summary.md), [code standards](docs/code-standards.md), [system architecture](docs/system-architecture.md) and [roadmap](docs/project-roadmap.md).
+
 ## What the agent can do with it
 
 | Tool | What it does |
