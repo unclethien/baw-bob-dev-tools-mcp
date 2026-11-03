@@ -64,6 +64,9 @@ CHOICE_WIDGETS = {kind for kind in FIELD_WIDGETS
                   if any((name, type_, is_list) == ("options", "NameValuePair", True) for name, _, type_, is_list in CONTRACT[kind]["options"])}
 SPEC_KEYS_FIRST = ("pattern", "message", "example", "min", "max")  # the order a spec has always listed these; other options follow
 SPEC_RESERVED = {"path", "label", "type", "readonly", "required", "help", "options"}  # spec keys an option must not overwrite
+# A UI Toolkit option whose value the widget takes under another name. The widgets name their other options as the
+# UI Toolkit does (tabIndex, selectAll, ...), so those carry over under their own name, and so do the event handlers.
+UI_TOOLKIT_NAMES = {"regExp": "pattern", "placeHolder": "example"}
 SCREEN_VIEWS = ("Coach Screen (", "PP React ")  # the screen view, and its name in apps modernized before the rename
 CONTAINERS = {"Panel", "Tab Section", "Vertical Layout", "Horizontal Layout", "Collapsible Panel", "Well"}
 BACKWARD = re.compile(r"\b(back|previous|prev|cancel|close)\b", re.I)
@@ -260,6 +263,30 @@ def widget_options(config):
         return None
 
 
+def option_value(value):
+    """A layout option's value; a responsive one (a value per screen size) as its value on large screens."""
+    if not (value or "").startswith('{"isResponsiveData"'):
+        return value
+    try:
+        values = json.loads(value)["values"]
+        return next((v["value"] for v in values if v.get("deviceConfigID") == "LargeID"), values[0]["value"] if values else None)
+    except (ValueError, KeyError, TypeError, IndexError):
+        return None
+
+
+def widget_config(it):
+    """A view's options under the names of the widget that replaces it: a Modernizer widget's own, a UI Toolkit
+    control's with UI_TOOLKIT_NAMES applied."""
+    if it["widget"]:
+        return it["config"]
+    return {UI_TOOLKIT_NAMES.get(k, k): option_value(v) for k, v in it["config"].items() if not k.startswith("@")}
+
+
+def widget_events(config, kind):
+    """The event handlers in a view's options that the widget of this kind has: {event: code}."""
+    return {name: config[name] for name, *_ in CONTRACT[kind]["events"] if (config.get(name) or "").strip()}
+
+
 def renderable(it):
     """A widget renders this view: a field widget, a known input, and a select or radio group only with fixed items."""
     if it["widget"]:
@@ -280,10 +307,13 @@ def field_spec(it, variable):
     spec = {"path": path, "label": it["label"] or humanize(path), "type": kind}
     if it["options"]:
         spec["options"] = it["options"]
-    if it["widget"]:
-        spec.update({k: it["config"][k] for k in widget_spec_keys(kind) if it["config"].get(k)})
-        if (it["config"].get("@helpText") or "").strip():
-            spec["help"] = it["config"]["@helpText"].strip()
+    widget = "text" if kind == "output" else kind
+    config = widget_config(it)
+    spec.update({k: config[k] for k in widget_spec_keys(widget) if config.get(k)})
+    if widget_events(config, widget):
+        spec["events"] = widget_events(config, widget)
+    if it["widget"] and (it["config"].get("@helpText") or "").strip():
+        spec["help"] = it["config"]["@helpText"].strip()
     if kind == "output" or "READONLY" in it["visibility"]:
         spec["readonly"] = True
     if "REQUIRED" in it["visibility"]:
@@ -355,12 +385,17 @@ def inventory_service(root, names, groups=None):
                            if f.get("sourceRef") == form.get("id") and first(f, "coachEventPath") is not None
                            and first(f, "coachEventPath").text == b["viewId"] and f.get("targetRef") in nodes), "")
             if b["widget"]:
-                primary = (b["config"].get("kind") or "").lower() != "secondary"
+                primary = (b["config"].get("kind") or "").lower() in ("", "primary", "danger")
             else:
                 primary = b["colorStyle"] == "P" or (b["colorStyle"] != "D" and not BACKWARD.search(b["label"]))
             button = {"label": b["label"] or b["viewId"], "viewId": b["viewId"], "primary": primary, "to": target or "(not wired)"}
             if b["widget"] and b["config"].get("validate") in ("true", "false"):
                 button["validate"] = b["config"]["validate"] == "true"
+            config = widget_config(b)
+            if (config.get("tabIndex") or "").strip():
+                button["tabIndex"] = config["tabIndex"]
+            if widget_events(config, "button"):
+                button["events"] = widget_events(config, "button")
             buttons.append(button)
         if len(buttons) == 1 and not b["widget"]:  # a Button widget says whether it is primary
             buttons[0]["primary"] = True

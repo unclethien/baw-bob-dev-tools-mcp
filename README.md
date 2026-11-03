@@ -60,7 +60,7 @@ The coaches both tools build are layouts of small widgets, so authors can open t
 | Toolkit | Acronym | Used by | Widgets | Built with |
 |---|---|---|---|---|
 | **App Builder Widgets** | `ABW` | `create_app` | Theme, App Header, Section, Review List, Button Bar | BAW markup and plain JavaScript, no framework; the fields inside are UI Toolkit views |
-| **Modernizer Widgets** | `MDW` | `modernize_app` | Theme, Header, Error Summary, Text Field, Text Area, Number Field, Date Field, Checkbox, Select, Radio Group, Button | React + Carbon, behind a framework-neutral contract |
+| **Modernizer Widgets** | `MDW` | `modernize_app` | Theme, Header, Error Summary, Text Field, Text Area, Number Field, Date Field, Checkbox, Select, Radio Group, Button | React + Carbon, behind a framework-neutral contract. In Coach Designer each widget shows its options in Behavior and Appearance sections and its events in the Events tab, as UI Toolkit controls do; handlers run with BPM UI's `me`, `${Control}` and `page.ui`, and modernizing an app carries the old controls' handlers over |
 
 Each widget shows in the palette with its icon and draws a preview on the canvas that follows its label and options. `build_widget_toolkit` builds a toolkit as `work/<ACR>-<snapshot>.twx`; install it once per server with `install_app`, then pass its snapshot as `create_app` or `modernize_app`'s `toolkit_snapshot`. Bob does both when the server has no snapshot yet. Each build is a new snapshot of the same toolkit, and an app keeps the snapshot it was built with until it is built again.
 

@@ -32,6 +32,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
    | `example` | Add a sample value, shown as the placeholder. Never use real data |
    | `help` | Add a short hint shown with the field (its BAW help text) |
    | `min` / `max` | Set the allowed range of a number field |
+   | `events` | The field's or button's event handlers (`eventON_CHANGE`, `eventON_CLICK`, ...), carried over from the UI Toolkit control it replaces. Keep them; tell the user about any handler that calls UI Toolkit methods a widget may lack |
    | `readonly: true` | Set on every field of a review or summary coach, which then renders as a read-only summary |
    | `intro` | Add one sentence of lead text for a coach |
    | `sectionStyle` | Use `"tabs"` for long single-coach forms, `"stack"` otherwise |
