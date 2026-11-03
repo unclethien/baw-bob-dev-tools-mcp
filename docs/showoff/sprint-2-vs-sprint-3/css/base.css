@@ -1,0 +1,104 @@
+/* Base: reset, type, chrome (masthead, buttons, theme toggle) and shared atoms. */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: var(--header-h); -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 var(--t-base) / 1.5 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+img { display: block; max-width: 100%; height: auto; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+sup { font-size: 0.6em; line-height: 0; margin-left: 2px; }
+sup a { text-decoration: none; }
+figure { margin: 0; }
+h1, h2, h3, p, dl, dd, ul, ol, blockquote { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+
+.display, .h2 {
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.display { font-size: var(--t-display); line-height: 1.1; }
+.h2 { font-size: var(--t-xl); line-height: 1.15; }
+.lead { font-size: var(--t-md); line-height: 1.45; color: var(--ink-2); max-width: var(--measure); text-wrap: pretty; }
+.kicker {
+  font: 400 var(--t-xs) / 1.33 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.skip { position: absolute; left: var(--s-4); top: -100px; z-index: 100; padding: var(--s-3) var(--s-4); background: var(--accent); color: var(--paper); }
+.skip:focus { top: var(--s-2); }
+
+/* masthead: Carbon UI shell, Gray 100 in both themes */
+.masthead {
+  position: fixed; inset: 0 0 auto 0; z-index: var(--z-header);
+  height: var(--header-h);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--shell); color: var(--shell-text);
+  border-bottom: 1px solid var(--shell-rule);
+}
+.wordmark { display: flex; align-items: center; gap: var(--s-2); height: 100%; padding: 0 var(--s-4); color: inherit; text-decoration: none; font-size: var(--t-xs); }
+.wordmark-ibm { font-weight: 600; letter-spacing: 0.02em; }
+.wordmark-sub { color: var(--shell-text-2); padding-left: var(--s-2); border-left: 1px solid var(--shell-rule); }
+.controls { display: flex; align-items: center; height: 100%; }
+.ctl {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  min-width: var(--header-h); height: var(--header-h); padding: 0 var(--s-3);
+  border: 0; border-left: 1px solid var(--shell-rule);
+  background: transparent; color: var(--shell-text);
+  font: 400 var(--t-xs) / 1 var(--font-sans);
+  cursor: pointer; justify-content: center;
+  transition: background-color var(--d-state) var(--ease-productive);
+}
+.ctl:hover { background: var(--shell-hover); }
+.ctl:active { background: var(--shell-rule); }
+.ctl:focus-visible { outline-offset: -2px; }
+.ctl:disabled { color: var(--shell-text-2); cursor: default; background: transparent; }
+.counter { min-width: 56px; text-align: center; font: 400 var(--t-xs) / 1 var(--font-code); font-variant-numeric: tabular-nums; color: var(--shell-text-2); }
+.ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: square; flex: none; }
+.theme .ico { display: none; }
+:root:not([data-theme]) .theme .ico-system,
+:root[data-theme="light"] .theme .ico-light,
+:root[data-theme="dark"] .theme .ico-dark { display: block; }
+
+/* buttons: Carbon primary and ghost */
+.btn {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: var(--s-8);
+  min-height: 48px; padding: var(--s-3) var(--s-4);
+  background: var(--accent); color: var(--paper);
+  border: 0; font: 400 var(--t-sm) / 1.3 var(--font-sans);
+  text-decoration: none; cursor: pointer;
+  transition: background-color var(--d-state) var(--ease-productive), transform var(--d-press) var(--ease-productive);
+}
+.btn:hover { background: light-dark(#0050e6, #a6c8ff); text-decoration: none; }
+.btn:hover .ico { transform: translateY(2px); }
+.btn .ico { transition: transform var(--d-state) var(--ease-productive); }
+.btn:active { transform: translateY(1px); background: light-dark(#002d9c, #d0e2ff); }
+.btn:focus-visible { outline-offset: 2px; }
+.btn-ghost { background: transparent; color: var(--accent); gap: var(--s-2); min-height: 44px; }
+.btn-ghost:hover { background: var(--hover); }
+.btn-ghost:hover .ico { transform: rotate(-30deg); }
+.btn-ghost:active { background: var(--paper-3); }
+
+/* tags: Sprint 2 is quiet gray, Sprint 3 is IBM blue */
+.tag {
+  display: inline-block; padding: 2px var(--s-2);
+  font: 600 var(--t-xs) / 1.4 var(--font-sans);
+  border-radius: 999px; white-space: nowrap;
+}
+.tag-2 { background: var(--paper-3); color: var(--ink); }
+.tag-3 { background: var(--accent-soft); color: var(--accent-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
