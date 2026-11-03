@@ -217,7 +217,52 @@ def load_spec(path: Path) -> dict:
             errors.append(f"confirmation.showFields: unknown field {name!r}")
     if errors:
         raise SystemExit("Invalid app spec:\n  " + "\n  ".join(errors))
+    default_groups(spec)
     return spec
+
+
+def view_name(text):
+    """A group name made from a section title: "&" and "+" read as "and", other punctuation becomes a space, so the
+    name works as a View and a service name ("Reporting & Location" -> "Reporting and Location")."""
+    text = re.sub(r"\s*[&+]\s*", " and ", text or "")
+    return " ".join(re.sub(r"[^\w\s-]", " ", text).split())[:group_views.LABEL_MAX]
+
+
+def taken_names(spec):
+    """Names the default groups' Views and Preview services must not take: the app's services and explicit groups."""
+    names = {spec["service"]["name"]}
+    approval = (spec.get("process") or {}).get("approval")
+    if approval is not None:
+        names.add(approval.get("name") or "Review")
+    if spec.get("_database"):
+        names |= {f"Load {spec['businessObject']['name']}", f"Save {spec['businessObject']['name']}"}
+    for g in spec.get("groups") or []:
+        names |= {g["name"], f"{g['name']} Preview"}
+    return names
+
+
+def default_groups(spec):
+    """Reusable Views by default: every section that lists its own fields becomes a group, so its fields live in a
+    View under the app's User interface (with a "<name> Preview" service) that the coach places, as if the spec had
+    named the group. The section keeps its title; the group is named after it (the step's title for a step without
+    sections). "reusableViews": false on the spec, or "reusable": false on a section (or a step without sections),
+    keeps the fields inline."""
+    if spec.get("reusableViews") is False:
+        return
+    taken, made = taken_names(spec), []
+    for step in spec["steps"]:
+        for s in step["sections"]:
+            inline = s.get("reusable") is False or (s.get("implicit") and step.get("reusable") is False)
+            if "group" in s or inline or not s.get("fields"):
+                continue
+            base = view_name(s.get("title")) or view_name(step["title"]) or "Fields"
+            prefixed = view_name(f"{step['title']} {base}") if view_name(step["title"]) != base else ""
+            candidates = [base, prefixed] + [f"{base} {n}" for n in range(2, 100)]
+            name = next(c for c in candidates if c and c not in taken and f"{c} Preview" not in taken)
+            taken |= {name, f"{name} Preview"}
+            made.append({"name": name, "columns": s.get("columns", 1), "widths": s.get("widths"), "fields": s["fields"]})
+            s["group"] = name
+    spec["groups"] = (spec.get("groups") or []) + made
 
 
 def layout_errors(where, s):
@@ -456,7 +501,7 @@ def tab_content(lay, var, step):
     """A tab shows its fields directly, or a panel per section when the step names sections."""
     s = step["sections"][0]
     if s.get("implicit"):
-        return columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"))
+        return [place_group(lay, var, s)] if "group" in s else columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"))
     return sections(lay, var, step)
 
 

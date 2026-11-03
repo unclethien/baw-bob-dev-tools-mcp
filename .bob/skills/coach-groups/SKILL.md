@@ -1,6 +1,6 @@
 ---
 name: coach-groups
-description: Build reusable groups of fields - BAW Views inside the app, listed under its User interface, each with a "<group> Preview" service - for the classic coaches (create_app) and the React + Carbon coaches (modernize_app), propose them from fields that repeat across screens, and handle groups someone changed in BAW on the next rebuild. Use when the same information appears on several screens, when the user names groups, or when a build reports changedInBaw.
+description: Build reusable groups of fields - BAW Views inside the app, listed under its User interface, each with a "<group> Preview" service - for the classic coaches (create_app) and the React + Carbon coaches (modernize_app), made by default from every section create_app builds, proposed as named groups from fields that repeat across screens, and handle groups someone changed in BAW on the next rebuild. Use for every new app, coach or coach view, when the same information appears on several screens, when the user names groups, or when a build reports changedInBaw.
 ---
 
 # Coach groups
@@ -12,12 +12,22 @@ A **group** is a set of fields that appears on several screens, for example a me
 - Classic coaches place "<group>" (BAW's own fields); modernized coaches place "<group> (Modernized)" (Modernizer Widgets).
 - Each placement has settings: a **"<field> visibility"** dropdown per optional field ("Same as parent", or "Hidden" to hide it there), and the placement's own **Visibility** ("Read only" makes every field in the group read-only).
 
-## When to propose groups
+## Reusable Views by default (create_app)
+
+`create_app` makes **every section a View by default**, even when the spec has no `groups`. The user does not have to ask for reusable Views. A request for "a coach view", "a form" or "a screen" gets them.
+
+- Each section that lists its own fields becomes a group named after its title, with its "<name> Preview" service. A step without sections counts as one section, named after the step. The coach places the View, and the panel keeps the section's title.
+- The name keeps words, digits, spaces and hyphens: "Reporting & Location" becomes the View "Reporting and Location". When a name is taken by a service or another group, the step's title goes in front ("Spouse Details"), then a number ("Details 2").
+- The View's identity is its name, so keep a section's title across rebuilds: renaming the section makes a new View and leaves the old one behind in the app.
+- Only when the user asks for fields placed directly on the coach: `"reusableViews": false` on the spec, or `"reusable": false` on a section (or a step without sections).
+- At the design stop, list the Views, one per section, by name. In the report, list each View and its Preview service, and say they open from the app's User interface.
+
+## When to propose named groups
 
 At the design stop (baw-app-builder step 3, screenshot-to-app section 5, the Modernizer's analyze stop):
 
 - When the user named groups in the request, use them.
-- Otherwise propose a group for a set of **at least three fields that appears on at least two screens** (a form section and the Review that repeats it, or the same details on two steps). `inspect_coaches` lists these as `groupCandidates`. Do not propose smaller groups unless the user asks.
+- Otherwise propose a named group (one View that several sections place) for a set of **at least three fields that appears on at least two screens** (a form section and the Review that repeats it, or the same details on two steps). `inspect_coaches` lists these as `groupCandidates`. Do not propose smaller groups unless the user asks.
 - Show each proposed group: its name, its fields, and where it is placed (editable, read-only, fields hidden). Build only after the user approves.
 
 ## Classic app (create_app)

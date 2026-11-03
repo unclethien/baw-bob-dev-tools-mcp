@@ -77,7 +77,8 @@ When the same information appears on several screens, Bob can build it once as a
 - **Classic UI:** the app spec's `groups` define them, and a section `{"group": "<name>", "readonly": true, "hide": [...]}` places one (details in [docs/app-spec-reference.html](docs/app-spec-reference.html#groups)). The fields inside are BAW's own.
 - **Modernized UI:** `inspect_coaches` reads the groups back, each group's fields listed once in the coach spec, and `modernize_app` builds "<group> (Modernized)" from Modernizer Widgets, with its own Preview service.
 - **Settings per placement:** a "<field> visibility" setting for each optional field (Same as parent, or Hidden), and the placement's own Visibility for Read only.
-- **Proposals:** Bob proposes a group for three or more fields that appear on two or more screens, or uses the groups you name, and shows them for approval before building.
+- **By default:** every section `create_app` builds is a View of its own, named after the section's title, so an app's fields are always in reusable Views without anyone asking. `"reusableViews": false` in the spec (or `"reusable": false` on a section) keeps fields directly on the coach.
+- **Proposals:** Bob proposes a named group for three or more fields that appear on two or more screens, or uses the groups you name, and shows them for approval before building.
 - **Changes in Coach Designer:** users can add, remove, move or relabel a group's fields and every coach follows. Save a snapshot, so Bob sees the change. On the next rebuild Bob keeps that group, says what changed and asks whether to keep it or replace it with the spec's version (`replace_groups`). Other edits to a group (help text, choices, styling) belong in the spec, because a rebuild replaces them.
 
 The steps Bob follows are in [`.bob/skills/coach-groups/SKILL.md`](.bob/skills/coach-groups/SKILL.md).
