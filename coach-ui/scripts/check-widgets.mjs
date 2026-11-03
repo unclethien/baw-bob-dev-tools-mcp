@@ -49,6 +49,8 @@ try {
     const TYPES = ['String', 'Integer', 'Decimal', 'Boolean', 'Date', 'NameValuePair'];
     const GROUPS = ['Behavior', 'Items', 'Appearance'];
     const CATEGORIES = ['Input', 'Informational', 'Layout', 'Operational', 'Chart'];
+    // Names the view or the coach spec already uses for something else.
+    const RESERVED = ['label', 'helpText', 'help', 'visibility', 'path', 'type', 'readonly', 'required', 'binding'];
     const problems = [];
     const seen = { kind: new Set(), view: new Set() };
     for (const w of contract) {
@@ -65,6 +67,7 @@ try {
         if (!TYPES.includes(o.type || 'String')) bad(`option ${o.name}: type ${o.type} is not one of ${TYPES.join(', ')}`);
         if (!GROUPS.includes(o.group)) bad(`option ${o.name}: group must be ${GROUPS.join(', ')}`);
         if (o.name && o.name.startsWith('eventON_')) bad(`option ${o.name}: an event goes in events, not options`);
+        if (RESERVED.includes(o.name) || (o.name || '').startsWith('@')) bad(`option ${o.name}: the name is taken (${RESERVED.join(', ')}); name it after what it holds, e.g. barLabel`);
       }
       const events = w.events || {};
       if (!('eventON_LOAD' in events)) bad('events need eventON_LOAD');
@@ -199,6 +202,16 @@ try {
       return out;
     });
     check('every Carbon component a widget uses is styled', Object.keys(unstyled).length === 0, unstyled);
+    // The toolkit's Carbon classes start with pp-- (ClassPrefix "pp"); a cds-- class has no styles here.
+    const foreign = await page.evaluate(() => {
+      const out = {};
+      for (const cell of document.querySelectorAll('[data-kind]')) {
+        const found = [...new Set([...cell.querySelectorAll('[class]')].flatMap((el) => [...el.classList]).filter((c) => c.startsWith('cds--') || c.startsWith('bx--')))];
+        if (found.length) out[cell.dataset.kind] = found.map((c) => `${c}: write pp--${c.replace(/^(cds|bx)--/, '')}`);
+      }
+      return out;
+    });
+    check('every Carbon class a widget writes has the toolkit prefix pp--', Object.keys(foreign).length === 0, foreign);
     check('no page errors (contract widgets)', errors.length === 0, errors);
     // The contract widgets with their sample values, for a look at widgets the first screenshot does not show.
     if (args.shot) await page.screenshot({ path: args.shot.replace(/(\.png)?$/, '-contract.png'), fullPage: true });
@@ -617,7 +630,7 @@ print(json.dumps(views))`, out], { encoding: 'utf8' }));
     await sleep(200);
     const problems = [];
     let got = await seen(page);
-    for (const w of plain) if (!got[`W_${w.kind}`]?.eventON_LOAD) problems.push(`${w.kind}: eventON_LOAD did not run`);
+    for (const w of plain) if (!got[`W_${w.kind}`]?.eventON_LOAD) problems.push(`${w.kind}: eventON_LOAD did not run (the component threw, or registerWidget names another kind)`);
     // The accessor, then the DOM events of each field.
     const values = await page.evaluate((list, sample) => Object.fromEntries(list.filter((w) => w.accessor).map((w) => {
       const view = window.views[w.kind].view;
@@ -629,28 +642,30 @@ print(json.dumps(views))`, out], { encoding: 'utf8' }));
       return [w.kind, { same: back === value || (back instanceof Date && back.getTime() === value.getTime()) }];
     })), plain, SAMPLE);
     for (const [kind, v] of Object.entries(values)) {
-      if (v.missing) problems.push(`${kind}: me has no accessor methods`);
-      else if (!v.same) problems.push(`${kind}: the accessor setter did not change what the getter reads`);
+      if (v.missing) problems.push(`${kind}: me has no accessor methods (accessor must be [getter, setter] in the contract)`);
+      else if (!v.same) problems.push(`${kind}: the accessor setter did not change what the getter reads (a field must write its value with binding.set)`);
     }
     await sleep(100);
     got = await seen(page);
     for (const w of plain.filter((x) => x.binding !== null && x.events?.eventON_CHANGE)) {
-      if (!got[`W_${w.kind}`]?.eventON_CHANGE) problems.push(`${w.kind}: setting its value did not fire eventON_CHANGE`);
+      if (!got[`W_${w.kind}`]?.eventON_CHANGE) problems.push(`${w.kind}: setting its value did not fire eventON_CHANGE (the field must bind its value with fieldWidget and binding.set)`);
     }
     for (const w of plain.filter((x) => x.events?.eventON_FOCUS || x.events?.eventON_BLUR || x.events?.eventON_INPUT)) {
       const input = `[data-kind=${w.kind}] input:not([type=hidden]), [data-kind=${w.kind}] select, [data-kind=${w.kind}] textarea, [data-kind=${w.kind}] button`;
-      if (!(await page.$(input))) { problems.push(`${w.kind}: declares focus or input events but draws no input`); continue; }
+      if (!(await page.$(input))) { problems.push(`${w.kind}: declares eventON_FOCUS, eventON_BLUR or eventON_INPUT but draws no input, select, textarea or button; drop those events`); continue; }
       if (w.events.eventON_INPUT) await page.type(input, 'x'); else await page.focus(input);
       await page.evaluate(() => document.activeElement && document.activeElement.blur());
       await sleep(50);
       const s = (await seen(page))[`W_${w.kind}`] || {};
-      for (const e of ['eventON_FOCUS', 'eventON_BLUR', 'eventON_INPUT']) if (w.events[e] && !s[e]) problems.push(`${w.kind}: ${e} did not fire`);
+      const hint = { eventON_INPUT: 'declare eventON_INPUT only on a widget whose first input is a text input or textarea, where the user types', eventON_FOCUS: 'its first input could not take the focus', eventON_BLUR: 'its first input could not take the focus' };
+      for (const e of ['eventON_FOCUS', 'eventON_BLUR', 'eventON_INPUT']) if (w.events[e] && !s[e]) problems.push(`${w.kind}: ${e} did not fire (${hint[e]})`);
     }
     check('every widget runs eventON_LOAD, its accessor and its field events', problems.length === 0, problems);
     check('no page errors (every widget\'s events)', errors.length === 0, errors);
     await page.close();
 
-    // Each boundary widget on a page of its own, pressed by its first button or link.
+    // Each boundary widget on a page of its own, pressed by its first button or link. A widget that asks first (a
+    // confirm dialog) is then confirmed with the primary button it shows.
     const pressed = [];
     for (const w of contract.filter((x) => x.boundary)) {
       const { page: p, errors: errs } = await fresh();
@@ -659,12 +674,21 @@ print(json.dumps(views))`, out], { encoding: 'utf8' }));
       if (!(await p.$(target))) { pressed.push(`${w.kind}: draws no button or link to press`); await p.close(); continue; }
       await p.click(target);
       await sleep(150);
+      if (!(await p.evaluate(() => harness.triggered.length))) {
+        const confirm = await p.evaluateHandle((kind) => {
+          const visible = (el) => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+          const scopes = [document.querySelector(`[data-kind=${kind}]`), ...document.querySelectorAll('[role=dialog]')];
+          const all = scopes.flatMap((sc) => (sc ? [...sc.querySelectorAll('.pp--btn--primary, .pp--btn--danger')] : []));
+          return all.filter(visible).filter((b) => b !== document.querySelector(`[data-kind=${kind}] button, [data-kind=${kind}] a`)).pop() || null;
+        }, w.kind);
+        if (confirm.asElement()) { await confirm.asElement().click(); await sleep(150); }
+      }
       const s = (await seen(p))[`W_${w.kind}`] || {};
       const fired = await p.evaluate(() => harness.triggered.map((t) => t.id));
-      if (!s.eventON_LOAD) pressed.push(`${w.kind}: eventON_LOAD did not run`);
-      if (!s.eventON_CLICK) pressed.push(`${w.kind}: eventON_CLICK did not run`);
-      if (!fired.includes(`W_${w.kind}`)) pressed.push(`${w.kind}: pressing it fired no boundary event`);
-      if (!s.eventON_BOUNDARYEVT || s.eventON_BOUNDARYEVT[0] !== 'ok') pressed.push(`${w.kind}: eventON_BOUNDARYEVT did not get the status`);
+      if (!s.eventON_LOAD) pressed.push(`${w.kind}: eventON_LOAD did not run (the component threw, or registerWidget names another kind)`);
+      if (!s.eventON_CLICK) pressed.push(`${w.kind}: eventON_CLICK did not run (call fire('eventON_CLICK') when the first button or link is pressed)`);
+      if (!fired.includes(`W_${w.kind}`)) pressed.push(`${w.kind}: pressing it fired no boundary event (call trigger(done) on the press, or on the primary button of the confirm step it shows)`);
+      if (!s.eventON_BOUNDARYEVT || s.eventON_BOUNDARYEVT[0] !== 'ok') pressed.push(`${w.kind}: eventON_BOUNDARYEVT did not get the status (fire the boundary event with trigger(done))`);
       if (errs.length) pressed.push(`${w.kind}: ${errs.join('; ')}`);
       await p.close();
     }
