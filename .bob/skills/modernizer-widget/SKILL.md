@@ -24,7 +24,9 @@ A widget that needs several values or a whole business object is out of scope. U
 
 Read only the files in the "Copy from" column for your kind, plus `coach-ui/src/widgets/field-widget.js` for a field, and one stock icon in `coach-ui/widgets/icons/`. Read no other platform file: every check failure says what to change. The build picks up every `coach-ui/src/widgets/*.jsx` by itself, so the new file needs no import anywhere.
 
-Tags: `Basic` for a widget authors place on many coaches, `Advanced` for one they place rarely or once per page (Theme), plus the Coach Designer category.
+Tags: the Coach Designer category (`Input` for fields and actions, `Informational` for displays and page-level widgets), plus `Basic` for a widget authors place on many coaches or `Advanced` for one they place rarely or once per page (Theme).
+
+Before you start, make sure `coach-ui` has its packages: run `cd coach-ui && npm ci` when `coach-ui/node_modules` is missing. A Carbon component's props are in its source, `coach-ui/node_modules/@carbon/react/lib/components/<Name>/`; read it when the component is not one the stock widgets use.
 
 ## 2. Write the component: `coach-ui/src/widgets/<kind>.jsx`
 
@@ -215,7 +217,7 @@ No other list, map or shared file needs editing. The build, the check, the toolk
 
    When a check fails, it builds no toolkit and returns the failures, each with the widget's kind and what to change: fix the widget and call it again. A check named "every ..." covers each contract widget, the new one included. Its `checks` lists what passed. It returns `work/MDW-<snapshot>.twx`.
 
-   To fix one failure at a time faster, run the same check yourself: `cd coach-ui && npm run build && node scripts/check-widgets.mjs | grep -v '^PASS'` (run `npm ci` first when `coach-ui` has no packages installed). Then call `build_widget_toolkit` once it passes.
+   To fix one failure at a time faster, run the same check yourself: `cd coach-ui && npm run build && node scripts/check-widgets.mjs | grep -v '^PASS'`. Then call `build_widget_toolkit` once it passes.
 3. Call `install_app` with that `.twx` (the user approves). Continue only when `"ok": true`. With no BAW server, give the user the `.twx` and its import steps.
 
 The check does not test what is particular to the new widget. Check that with `test_service` and its screenshots of the modernized app. With `fill`, it turns on every switch that is off and ticks every checkbox on screen. A field on a tab that is not open is reached through its group's Preview service.
