@@ -1,6 +1,6 @@
 {
   "toolkit": "Modernizer Widgets",
-  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; label: the view has a Label property; options: configuration options (type: a System Data type or NameValuePair; list: a list of them; group: the Configuration section Coach Designer shows it in, as the UI Toolkit's Behavior, Items and Appearance; an option the UI Toolkit also has takes its UI Toolkit name, so the modernizer can carry its value over); events: the view's events, listed in Coach Designer's Events tab, each with the names of the arguments its handler gets, as the UI Toolkit names them (labels: the top-level events); boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart; the toolkit's name is added so a palette search for it lists every widget). A new widget needs only its component (coach-ui/src/widgets/<kind>.jsx), its entry here and its icon (icons/<kind>.svg), plus coach-ui/src/widgets/<kind>.scss when it uses a Carbon component the stock widgets do not: the build, the harness, the inspector and the modernizer read this file and that folder.",
+  "about": "One entry per widget. view: name in the Coach Designer palette; binding: the bound System Data type, or null; label: the view has a Label property; options: configuration options (type: a System Data type or NameValuePair; list: a list of them; group: the Configuration section Coach Designer shows it in, as the UI Toolkit's Behavior, Items and Appearance; an option the UI Toolkit also has takes its UI Toolkit name, so the modernizer can carry its value over); events: the view's events, listed in Coach Designer's Events tab, each with the names of the arguments its handler gets, as the UI Toolkit names them (labels: the top-level events); accessor: the UI Toolkit's names of the getter and setter a handler calls on me for the widget's value (its label when it has no binding), as isChecked and setChecked on a Checkbox; boundary: fires the view's boundary event; preview: the value a Coach Designer preview shows; tags: palette categories (Coach Designer lists Input, Informational, Layout, Operational and Chart; the toolkit's name is added so a palette search for it lists every widget). A new widget needs only its component (coach-ui/src/widgets/<kind>.jsx), its entry here and its icon (icons/<kind>.svg), plus coach-ui/src/widgets/<kind>.scss when it uses a Carbon component the stock widgets do not: the build, the harness, the inspector and the modernizer read this file and that folder.",
   "events": {
     "eventON_LOAD": "On load",
     "eventON_CHANGE": "On change",
@@ -70,7 +70,11 @@
           "selection",
           "type"
         ]
-      }
+      },
+      "accessor": [
+        "getText",
+        "setText"
+      ]
     },
     {
       "kind": "textarea",
@@ -131,7 +135,11 @@
           "selection",
           "type"
         ]
-      }
+      },
+      "accessor": [
+        "getText",
+        "setText"
+      ]
     },
     {
       "kind": "number",
@@ -198,7 +206,11 @@
           "selection",
           "type"
         ]
-      }
+      },
+      "accessor": [
+        "getValue",
+        "setValue"
+      ]
     },
     {
       "kind": "date",
@@ -247,7 +259,11 @@
         ],
         "eventON_FOCUS": [],
         "eventON_BLUR": []
-      }
+      },
+      "accessor": [
+        "getDate",
+        "setDate"
+      ]
     },
     {
       "kind": "checkbox",
@@ -284,7 +300,11 @@
         ],
         "eventON_FOCUS": [],
         "eventON_BLUR": []
-      }
+      },
+      "accessor": [
+        "isChecked",
+        "setChecked"
+      ]
     },
     {
       "kind": "select",
@@ -334,7 +354,11 @@
         ],
         "eventON_FOCUS": [],
         "eventON_BLUR": []
-      }
+      },
+      "accessor": [
+        "getSelectedItem",
+        "setSelectedItem"
+      ]
     },
     {
       "kind": "radio",
@@ -378,7 +402,11 @@
         ],
         "eventON_FOCUS": [],
         "eventON_BLUR": []
-      }
+      },
+      "accessor": [
+        "getSelectedItem",
+        "setSelectedItem"
+      ]
     },
     {
       "kind": "header",
@@ -487,7 +515,11 @@
         "eventON_BOUNDARYEVT": [
           "status"
         ]
-      }
+      },
+      "accessor": [
+        "getText",
+        "setText"
+      ]
     },
     {
       "kind": "theme",
@@ -555,7 +587,11 @@
         ],
         "eventON_FOCUS": [],
         "eventON_BLUR": []
-      }
+      },
+      "accessor": [
+        "isChecked",
+        "setChecked"
+      ]
     }
   ]
 }

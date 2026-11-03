@@ -18,7 +18,7 @@ export function registerScreen(name, component) {
   screens[name] = component;
 }
 
-// A widget is one Coach View of the Modernizer Widgets toolkit, bound to a single value.
+// A widget is one Coach View of the Modernizer Widgets toolkit: a field, an action, a display or a page-level widget.
 export function registerWidget(kind, component) {
   widgets[kind] = component;
 }

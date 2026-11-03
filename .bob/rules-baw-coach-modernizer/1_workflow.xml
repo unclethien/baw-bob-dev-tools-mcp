@@ -41,10 +41,10 @@
         <step>export_app, inspect_coaches; test_service on the legacy service to see the screens as users do today</step>
         <step>Improve the spec: human labels, section titles, required fields, patterns, examples, read-only review coaches</step>
         <step>Set the spec's "theme" to the app's theme file; without one, ask the user to describe the look and write work/NAME.theme.json with the app-theme skill</step>
-        <step>When a coach needs a field no Modernizer Widget gives (for example a Yes/No Toggle for a Boolean), plan a new widget: what single value it saves, its options, and which fields use it. Never plan a change to an existing widget</step>
+        <step>When a coach needs a widget no Modernizer Widget gives, plan a new one with the modernizer-widget skill: its kind (a field that saves one value, such as a Yes/No Toggle; an action that fires the boundary event, such as a link; a display, such as a notice; or a page-level widget), its options and events, and which fields or buttons use it. Never plan a change to an existing widget</step>
         <step>Keep the groups inspect_coaches read back; propose its groupCandidates, or the groups the user named, as reusable groups (coach-groups skill). A group's fields are listed once, in the spec's "groups": edit a group's field there, not in the coaches that place it</step>
         <step>Check the request against what the coach spec can change. Buttons (a new Cancel, a renamed Submit), fields, steps, a workflow or an approval live in the app spec: the Modernizer cannot add or rename them. When the request needs one, put it first in the plan as an App Builder change, and on approval switch to BAW App Builder before building anything here, so the app is rebuilt once and modernized once</step>
-        <step>STOP unless told to continue: show what is wrong with the legacy screens, your design for each coach, the theme file, the spec changes, the groups and where each is placed, the new widgets (what each saves, its options, the fields that use it), and the App Builder changes the request needs first</step>
+        <step>STOP unless told to continue: show what is wrong with the legacy screens, your design for each coach, the theme file, the spec changes, the groups and where each is placed, the new widgets (the kind of each, what it saves or does, its options, the fields or buttons that use it), and the App Builder changes the request needs first</step>
       </steps>
     </phase>
 

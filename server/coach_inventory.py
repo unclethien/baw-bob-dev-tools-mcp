@@ -208,7 +208,7 @@ class CoachReader:
             self.header = it["config"]
         elif it["builder"] == "header":
             self.header = {"intro": it["config"].get("intro")}
-        elif view == "Button" or it["widget"] == "button":
+        elif view == "Button" or (it["widget"] in CONTRACT and CONTRACT[it["widget"]]["boundary"]):
             self.buttons.append(it)
         elif view == "Custom HTML":
             self.dropped.append(f'{it["viewId"]} (Custom HTML)')
@@ -389,13 +389,16 @@ def inventory_service(root, names, groups=None):
             else:
                 primary = b["colorStyle"] == "P" or (b["colorStyle"] != "D" and not BACKWARD.search(b["label"]))
             button = {"label": b["label"] or b["viewId"], "viewId": b["viewId"], "primary": primary, "to": target or "(not wired)"}
+            kind = b["widget"] if b["widget"] in CONTRACT else "button"
+            if kind != "button":  # another boundary widget of the toolkit
+                button["type"] = kind
             if b["widget"] and b["config"].get("validate") in ("true", "false"):
                 button["validate"] = b["config"]["validate"] == "true"
             config = widget_config(b)
             if (config.get("tabIndex") or "").strip():
                 button["tabIndex"] = config["tabIndex"]
-            if widget_events(config, "button"):
-                button["events"] = widget_events(config, "button")
+            if widget_events(config, kind):
+                button["events"] = widget_events(config, kind)
             buttons.append(button)
         if len(buttons) == 1 and not b["widget"]:  # a Button widget says whether it is primary
             buttons[0]["primary"] = True
