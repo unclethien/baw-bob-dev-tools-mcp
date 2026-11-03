@@ -9,6 +9,8 @@ import { buttonLabel } from '../components.jsx';
 import { page, reveal } from '../page-registry.js';
 
 const KINDS = ['primary', 'secondary', 'tertiary', 'ghost', 'danger'];
+// Size, as the UI Toolkit's ButtonSizeStyle: X Extra-Small, S Small, D Default, L Large. Width is the widget's (runtime.jsx).
+const SIZES = { X: 'sm', S: 'md', D: 'lg', L: 'xl' };
 
 function ActionButton({ label, options, trigger, fire, preview }) {
   const [busy, setBusy] = useState(false);
@@ -31,7 +33,7 @@ function ActionButton({ label, options, trigger, fire, preview }) {
   };
   return (
     <div className="pp-actions">
-      <Button kind={kind} disabled={busy} onClick={press}>{buttonLabel(label || 'Button')}</Button>
+      <Button kind={kind} size={SIZES[options.sizeStyle] || 'lg'} disabled={busy} onClick={press}>{buttonLabel(label || 'Button')}</Button>
     </div>
   );
 }
