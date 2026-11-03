@@ -15,7 +15,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 
 2. **Read the spec.** Each service has a `variable` (the business object behind its fields) and its `coaches` in flow order. Each coach has:
    - `sections`, each holding `fields` (`path`, `label`, `type`, `readonly`, `required`);
-   - `buttons` (`label`, `viewId`, `primary`, `to`);
+   - `buttons` (`label`, `viewId`, `primary`, `to`, and `type` when the button is an action widget other than Button);
    - `native`, the items that stay as BAW views, below the widgets;
    - `dropped`, the items that will not appear at all.
 
@@ -32,6 +32,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
    | `example` | Add a sample value, shown as the placeholder. Never use real data |
    | `help` | Add a short hint shown with the field (its BAW help text) |
    | `min` / `max` | Set the allowed range of a number field |
+   | `events` | The field's or button's event handlers (`eventON_CHANGE`, `eventON_CLICK`, ...), carried over from the UI Toolkit control it replaces. Keep them; tell the user about any handler that calls UI Toolkit methods a widget may lack |
    | `readonly: true` | Set on every field of a review or summary coach, which then renders as a read-only summary |
    | `intro` | Add one sentence of lead text for a coach |
    | `sectionStyle` | Use `"tabs"` for long single-coach forms, `"stack"` otherwise |
@@ -40,7 +41,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 
    At the top of the spec, set `"theme"` to the app's theme file, e.g. `"work/acme.theme.json"`. Use the file the app was built with when there is one. Otherwise follow the app-theme skill: ask the user to describe the look, or read it from a screenshot of the legacy screens, and write one.
 
-   Keep `path`, `viewId`, `id` and `type` as they are. Do not delete buttons: a button missing from the spec cannot be pressed.
+   Keep `path`, `viewId`, `id` and `type` as they are; only the modernizer-widget skill sets a field's or button's `type` to a new widget. Do not delete buttons: a button missing from the spec cannot be pressed.
 
 4. **Check what will not be modernized.** Read `native` and `dropped` for every coach. Tell the user about anything important that is dropped, such as a Custom HTML block with instructions, and add its text to the coach's `intro` when it matters.
 
