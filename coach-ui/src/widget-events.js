@@ -119,17 +119,12 @@ function potentialText(text, { start, end }, e) {
   return text;
 }
 
-// The methods a handler calls on `me`, by the names the UI Toolkit controls use: getData and setData, the value
-// accessor of the widget's kind (getText on a Text, isChecked on a Checkbox, ...), the label, help text, tab index,
-// placeholder, visibility and enabled state. A method the view already has (one BPM UI added) is left alone.
-// update() redraws the widget after an option changed.
-const ACCESSORS = {
-  text: ['getText', 'setText'], textarea: ['getText', 'setText'], number: ['getValue', 'setValue'], date: ['getDate', 'setDate'],
-  checkbox: ['isChecked', 'setChecked'], toggle: ['isChecked', 'setChecked'], select: ['getSelectedItem', 'setSelectedItem'],
-  radio: ['getSelectedItem', 'setSelectedItem'],
-};
-
-export function addMethods(view, kind, update) {
+// The methods a handler calls on `me`, by the names the UI Toolkit controls use: getData and setData, the label, help
+// text, tab index, visibility and enabled state, the placeholder of a widget with an "example" option, and the value
+// accessor the contract names for the widget (accessor: [getter, setter], as isChecked and setChecked on a Checkbox;
+// it reads and writes the label of a widget with no binding, as getText and setText on a Button). A method the view
+// already has (one BPM UI added) is left alone. update() redraws the widget after an option changed.
+export function addMethods(view, update, { optionNames = [], accessor = null } = {}) {
   const { context } = view;
   const holder = (name) => (name.startsWith('@') ? context.options._metadata && context.options._metadata[name.slice(1)] : context.options[name]);
   const read = (name) => { const h = holder(name); return h && typeof h.get === 'function' ? h.get('value') : undefined; };
@@ -142,7 +137,7 @@ export function addMethods(view, kind, update) {
       let current = value;
       context.options[name] = { get: () => current, set: (_, next) => { current = next; } };
     } else {
-      console.warn(`Modernizer Widgets: ${context.viewid || kind} has no ${name}`);
+      console.warn(`Modernizer Widgets: ${context.viewid || 'the widget'} has no ${name}`);
       return;
     }
     update();
@@ -162,18 +157,14 @@ export function addMethods(view, kind, update) {
     isEnabled: () => visibility() !== 'READONLY',
     setEnabled: (enabled) => write('@visibility', enabled ? 'DEFAULT' : 'READONLY'),
   };
-  if (['text', 'textarea', 'number', 'select'].includes(kind)) {
+  if (optionNames.includes('example')) {
     methods.getPlaceholder = () => read('example');
     methods.setPlaceholder = (text) => write('example', text);
   }
-  if (kind === 'button') {
-    methods.getText = methods.getLabel;
-    methods.setText = methods.setLabel;
-  }
-  const [get, set] = ACCESSORS[kind] || [];
-  if (get) {
-    methods[get] = methods.getData;
-    methods[set] = methods.setData;
+  if (Array.isArray(accessor) && accessor.length === 2) {
+    const [get, set] = accessor;
+    methods[get] = context.binding ? methods.getData : methods.getLabel;
+    methods[set] = context.binding ? methods.setData : methods.setLabel;
   }
   for (const [name, method] of Object.entries(methods)) {
     if (typeof view[name] !== 'function') view[name] = method;

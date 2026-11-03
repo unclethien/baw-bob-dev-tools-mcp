@@ -50,7 +50,7 @@ TOOLKITS = {
 def widgets(toolkit):
     """The toolkit's widget contract (coach-ui/widgets/<toolkit>-widgets.json), by kind. Each widget: view, binding,
     label (has a Label property), options [(name, label, type, is list)], groups {option name: Configuration section},
-    events [(name, label, [argument names])], boundary, sample (the preview's value), tags (palette categories) and
+    events [(name, label, [argument names])], accessor ([getter, setter] or None), boundary, sample (the preview's value), tags (palette categories) and
     source (the classic widget's markup and script name)."""
     contract = json.loads((WIDGETS_DIR / f"{toolkit}-widgets.json").read_text())
     labels = contract.get("events", {})
@@ -58,6 +58,7 @@ def widgets(toolkit):
                         "options": [(o["name"], o["label"], o.get("type", "String"), o.get("list", False)) for o in w["options"]],
                         "groups": {o["name"]: o["group"] for o in w["options"] if o.get("group")},
                         "events": [(name, labels[name], args) for name, args in w.get("events", {}).items()],
+                        "accessor": w.get("accessor"),
                         "boundary": w["boundary"], "sample": w["preview"]["value"], "tags": w["tags"], "source": w.get("source", w["kind"])}
             for w in contract["widgets"]}
 
@@ -94,11 +95,11 @@ def metadata_xml(tags):
     return f'<?xml version="1.0" encoding="UTF-8"?>\n<metadata>{objects}\n</metadata>\n'
 
 
-def load_js(kind, options, events):
+def load_js(kind, options, events, accessor=None):
     """The Coach View's load handler: the toolkit bundle's widget host builds the widget's context from the view and
-    wires its events ({event: [argument names]}, see src/widget-events.js)."""
+    wires its events ({event: [argument names]}) and its value accessor ([getter, setter]), see src/widget-events.js."""
     return (f"this._ppWidget = window.ModernizerWidgets.attach(this, {json.dumps(kind)}, {json.dumps([o[0] for o in options])}, "
-            f"{json.dumps({name: args for name, _, args in events})});")
+            f"{json.dumps({name: args for name, _, args in events})}, {json.dumps(accessor)});")
 
 
 # BAW calls change() for a change to the binding (which fires the view's eventON_CHANGE) and to an option.
@@ -268,7 +269,7 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
         else:
             preview_html = shared_preview
             preview = asset(f"{kind}-preview.js", "application/javascript", preview_js(kind, tk["acronym"], w["sample"], w["options"]).encode())
-            code = {"load": load_js(kind, w["options"], w["events"]), "change": CHANGE_JS, "unload": UNLOAD_JS}
+            code = {"load": load_js(kind, w["options"], w["events"], w["accessor"]), "change": CHANGE_JS, "unload": UNLOAD_JS}
         new_id = stable_ids(toolkit, f"view/{kind}")
         view_id, version = "64." + new_id(), uid()
         files[f"objects/{view_id}.xml"] = view_xml(

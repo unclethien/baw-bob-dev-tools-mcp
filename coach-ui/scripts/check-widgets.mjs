@@ -1,5 +1,6 @@
 // Check the Modernizer Widgets bundle offline: renders every widget in scripts/widget-harness.html through fake
-// BAW Coach Views (and as Coach Designer previews), and checks validation, visibility, the Button and the Theme.
+// BAW Coach Views (and as Coach Designer previews), and checks the contract, validation, visibility, the events, the Button
+// and the Theme. Sections 0, 2, 2b, 11 and 12 cover every contract widget, so a new widget is checked without editing it.
 //
 // Usage: npm run build, then node scripts/check-widgets.mjs [--shot <png>] (also writes <png>-contract.png, every contract widget)
 // Exit code 1 when a check fails.
@@ -32,13 +33,55 @@ async function fresh() {
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(harness);
-  await page.evaluate((events, names) => { window.harness.events = events; window.harness.optionNames = names; },
-    Object.fromEntries(contract.map((w) => [w.kind, w.events || {}])), Object.fromEntries(contract.map((w) => [w.kind, w.options.map((o) => o.name)])));
+  await page.evaluate((events, names, accessors) => { Object.assign(window.harness, { events, optionNames: names, accessors }); },
+    Object.fromEntries(contract.map((w) => [w.kind, w.events || {}])), Object.fromEntries(contract.map((w) => [w.kind, w.options.map((o) => o.name)])),
+    Object.fromEntries(contract.map((w) => [w.kind, w.accessor || null])));
   return { page, errors };
 }
 const text = (page, selector) => page.$eval(selector, (el) => el.textContent.trim()).catch(() => null);
 
 try {
+  // 0. Every contract entry is complete, so Coach Designer shows it as the UI Toolkit shows its controls and the
+  //    widget host can run its events (the rules a new widget's entry follows, in the modernizer-widget skill).
+  {
+    const full = JSON.parse(fs.readFileSync(new URL('../widgets/modernizer-widgets.json', import.meta.url), 'utf8'));
+    const catalog = full.events || {};
+    const TYPES = ['String', 'Integer', 'Decimal', 'Boolean', 'Date', 'NameValuePair'];
+    const GROUPS = ['Behavior', 'Items', 'Appearance'];
+    const CATEGORIES = ['Input', 'Informational', 'Layout', 'Operational', 'Chart'];
+    const problems = [];
+    const seen = { kind: new Set(), view: new Set() };
+    for (const w of contract) {
+      const at = w.kind || JSON.stringify(w).slice(0, 40);
+      const bad = (what) => problems.push(`${at}: ${what}`);
+      if (!/^[a-z][a-z0-9]*$/.test(w.kind || '')) bad('kind must be lower-case letters and digits');
+      for (const key of ['kind', 'view']) { if (seen[key].has(w[key])) bad(`${key} is not unique`); seen[key].add(w[key]); }
+      if (w.binding !== null && !['String', 'Integer', 'Decimal', 'Boolean', 'Date'].includes(w.binding)) bad(`binding ${w.binding} is not String, Integer, Decimal, Boolean, Date or null`);
+      if (typeof w.label !== 'boolean' || typeof w.boundary !== 'boolean') bad('label and boundary must be true or false');
+      if (!w.preview || !('value' in w.preview)) bad('preview needs a value (null when it binds nothing)');
+      if (!Array.isArray(w.tags) || !w.tags.some((t) => CATEGORIES.includes(t))) bad(`tags need one of ${CATEGORIES.join(', ')}`);
+      for (const o of w.options || []) {
+        if (!o.name || !o.label) bad('an option needs a name and a label');
+        if (!TYPES.includes(o.type || 'String')) bad(`option ${o.name}: type ${o.type} is not one of ${TYPES.join(', ')}`);
+        if (!GROUPS.includes(o.group)) bad(`option ${o.name}: group must be ${GROUPS.join(', ')}`);
+        if (o.name && o.name.startsWith('eventON_')) bad(`option ${o.name}: an event goes in events, not options`);
+      }
+      const events = w.events || {};
+      if (!('eventON_LOAD' in events)) bad('events need eventON_LOAD');
+      for (const [name, argNames] of Object.entries(events)) {
+        if (!(name in catalog)) bad(`event ${name} is not in the top-level events (${Object.keys(catalog).join(', ')})`);
+        if (!Array.isArray(argNames) || argNames.some((a) => typeof a !== 'string')) bad(`event ${name}: its arguments must be a list of names`);
+      }
+      if (w.binding !== null && (events.eventON_CHANGE || []).length !== 2) bad('a widget with a binding needs eventON_CHANGE with two arguments (new and old value)');
+      if (w.boundary && !('eventON_CLICK' in events && 'eventON_BOUNDARYEVT' in events)) bad('a boundary widget needs eventON_CLICK and eventON_BOUNDARYEVT');
+      if (w.binding !== null && !w.accessor) bad('a widget with a binding needs an accessor [getter, setter]');
+      if (w.accessor && !(Array.isArray(w.accessor) && w.accessor.length === 2 && w.accessor.every((m) => /^[a-z][A-Za-z]*$/.test(m)))) bad('accessor must be [getter, setter] method names');
+      if (w.accessor && w.binding === null && !w.label) bad('an accessor of a widget with no binding reads the label, so label must be true');
+      if (!fs.existsSync(new URL(`../widgets/icons/${w.kind}.svg`, import.meta.url))) bad(`no icon widgets/icons/${w.kind}.svg`);
+    }
+    check('every contract entry is complete (groups, events, accessor, icon)', problems.length === 0, problems);
+  }
+
   // 1. Every widget renders at runtime, through the widget host.
   {
     const { page, errors } = await fresh();
@@ -547,6 +590,85 @@ print(json.dumps(views))`, out], { encoding: 'utf8' }));
     check('every option is in its Configuration group and every event is an EVENT option', problems.length === 0, problems);
     const preview = execFileSync('python3', ['../server/widget_toolkit.py', 'preview', 'modernizer', 'text'], { encoding: 'utf8' });
     check('the Coach Designer preview runs no event code', !preview.includes('eventON_'));
+  }
+  // 12. What every contract widget does, so a new widget is covered without editing this script: its eventON_LOAD
+  //     runs with me, its accessor reads and writes its value (its label when it binds nothing) and fires
+  //     eventON_CHANGE, a field fires focus, blur and input, and a boundary widget fires eventON_CLICK, its boundary
+  //     event and eventON_BOUNDARYEVT.
+  {
+    const SAMPLE = { String: 'b', Integer: 7, Decimal: 7.5, Boolean: true };
+    const record = (event) => `window.seen = window.seen || {}; (window.seen[me.context.viewid] = window.seen[me.context.viewid] || {})[${JSON.stringify(event)}] = Array.prototype.slice.call(arguments, 2).concat([true]);`;
+    const nvp = { items: [{ name: 'A', value: 'a' }, { name: 'B', value: 'b' }] };
+    const setUp = async (page, list) => page.evaluate((items) => items.forEach((w) => {
+      window.views = window.views || {};
+      window.views[w.kind] = harness.view({ kind: w.kind, id: `W_${w.kind}`, label: `${w.kind} label`, value: null, options: w.options });
+    }), list);
+    const spec = (w) => {
+      const options = Object.fromEntries(Object.keys(w.events || {}).map((e) => [e, record(e)]));
+      if (w.options.some((o) => o.name === 'options' && o.list)) options.options = nvp;
+      if (w.options.some((o) => o.name === 'validate')) options.validate = false;
+      return { kind: w.kind, options };
+    };
+    const seen = (page) => page.evaluate(() => window.seen || {});
+
+    const { page, errors } = await fresh();
+    const plain = contract.filter((w) => !w.boundary);
+    await setUp(page, plain.map(spec));
+    await sleep(200);
+    const problems = [];
+    let got = await seen(page);
+    for (const w of plain) if (!got[`W_${w.kind}`]?.eventON_LOAD) problems.push(`${w.kind}: eventON_LOAD did not run`);
+    // The accessor, then the DOM events of each field.
+    const values = await page.evaluate((list, sample) => Object.fromEntries(list.filter((w) => w.accessor).map((w) => {
+      const view = window.views[w.kind].view;
+      const [get, set] = w.accessor;
+      if (typeof view[get] !== 'function' || typeof view[set] !== 'function') return [w.kind, { missing: true }];
+      const value = w.binding === null ? 'Renamed' : w.binding === 'Date' ? new Date(2026, 1, 2) : sample[w.binding];
+      view[set](value);
+      const back = view[get]();
+      return [w.kind, { same: back === value || (back instanceof Date && back.getTime() === value.getTime()) }];
+    })), plain, SAMPLE);
+    for (const [kind, v] of Object.entries(values)) {
+      if (v.missing) problems.push(`${kind}: me has no accessor methods`);
+      else if (!v.same) problems.push(`${kind}: the accessor setter did not change what the getter reads`);
+    }
+    await sleep(100);
+    got = await seen(page);
+    for (const w of plain.filter((x) => x.binding !== null && x.events?.eventON_CHANGE)) {
+      if (!got[`W_${w.kind}`]?.eventON_CHANGE) problems.push(`${w.kind}: setting its value did not fire eventON_CHANGE`);
+    }
+    for (const w of plain.filter((x) => x.events?.eventON_FOCUS || x.events?.eventON_BLUR || x.events?.eventON_INPUT)) {
+      const input = `[data-kind=${w.kind}] input:not([type=hidden]), [data-kind=${w.kind}] select, [data-kind=${w.kind}] textarea, [data-kind=${w.kind}] button`;
+      if (!(await page.$(input))) { problems.push(`${w.kind}: declares focus or input events but draws no input`); continue; }
+      if (w.events.eventON_INPUT) await page.type(input, 'x'); else await page.focus(input);
+      await page.evaluate(() => document.activeElement && document.activeElement.blur());
+      await sleep(50);
+      const s = (await seen(page))[`W_${w.kind}`] || {};
+      for (const e of ['eventON_FOCUS', 'eventON_BLUR', 'eventON_INPUT']) if (w.events[e] && !s[e]) problems.push(`${w.kind}: ${e} did not fire`);
+    }
+    check('every widget runs eventON_LOAD, its accessor and its field events', problems.length === 0, problems);
+    check('no page errors (every widget\'s events)', errors.length === 0, errors);
+    await page.close();
+
+    // Each boundary widget on a page of its own, pressed by its first button or link.
+    const pressed = [];
+    for (const w of contract.filter((x) => x.boundary)) {
+      const { page: p, errors: errs } = await fresh();
+      await setUp(p, [spec(w)]);
+      const target = `[data-kind=${w.kind}] button, [data-kind=${w.kind}] a, [data-kind=${w.kind}] [role=button]`;
+      if (!(await p.$(target))) { pressed.push(`${w.kind}: draws no button or link to press`); await p.close(); continue; }
+      await p.click(target);
+      await sleep(150);
+      const s = (await seen(p))[`W_${w.kind}`] || {};
+      const fired = await p.evaluate(() => harness.triggered.map((t) => t.id));
+      if (!s.eventON_LOAD) pressed.push(`${w.kind}: eventON_LOAD did not run`);
+      if (!s.eventON_CLICK) pressed.push(`${w.kind}: eventON_CLICK did not run`);
+      if (!fired.includes(`W_${w.kind}`)) pressed.push(`${w.kind}: pressing it fired no boundary event`);
+      if (!s.eventON_BOUNDARYEVT || s.eventON_BOUNDARYEVT[0] !== 'ok') pressed.push(`${w.kind}: eventON_BOUNDARYEVT did not get the status`);
+      if (errs.length) pressed.push(`${w.kind}: ${errs.join('; ')}`);
+      await p.close();
+    }
+    check('every boundary widget fires eventON_CLICK, its boundary event and eventON_BOUNDARYEVT', pressed.length === 0, pressed);
   }
 } catch (e) {
   check('harness ran', false, String(e).slice(0, 500));
