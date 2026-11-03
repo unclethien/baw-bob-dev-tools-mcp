@@ -21,6 +21,7 @@
 @use '@carbon/react/scss/components/select';
 @use '@carbon/react/scss/components/radio-button';
 @use '@carbon/react/scss/components/form';
+@use '@carbon/react/scss/components/tooltip';
 
 // The coach's original buttons stay in the coach so its flow wiring keeps working;
 // modernize_coaches.py puts them in this layout and the React screen presses them.
@@ -209,3 +210,64 @@ html body.pp-widget-page {
     .tab-content > .ContentBox { padding: 0; }
   }
 }
+
+// A field's validation marker (showValidationMarker): a borderless icon button whose tooltip gives the error.
+.pp-app .pp-validation-marker {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: help;
+  vertical-align: middle;
+
+  svg { fill: var(--pp-support-error, #da1e28); }
+}
+
+// Label placement Left (the UI Toolkit's labelPlacement "L"): the label in a column of Label width (a third by default)
+// beside the input; help and error text stay under the input. The element that holds a Carbon input's label becomes a
+// two-column grid, and so does a widget's own pp--form-item with a pp--label in it. A radio group's legend is floated
+// so it lays out like any other grid item.
+.pp-app.pp-label-left {
+  --pp-label-gap: 1rem;
+
+  :is(.pp--text-input-wrapper, .pp--form-item:has(> .pp--text-area__label-wrapper), .pp--number, .pp--select,
+      .pp--date-picker-container, .pp--radio-button-group, .pp--form-item:has(> .pp--label)) {
+    display: grid;
+    grid-template-columns: var(--pp-label-width, 33%) minmax(0, 1fr);
+    column-gap: var(--pp-label-gap);
+    align-items: start;
+
+    > * { grid-column: 2; }
+    > :is(.pp--label, .pp--text-input__label-wrapper, .pp--text-area__label-wrapper) {
+      float: left;
+      grid-column: 1;
+      grid-row: 1 / span 4;
+      margin: 0;
+      padding-top: 0.75rem;
+      overflow-wrap: anywhere;
+    }
+    :is(.pp--text-input__label-wrapper, .pp--text-area__label-wrapper) .pp--label { margin: 0; }
+  }
+  .pp--radio-button-group > .pp--label { grid-row: 1; padding-top: 0; }
+  .pp--radio-button-group > .pp--radio-button-group-inner--decorator { grid-column: 1; grid-row: 2; justify-self: start; }
+  .pp--form-item > :is(.pp--radio-button__validation-msg, .pp--form__helper-text) {
+    margin-inline-start: calc(var(--pp-label-width, 33%) + var(--pp-label-gap));
+  }
+  &.pp-size-S :is(.pp--text-input-wrapper, .pp--number, .pp--select, .pp--date-picker-container) > :is(.pp--label, .pp--text-input__label-wrapper) { padding-top: 0.5rem; }
+  &.pp-size-L :is(.pp--text-input-wrapper, .pp--number, .pp--select, .pp--date-picker-container) > :is(.pp--label, .pp--text-input__label-wrapper) { padding-top: 1rem; }
+}
+
+// Size on widgets whose Carbon component has no size prop.
+.pp-app.pp-widget-textarea.pp-size-S .pp--text-area { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
+.pp-app.pp-widget-textarea.pp-size-L .pp--text-area { padding: 0.875rem 1rem; font-size: 1rem; }
+.pp-app.pp-widget-toggle.pp-size-L .pp--toggle__switch {
+  border-radius: 1rem;
+  block-size: 2rem;
+  inline-size: 4rem;
+
+  &::before { block-size: 1.625rem; inline-size: 1.625rem; }
+  &.pp--toggle__switch--checked::before { transform: translateX(2rem); }
+}
+
+// Width on a button: the button fills the width the widget was given.
+.pp-app.pp-widget-button.pp-has-width .pp--btn { inline-size: 100%; max-inline-size: none; }

@@ -48,7 +48,7 @@ PROJECT = Path(__file__).resolve().parent.parent
 DESIGNER_NS = "http://www.ibm.com/bpm/CoachDesignerNG"
 XSI_NS = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
 SCREEN_ITEM, ACTIONS_ITEM = "CoachScreen1", "PPNativeActions"
-SPEC_KEYS = ("path", "label", "type", "readonly", "required", "pattern", "message", "example", "options", "min", "max", "help")
+SPEC_KEYS = ("path", "label", "type", "readonly", "required", "pattern", "message", "example", "options", "min", "max", "help", "events")
 TOOLKIT = "modernizer"
 GROUP_VIEWS = {}  # group name -> (View ID, group_views fields), from modernize()
 KEPT = []  # groups changed in BAW that the last modernize() kept as they are
@@ -165,7 +165,15 @@ def field_widget(p, next_id, views, variable, field, root="tw.local", item_id=No
             value = [{"name": o.get("label") or o["value"], "value": o["value"]} for o in value]
         if value not in (None, "", []):
             options.append((name, widget_toolkit.option_text(value)))
+    options += widget_events(w, field)
     return view_item(p, item_id or next_id(w["view"]), views[kind], options, binding=f"{root}.{variable}.{field['path']}", tag="contributions")
+
+
+def widget_events(w, part):
+    """The (event, code) options of a spec field or button: the handlers its widget has (the inventory carries them
+    over from the view the widget replaces)."""
+    events = part.get("events") or {}
+    return [(name, events[name]) for name, *_ in w["events"] if (events.get(name) or "").strip()]
 
 
 def widget_layout(old, p, coach, views, theme, variable, spec):
@@ -200,9 +208,15 @@ def widget_layout(old, p, coach, views, theme, variable, spec):
     for b in coach["buttons"]:
         if b["viewId"] not in by_id:
             continue
-        options = {"kind": "primary" if b.get("primary") else "secondary", **({"validate": b["validate"]} if "validate" in b else {})}
+        # A button's "type" names the boundary widget it becomes (default Button); it keeps the options that widget has.
+        kind = b.get("type") or "button"
+        w = widget_toolkit.widgets(TOOLKIT)[kind]
+        names = {name for name, *_ in w["options"]}
+        options = {"kind": "primary" if b.get("primary") else "secondary", **({"validate": b["validate"]} if "validate" in b else {}),
+                   **({"tabIndex": b["tabIndex"]} if b.get("tabIndex") not in (None, "") else {})}
+        options = {**{k: v for k, v in options.items() if k in names}, **dict(widget_events(w, b))}
         item = retag(by_id[b["viewId"]], p, "contributions")
-        buttons.append(widget_toolkit.swap_view(item, b["viewId"], views["button"], options))
+        buttons.append(widget_toolkit.swap_view(item, b["viewId"], views[kind], options))
     actions = [view_item(p, next_id("Horizontal Layout"), VIEWS["Horizontal Layout"], [("@label", "Actions"), *hide], children=buttons)] if buttons else []
     return "".join(head + body + native + actions)
 
@@ -313,7 +327,8 @@ def group_objects(spec, package, owners, views, theme, twx, replace=()):
         variable, class_ref = owners[g["name"]]
         name = f"{g['name']}{SUFFIX} Preview"
         layout, ok = preview_layout(name, g, variable, views, theme, spec.get("app", ""))
-        init = "\n".join([f"tw.local.{variable} = {{}};"] + [f"tw.local.{variable}.{f['path']} = false;" for f in g["fields"] if f["type"] == "checkbox"])
+        booleans = [f for f in g["fields"] if widget_toolkit.widgets(TOOLKIT).get(f["type"], {}).get("binding") == "Boolean"]
+        init = "\n".join([f"tw.local.{variable} = {{}};"] + [f"tw.local.{variable}.{f['path']} = false;" for f in booleans])
         objects.append(group_views.preview_service(acronym, name, variable, class_ref.lstrip("/"), layout, ok, init, "modernize_coaches"))
     return objects
 

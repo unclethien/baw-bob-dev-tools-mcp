@@ -33,6 +33,7 @@ from xml.sax.saxutils import escape, unescape
 import app_template
 from coach_builder import SYSTEM_TYPES, TWSYS
 from coach_views import managed_asset_xml, view_xml
+from group_views import selection_type
 
 PROJECT = Path(__file__).resolve().parent.parent
 COACH_UI = PROJECT / "coach-ui"
@@ -50,17 +51,36 @@ TOOLKITS = {
 @functools.cache
 def widgets(toolkit):
     """The toolkit's widget contract (coach-ui/widgets/<toolkit>-widgets.json), by kind. Each widget: view, binding,
-    label (has a Label property), options [(name, label, type, is list)], boundary, sample (the preview's value),
-    tags (palette categories) and source (the classic widget's markup and script name)."""
+    label (has a Label property), options [(name, label, type, is list)], groups {option name: Configuration section},
+    events [(name, label, [argument names])], accessor ([getter, setter] or None), boundary, sample (the preview's value), tags (palette categories) and
+    source (the classic widget's markup and script name)."""
     contract = json.loads((WIDGETS_DIR / f"{toolkit}-widgets.json").read_text())
+    labels = contract.get("events", {})
     return {w["kind"]: {"view": w["view"], "binding": w["binding"], "label": w["label"],
                         "options": [(o["name"], o["label"], o.get("type", "String"), o.get("list", False)) for o in w["options"]],
+                        "groups": {o["name"]: o["group"] for o in w["options"] if o.get("group")},
+                        "events": [(name, labels[name], args) for name, args in w.get("events", {}).items()],
+                        "accessor": w.get("accessor"),
                         "boundary": w["boundary"], "sample": w["preview"]["value"], "tags": w["tags"], "source": w.get("source", w["kind"])}
             for w in contract["widgets"]}
 
 
 # System Data types that widget bindings and options use, beyond the ones generated apps use.
 TYPES = {**SYSTEM_TYPES, "NameValuePair": "12.d2e5a15a-ea53-4793-9e93-29af5bd80b13"}
+
+
+@functools.cache
+def contract_types(toolkit):
+    """The toolkit's own dropdown types: {name: [(value, label)]}, as the UI Toolkit's of the same name, so an option
+    of one shows the same choices and keeps the value a UI Toolkit control stored."""
+    contract = json.loads((WIDGETS_DIR / f"{toolkit}-widgets.json").read_text())
+    return {name: [(c["value"], c["label"]) for c in choices] for name, choices in contract.get("types", {}).items()}
+
+
+@functools.cache
+def ui_toolkit_names(toolkit):
+    """{UI Toolkit setting: the option a widget holds it under}, for the settings the widgets name otherwise."""
+    return json.loads((WIDGETS_DIR / f"{toolkit}-widgets.json").read_text()).get("uiToolkitNames", {})
 
 
 BUNDLE_FILES = [("mdw.js", "application/javascript"), ("mdw.css", "text/css")]
@@ -91,12 +111,15 @@ def metadata_xml(tags):
     return f'<?xml version="1.0" encoding="UTF-8"?>\n<metadata>{objects}\n</metadata>\n'
 
 
-def load_js(kind, options):
-    """The Coach View's load handler: the toolkit bundle's widget host builds the widget's context from the view."""
-    return f"this._ppWidget = window.ModernizerWidgets.attach(this, {json.dumps(kind)}, {json.dumps([o[0] for o in options])});"
+def load_js(kind, options, events, accessor=None):
+    """The Coach View's load handler: the toolkit bundle's widget host builds the widget's context from the view and
+    wires its events ({event: [argument names]}) and its value accessor ([getter, setter]), see src/widget-events.js."""
+    return (f"this._ppWidget = window.ModernizerWidgets.attach(this, {json.dumps(kind)}, {json.dumps([o[0] for o in options])}, "
+            f"{json.dumps({name: args for name, _, args in events})}, {json.dumps(accessor)});")
 
 
-CHANGE_JS = "if (this._ppWidget) this._ppWidget.update();"
+# BAW calls change() for a change to the binding (which fires the view's eventON_CHANGE) and to an option.
+CHANGE_JS = "if (this._ppWidget) this._ppWidget.change(event);"
 UNLOAD_JS = "if (this._ppWidget) this._ppWidget.unmount();"
 
 PREVIEW_HTML = '<div class="pp-preview"></div>\n'
@@ -252,6 +275,16 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
     asset = lambda name, mime, data: managed_file(name, mime, data, files, objects, file_entries, stable_ids(toolkit, f"file/{name}"))  # noqa: E731
     assets = [] if classic else [asset(name, mime, (bundle / name).read_bytes()) for name, mime in BUNDLE_FILES]
     shared_preview = None if classic else asset("mdw-preview.html", "text/html", PREVIEW_HTML.encode())
+    type_refs = {}
+    for name, values in contract_types(toolkit).items():
+        class_id, version, xml = selection_type(stable_ids(toolkit, f"type/{name}"), tk["acronym"], name, values,
+                                                f"{tk['name']}: the UI Toolkit's {name} choices", author)
+        files[f"objects/{class_id}.xml"] = xml
+        objects.append((class_id, version, name, "twClass"))
+        type_refs[name] = f"/{class_id}"
+
+    def type_ref(t):
+        return type_refs.get(t) or f"{TWSYS}/{TYPES[t]}"
     for kind, w in widgets(toolkit).items():
         icon_path = tk["icons"] / f"{kind}.svg"
         icon = asset(f"{kind}.svg", "image/svg+xml", icon_path.read_bytes()) if icon_path.exists() else None
@@ -264,12 +297,13 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
         else:
             preview_html = shared_preview
             preview = asset(f"{kind}-preview.js", "application/javascript", preview_js(kind, tk["acronym"], w["sample"], w["options"]).encode())
-            code = {"load": load_js(kind, w["options"]), "change": CHANGE_JS, "unload": UNLOAD_JS}
+            code = {"load": load_js(kind, w["options"], w["events"], w["accessor"]), "change": CHANGE_JS, "unload": UNLOAD_JS}
         new_id = stable_ids(toolkit, f"view/{kind}")
         view_id, version = "64." + new_id(), uid()
         files[f"objects/{view_id}.xml"] = view_xml(
             view_id, version, escape(w["view"]), binding_ref=f"{TWSYS}/{TYPES[w['binding']]}" if w["binding"] else None,
-            options=[(o, label, f"{TWSYS}/{TYPES[t]}", is_list) for o, label, t, is_list in w["options"]], asset_ids=assets,
+            options=[(o, label, type_ref(t), is_list, w["groups"].get(o)) for o, label, t, is_list in w["options"]]
+            + [(name, label, f"{TWSYS}/{TYPES['String']}", False, "Events", "EVENT") for name, label, _ in w["events"]], asset_ids=assets,
             description=f"{tk['name']}: {w['view']}", palette_icon=icon, preview_html=preview_html, preview_js=preview,
             has_label=w["label"], emit_boundary=w["boundary"], new_id=new_id, **code)
         objects.append((view_id, version, w["view"], "coachView"))

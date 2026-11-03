@@ -27,3 +27,13 @@ export const isEmpty = (field, value) => {
   if (field.isEmpty) return field.isEmpty(field, value);
   return fieldKind(field) === 'checkbox' ? !value : value === null || value === undefined || value === '';
 };
+
+// A Boolean option as a coach stores it: true, or "true" when it was carried over from a UI Toolkit coach as text.
+export const on = (flag) => flag === true || flag === 'true';
+
+// A CSS length option (Width, Label width, Height): a bare number is pixels.
+export const cssLength = (value) => (value === null || value === undefined || value === '' ? undefined
+  : /^\d+(\.\d+)?$/.test(String(value)) ? `${value}px` : String(value));
+
+// The Size option (the UI Toolkit's TextSizeStyle: D Default, S Small, L Large) as a Carbon input's size prop.
+export const carbonSize = (sizeStyle) => ({ S: 'sm', L: 'lg' })[sizeStyle];
