@@ -15,14 +15,16 @@ A new Modernizer Widget is one Coach View of the MDW toolkit. Authors find it in
 
 | Kind | What it does | `binding` | `label` | `boundary` | Copy from | Stock examples |
 |---|---|---|---|---|---|---|
-| Field | Binds one value: String, Integer, Decimal, Boolean or Date. With an `options` list it is a choice | the type | `true` | `false` | `coach-ui/src/widgets/toggle.jsx` | Text Field, Number Field, Date Field, Checkbox, Select, Radio Group, Toggle |
+| Field | Binds one value: String, Integer, Decimal, Boolean or Date. With an `options` list it is a choice | the type | `true` | `false` | `coach-ui/src/widgets/toggle.jsx`; for a choice also `coach-ui/src/components/fields/radio-field.jsx` | Text Field, Number Field, Date Field, Checkbox, Select, Radio Group, Toggle |
 | Action | Fires the view's boundary event, so the coach flow wires it like a button | `null` | `true` | `true` | `coach-ui/src/widgets/button.jsx` | Button |
 | Display | Shows its options or the page's state, binds nothing | `null` | `false` | `false` | `coach-ui/src/widgets/header.jsx`, `error-summary.jsx` | Header, Error Summary |
 | Page-level | Changes the page, draws nothing there, and shows a marker in Coach Designer | `null` | `false` | `false` | `coach-ui/src/widgets/theme.jsx` | Theme |
 
 A widget that needs several values or a whole business object is out of scope. Use stock widgets, or a hand-written screen (react-coach-screen skill), and say so.
 
-Read only the file in the "Copy from" column for your kind, plus `coach-ui/src/widgets/field-widget.js` for a field. Read no other platform file. The build picks up every `coach-ui/src/widgets/*.jsx` by itself, so the new file needs no import anywhere.
+Read only the files in the "Copy from" column for your kind, plus `coach-ui/src/widgets/field-widget.js` for a field, and one stock icon in `coach-ui/widgets/icons/`. Read no other platform file: every check failure says what to change. The build picks up every `coach-ui/src/widgets/*.jsx` by itself, so the new file needs no import anywhere.
+
+Tags: `Basic` for a widget authors place on many coaches, `Advanced` for one they place rarely or once per page (Theme), plus the Coach Designer category.
 
 ## 2. Write the component: `coach-ui/src/widgets/<kind>.jsx`
 
@@ -44,7 +46,11 @@ The widget host already does the shared work, so the component does none of it:
 - It runs `eventON_LOAD` once the widget is drawn, `eventON_CHANGE` when the binding changes, and `eventON_FOCUS`, `eventON_BLUR` and `eventON_INPUT` from the DOM. It also runs `eventON_BOUNDARYEVT` once `trigger` is done.
 - It adds the `me` methods (getData, setData, label, help, visibility, the placeholder when there is an `example` option, and the contract's `accessor`).
 
-The component fires only `eventON_CLICK`, and only on an action. Wrap every part of the widget in Carbon's styles, as the stock widgets do.
+The component fires only `eventON_CLICK`, and only on an action.
+
+Carbon styles in this toolkit use the class prefix `pp`, not `cds`: write `pp--label`, `pp--form-item`, `pp--form__helper-text`, `pp--form-requirement`. A `cds--` class has no styles here, and the check fails it. Carbon's own components add the prefix by themselves.
+
+Options can arrive as text, so read a number with `Number(options.max)` and a Boolean as `options.validate === true || options.validate === 'true'`. An option the author did not set is `null`: choose its default in the component.
 
 ### Field
 
@@ -81,8 +87,19 @@ registerWidget('toggle', fieldWidget('toggle', {
   - `field.label` is the label and `field.help` the help text. Show both, because the helper does not draw them around a custom input.
   - Every option the contract declares reaches `field` under its own name (`field.onText`). `field.example` is the placeholder.
 - A choice field declares an `options` option (`"type": "NameValuePair", "list": true, "group": "Items"`). It then reads the choices as `field.options`, a list of `{ value, label }`.
-- `display(field, value)` returns the text that READONLY shows.
-- `isEmpty(field, value)` is required: it decides when REQUIRED fails. If your widget's rule differs from the stock widget of the same type, say so in the file's header comment, as the toggle does.
+- When the Carbon component takes no `invalid` and `invalidText` props, draw the error and the label yourself:
+  ```jsx
+  <div className="pp--form-item">
+    <div className="pp--label" id={`${id}-label`}>{field.label}</div>
+    <ContentSwitcher aria-labelledby={`${id}-label`} ... />
+    {validity.invalid && <div className="pp--form-requirement" style={{ display: 'block' }}>{validity.invalidText}</div>}
+    {field.help && <div className="pp--form__helper-text">{field.help}</div>}
+  </div>
+  ```
+  A label of a control that is not one input (a switcher, a group of buttons) names it with `aria-labelledby`, not `htmlFor`.
+- A choice field copies Radio Group's contract entry (Select's when it has a placeholder, `example`). Its input saves the choice's `value` and shows its `label`, as `radio-field.jsx` does.
+- `display(field, value)` returns the text that READONLY shows. For a choice it is the picked choice's `label`.
+- `isEmpty(field, value)` is required: it decides when REQUIRED fails. A String, a number, a Date or a choice is empty when `null`, `undefined` or `''`. A Boolean is empty when not `true` (Checkbox: "must be ticked"), or never (Toggle: off is a valid "No"). A control that always shows a value, such as a slider, uses the blank test, so REQUIRED fails until the user moves it. Say in the file's header comment what REQUIRED means for your widget.
 - `validate(field, value)` is optional. It runs after REQUIRED and the pattern, and returns an error message or `null`. Import `rangeError` from `./field-widget.js` for `min` and `max` on a number, or `dateRangeError` for `startDate` and `endDate` on a date. For anything else, write your own; use `field.message` when the author set one.
 
 ### Action
@@ -118,6 +135,7 @@ registerWidget('link', LinkAction);
 - Then validate the page, when the widget validates. Decide whether that is the default: Button validates by default only when primary.
 - Then call `trigger(done)` and take no more presses until `done` runs.
 - Draw a `button` or an `a` element: the check presses the first one.
+- An action that asks first (a confirm dialog, a menu) runs `eventON_CLICK` and the validation on the first press, then calls `trigger(done)` from the confirm step's primary Carbon Button (`kind="primary"` or `"danger"`, as Carbon Modal's primary button is). The check presses that button when the first press fired nothing.
 
 ### Display
 
@@ -143,7 +161,9 @@ registerWidget('notice', NoticeWidget);
 Copy `theme.jsx`:
 - Do the widget's work in a `useEffect` that returns early when `preview` is true, and undo it in the effect's cleanup.
 - Return `null` on the page. In a preview, return `<div className="pp-widget-marker">Name</div>` so the author can find and select it.
-- Never use `document.getElementById`. A page-level widget may touch `document.body`, as Theme does.
+- Never use `document.getElementById`. A page-level widget may touch `document.body` or `document.title`, as Theme touches the body.
+- When the option it acts on is empty, do nothing.
+- The next coach's widget may mount before this coach's one unmounts. When the widget changes something on the page, count the mounted widgets as Theme does (`dressed`), and put the page back only when the last one unmounts. Otherwise the old coach's cleanup undoes the new coach's change.
 
 ## 3. Write the contract entry
 
@@ -152,7 +172,7 @@ Add one entry at the end of the `widgets` array in `coach-ui/widgets/modernizer-
 | Key | What to write |
 |---|---|
 | `kind`, `view`, `binding`, `label`, `boundary` | As decided in step 1 |
-| `options` | Each option has a `name`, a `label`, a `type` (a binding type, or `NameValuePair`), `"list": true` for a list, and a `group`. The group is one of these: `Behavior` (what it does and checks: `tabIndex`, `message`, `min`, `max`, `example`, `validate`), `Items` (the choices, `options`) or `Appearance` (how it looks: texts, `kind`, `height`) |
+| `options` | Each option has a `name`, a `label`, a `type` (a binding type, or `NameValuePair`), `"list": true` for a list, and a `group`. The group is one of these: `Behavior` (what it does, checks or shows as data: `tabIndex`, `message`, `min`, `max`, `example`, `validate`, a display's `value`), `Items` (the choices, `options`) or `Appearance` (how it looks: texts, `kind`, `height`). The names `label`, `helpText`, `help`, `visibility`, `path`, `type`, `readonly`, `required` and `binding` are taken: name a display's own label after what it holds, such as `barLabel` |
 | `events` | `{ event: [argument names] }`, from the table below |
 | `accessor` | `[getter, setter]`, the names a handler calls on `me` for the value, from the table below. Leave it out on display and page-level widgets |
 | `preview` | `{ "value": ... }`, the value a Coach Designer preview shows (`null` when it binds nothing) |
@@ -162,8 +182,8 @@ Use the UI Toolkit's name for an option the UI Toolkit also has. The modernizer 
 
 | Kind | `events` | `accessor` |
 |---|---|---|
-| Field you type into (String, Integer, Decimal) | `eventON_LOAD: []`, `eventON_CHANGE`, `eventON_FOCUS: []`, `eventON_BLUR: []`, `eventON_INPUT: ["current", "potential", "selection", "type"]` | String: `getText`, `setText`. Number: `getValue`, `setValue` |
-| Field you pick with (Boolean, Date, a choice) | `eventON_LOAD: []`, `eventON_CHANGE`, `eventON_FOCUS: []`, `eventON_BLUR: []` | Boolean: `isChecked`, `setChecked`. Date: `getDate`, `setDate`. Choice: `getSelectedItem`, `setSelectedItem` |
+| Field whose first input is a text input or textarea the user types into (as Text Field, Text Area, Number Field) | `eventON_LOAD: []`, `eventON_CHANGE`, `eventON_FOCUS: []`, `eventON_BLUR: []`, `eventON_INPUT: ["current", "potential", "selection", "type"]` | String: `getText`, `setText`. Number: `getValue`, `setValue` |
+| Any other field: a switch, a picker, a choice, a slider (its number input is `type=number`, which gives no keystroke event) | `eventON_LOAD: []`, `eventON_CHANGE`, `eventON_FOCUS: []`, `eventON_BLUR: []` | Boolean: `isChecked`, `setChecked`. Number: `getValue`, `setValue`. Date: `getDate`, `setDate`. Choice: `getSelectedItem`, `setSelectedItem` |
 | Action | `eventON_LOAD: []`, `eventON_CLICK: []`, `eventON_BOUNDARYEVT: ["status"]` | `getText`, `setText` (they read and write the label) |
 | Display, page-level | `eventON_LOAD: []` | none |
 
@@ -180,7 +200,7 @@ Use only the events in the contract's top-level `events`.
    - `width` and `height` 16, `viewBox="0 0 16 16"`;
    - Carbon blue `#0f62fe` for the main shape, `#fff` or `#161616` for details;
    - strokes about 1.5 wide, filled shapes where the stock icons use them, no text.
-2. `coach-ui/src/widgets/<kind>.scss`, only when the Carbon component is not one the shared styles include. Those are Button, Checkbox, TextInput, TextArea, DatePicker, Tabs, Tile, Notification, ProgressIndicator, NumberInput, Select, RadioButton and the form styles. The file is one line, for example `@use '@carbon/react/scss/components/toggle';` or `@use '@carbon/react/scss/components/link';`. Without it the component renders unstyled.
+2. `coach-ui/src/widgets/<kind>.scss`, only when the Carbon component is not one the shared styles include. Those are Button, Checkbox, TextInput, TextArea, DatePicker, Tabs, Tile, Notification, ProgressIndicator, NumberInput, Select, RadioButton and the form styles; nothing else (ProgressBar is not ProgressIndicator, Modal and Slider are not included). The file is one line, `@use '@carbon/react/scss/components/<name>';`, where the name is the component's in kebab case: `toggle`, `link`, `slider`, `modal`, `progress-bar`, `content-switcher`. Each name is a folder of `coach-ui/node_modules/@carbon/styles/scss/components/`. Without the file the component renders unstyled, and the check says which Carbon block has no styles.
 
 No other list, map or shared file needs editing. The build, the check, the toolkit, the inspector and the modernizer read the contract and the widget folder.
 
@@ -193,7 +213,9 @@ No other list, map or shared file needs editing. The build, the check, the toolk
    - Its `eventON_LOAD` runs with `me`, and its accessor writes and reads the value (or the label). A field fires `eventON_CHANGE`, focus, blur and input. An action, once pressed, fires `eventON_CLICK`, the boundary event and `eventON_BOUNDARYEVT`.
    - Every option and event shows in the built view's Configuration groups and Events tab.
 
-   When a check fails, it builds no toolkit and returns the failures with the widget's kind: fix the widget and call it again. Its `checks` lists what passed. It returns `work/MDW-<snapshot>.twx`.
+   When a check fails, it builds no toolkit and returns the failures, each with the widget's kind and what to change: fix the widget and call it again. A check named "every ..." covers each contract widget, the new one included. Its `checks` lists what passed. It returns `work/MDW-<snapshot>.twx`.
+
+   To fix one failure at a time faster, run the same check yourself: `cd coach-ui && npm run build && node scripts/check-widgets.mjs | grep -v '^PASS'` (run `npm ci` first when `coach-ui` has no packages installed). Then call `build_widget_toolkit` once it passes.
 3. Call `install_app` with that `.twx` (the user approves). Continue only when `"ok": true`. With no BAW server, give the user the `.twx` and its import steps.
 
 The check does not test what is particular to the new widget. Check that with `test_service` and its screenshots of the modernized app. With `fill`, it turns on every switch that is off and ticks every checkbox on screen. A field on a tab that is not open is reached through its group's Preview service.
