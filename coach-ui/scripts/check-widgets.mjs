@@ -196,12 +196,15 @@ try {
           const name = `pp--${block.split('__')[0]}`;
           blocks[name] = blocks[name] || styled.has(`.${c}`);
         }));
-        const bare = Object.keys(blocks).filter((b) => !blocks[b]);
+        // Carbon also writes classes it gives no rule of their own (pp--modal-tall on a pp--modal): a block is styled
+        // when a styled block of the same widget starts its name.
+        const bare = Object.keys(blocks).filter((b) => !blocks[b] && !Object.keys(blocks).some((o) => blocks[o] && b.startsWith(`${o}-`)));
         if (bare.length) out[cell.dataset.kind] = bare;
       }
       return out;
     });
-    check('every Carbon component a widget uses is styled', Object.keys(unstyled).length === 0, unstyled);
+    const fix = Object.fromEntries(Object.entries(unstyled).map(([kind, bare]) => [kind, bare.map((b) => `${b}: add @use '@carbon/react/scss/components/<name>'; to src/widgets/${kind}.scss`)]));
+    check('every Carbon component a widget uses is styled', Object.keys(unstyled).length === 0, fix);
     // The toolkit's Carbon classes start with pp-- (ClassPrefix "pp"); a cds-- class has no styles here.
     const foreign = await page.evaluate(() => {
       const out = {};
