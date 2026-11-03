@@ -4,9 +4,10 @@
 // ctx exposes the bound business object (read/write by dotted path), the boundary-event
 // trigger, fire(viewId) to press one of the coach's own buttons, and the screen options (the app's theme, field list). React state lives in BAW's binding, so the coach flow, variables and
 // server-side logic stay native; React only owns rendering.
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { ClassPrefix } from '@carbon/react';
-import { useSyncExternalStore } from 'react';
+import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { page } from './page-registry.js';
 import './styles.scss';
 
@@ -92,24 +93,43 @@ function Host({ screen: Screen, store, ctx }) {
 // A widget takes the page's theme (published by the Theme widget) but not its width: it fills its cell.
 // Its root names its kind (pp-widget-text), whether it is a field widget (pp-widget-field) and its read-only state,
 // which the page's layout rules read (styles.scss).
+const FOCUSABLE = 'input, select, textarea, button';
+const noEvent = () => undefined;
+
+// The tabIndex option, as the UI Toolkit applies it: on every control the widget draws.
+function useTabIndex(root, tabIndex) {
+  useLayoutEffect(() => {
+    const index = tabIndex === null || tabIndex === undefined || tabIndex === '' ? NaN : Number(tabIndex);
+    root.current?.querySelectorAll(FOCUSABLE).forEach((el) => {
+      if (Number.isNaN(index)) el.removeAttribute('tabindex');
+      else el.tabIndex = index;
+    });
+  });
+}
+
 function WidgetHost({ kind, widget: Widget, store, ctx }) {
   useSyncExternalStore(store.subscribe, store.snapshot);
   const theme = useSyncExternalStore(page.subscribe, () => page.theme);
+  const root = useRef(null);
   const props = ctx.read();
+  useTabIndex(root, props.options.tabIndex);
   if (props.visibility === 'HIDDEN' || props.visibility === 'NONE') return null;
   const binding = { value: ctx.binding.get(), set: (value) => { ctx.binding.set(value); store.notify(); } };
   const className = `pp-app pp-widget pp-widget-${kind}${Widget.field ? ' pp-widget-field' : ''}${props.visibility === 'READONLY' ? ' pp-widget-readonly' : ''}`;
   return (
     <ClassPrefix prefix="pp">
-      <div className={className} style={themeStyle({ ...theme, width: undefined })}>
-        <Widget {...props} binding={binding} trigger={ctx.trigger} />
+      <div ref={root} className={className} style={themeStyle({ ...theme, width: undefined })}>
+        <Widget {...props} binding={binding} trigger={ctx.trigger} fire={ctx.fire || noEvent} />
       </div>
     </ClassPrefix>
   );
 }
 
-// ctx: read() -> { id, label, helpText, visibility, options, preview }, binding { get, set }, trigger(done).
+// ctx: read() -> { id, label, helpText, visibility, options, preview }, binding { get, set }, trigger(done), and
+// fire(event, ...args), which runs one of the view's event handlers (none in a preview).
 // The Coach View (src/widget-host.js) or the Coach Designer preview owns the context, so this stays free of BAW APIs.
+// The first render is synchronous, so the widget is on the page when the view's eventON_LOAD runs, as a UI Toolkit
+// control's is.
 export function mountWidget(element, kind, ctx) {
   const Widget = widgets[kind];
   if (!Widget) throw new Error(`Modernizer Widgets: no widget named "${kind}"`);
@@ -117,7 +137,7 @@ export function mountWidget(element, kind, ctx) {
   element.appendChild(container);
   const store = createStore(ctx);
   const root = createRoot(container);
-  root.render(<WidgetHost kind={kind} widget={Widget} store={store} ctx={ctx} />);
+  flushSync(() => root.render(<WidgetHost kind={kind} widget={Widget} store={store} ctx={ctx} />));
   return {
     update: () => store.notify(),
     unmount() {

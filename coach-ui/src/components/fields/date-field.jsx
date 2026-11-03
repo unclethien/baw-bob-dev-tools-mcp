@@ -13,13 +13,16 @@ function parseTyped(text, whole) {
 // Picking from the calendar sets the date at once. A typed date is kept as soon as it reads as a full mm/dd/yyyy date,
 // and in any form on blur. Waiting for blur alone is not enough: tabbing into the input opens the calendar, and Tab
 // then stays in the input.
+// startDate and endDate (the UI Toolkit Date Time Picker's names) bound the calendar; a date typed outside them is
+// flagged when the page is validated (field-widget.js).
 export function DateField({ id, field, binding, validity, readOnly }) {
   const commit = (text, whole) => {
     const date = parseTyped(text, whole);
     if (date && toDate(binding.value)?.getTime() !== date.getTime()) binding.set(date);
   };
   return (
-    <DatePicker datePickerType="single" value={toDate(binding.value) || undefined} readOnly={readOnly} onChange={([d]) => d && binding.set(d)}>
+    <DatePicker datePickerType="single" value={toDate(binding.value) || undefined} readOnly={readOnly} onChange={([d]) => d && binding.set(d)}
+      minDate={toDate(field.startDate) || undefined} maxDate={toDate(field.endDate) || undefined}>
       <DatePickerInput id={id} labelText={field.label} helperText={field.help} placeholder="mm/dd/yyyy" onChange={(e) => commit(e.target.value, true)} onBlur={(e) => commit(e.target.value, false)} {...validity} />
     </DatePicker>
   );

@@ -17,7 +17,11 @@
     function holder(value) { return { get: function () { return value; }, set: function (key, next) { value = next; } }; }
     window.harness = {
       triggered: [],
-      // spec: { kind, label, help, visibility, inherited, options: {name: value}, value, id (viewid), path (controlidpath), parent }
+      events: {},  // { kind: { event: [argument names] } }, from the contract; scripts/check-widgets.mjs sets it
+      optionNames: {},  // { kind: [option name] }, from the contract: the names the generated load handler passes
+      status: 'ok',  // the status BAW hands a boundary event's callback
+      // spec: { kind, label, help, visibility, inherited, options: {name: value}, value, id (viewid), path (controlidpath), parent };
+      // an event handler is an option too: options: { eventON_CHANGE: 'code' }
       view: function (spec) {
         var element = document.createElement('div');
         element.className = 'cell';
@@ -25,15 +29,24 @@
         (spec.parent || document.getElementById('root')).appendChild(element);
         var options = { _metadata: { label: holder(spec.label), helpText: holder(spec.help), visibility: holder(spec.visibility) } };
         Object.keys(spec.options || {}).forEach(function (name) { options[name] = holder(spec.options[name]); });
-        var bound = holder(spec.value);
+        var handle;
+        // BAW calls the view's change() when its binding changes, also when the widget itself sets it.
+        var bound = holder(spec.value), set = bound.set;
+        bound.set = function (key, next) {
+          var old = bound.get('value');
+          set(key, next);
+          if (handle) handle.change({ property: 'value', oldVal: old, newVal: next });
+        };
         var view = { context: {
           element: element, viewid: spec.id, controlidpath: spec.path, options: options, binding: spec.kind === 'button' ? undefined : bound,
           getInheritedVisibility: function () { return spec.inherited || 'EDITABLE'; },
-          trigger: function (callback, opts) { harness.triggered.push({ id: spec.id, callBackForAll: !!(opts && opts.callBackForAll) }); if (callback) setTimeout(callback, 10); },
+          trigger: function (callback, opts) { harness.triggered.push({ id: spec.id, callBackForAll: !!(opts && opts.callBackForAll) }); if (callback) setTimeout(function () { callback({ status: harness.status }); }, 10); },
         } };
-        var names = Object.keys(spec.options || {});
-        var handle = ModernizerWidgets.attach(view, spec.kind, names);
-        return { element: element, handle: handle, value: function () { return bound.get('value'); },
+        var events = harness.events[spec.kind] || {};
+        var names = (harness.optionNames[spec.kind] || []).concat(Object.keys(spec.options || {}))
+          .filter(function (name, i, all) { return !(name in events) && all.indexOf(name) === i; });
+        handle = ModernizerWidgets.attach(view, spec.kind, names, events);
+        return { element: element, handle: handle, view: view, value: function () { return bound.get('value'); },
                  setOption: function (name, value) { options[name] = holder(value); handle.update(); } };
       },
       preview: function (kind, state) {

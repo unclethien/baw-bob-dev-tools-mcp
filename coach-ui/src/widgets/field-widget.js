@@ -3,7 +3,7 @@
 //   registerWidget('toggle', fieldWidget('toggle', { Input: ToggleInput, display, isEmpty }));
 // Kept as .js (no JSX) so build.mjs does not take it for a widget: only src/widgets/*.jsx are bundled as widgets.
 import { createElement, useEffect, useRef, useState } from 'react';
-import { Field, fieldError, fieldKind, ReadOnlyValue } from '../components.jsx';
+import { Field, fieldError, fieldKind, ReadOnlyValue, toDate } from '../components.jsx';
 import { page } from '../page-registry.js';
 
 const choices = (list) => (Array.isArray(list) ? list.map((o) => ({ value: o.value, label: o.name ?? o.value })) : []);
@@ -13,6 +13,19 @@ function rangeError(field, value) {
   if (blank(value)) return null;
   if (!blank(field.min) && Number(value) < Number(field.min)) return field.message || `${field.label} must be at least ${field.min}`;
   if (!blank(field.max) && Number(value) > Number(field.max)) return field.message || `${field.label} must be at most ${field.max}`;
+  return null;
+}
+
+// The earliest and latest date a Date widget takes (startDate, endDate), compared by calendar day.
+const day = (value) => { const d = toDate(value); return d && !Number.isNaN(d.getTime()) ? new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() : null; };
+
+function dateRangeError(field, value) {
+  const at = day(value);
+  if (at === null) return null;
+  const start = day(field.startDate);
+  const end = day(field.endDate);
+  if (start !== null && at < start) return field.message || `${field.label} must be on or after ${toDate(field.startDate).toLocaleDateString()}`;
+  if (end !== null && at > end) return field.message || `${field.label} must be on or before ${toDate(field.endDate).toLocaleDateString()}`;
   return null;
 }
 
@@ -45,7 +58,7 @@ export function fieldWidget(type, { Input, display, isEmpty } = {}) {
         get element() { return element.current; },
         validate() {
           const { field: f, value } = latest.current;
-          const message = fieldError(f, value) || (type === 'number' ? rangeError(f, value) : null);
+          const message = fieldError(f, value) || (type === 'number' ? rangeError(f, value) : type === 'date' ? dateRangeError(f, value) : null);
           setError(message);
           return message && { message };
         },

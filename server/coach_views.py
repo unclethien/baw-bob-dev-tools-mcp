@@ -79,17 +79,20 @@ def managed_asset_xml(asset_id, version, name, asset_uuid, mime, length, guid=No
 def view_xml(view_id, version, name, *, binding_ref=None, options=(), asset_ids=(), load="", change="", unload="",
              description="", palette_icon=None, preview_html=None, preview_js=None, has_label=False, emit_boundary=True, new_id=None, layout="",
              binding_name="data"):
-    """Coach View object XML. options: (name, label, class ref) or (name, label, class ref, is list) config options.
+    """Coach View object XML. options: config options (name, label, class ref[, is list[, group[, property type]]]); the
+    group is the Configuration section Coach Designer shows the option in, and an EVENT option (a String holding the
+    handler's code) is listed in its Events tab.
     palette_icon, preview_html and preview_js are managed file IDs (61.*) for Coach Designer.
     layout: the view's own layout items (CoachDesignerNG XML with the ns2 prefix), e.g. Custom HTML around a content box.
     new_id makes the IDs and guids inside the view (a toolkit keeps them across builds); versionIds are always new.
     binding_name names the business data binding: views in the layout bind to tw.businessData.<binding_name>.<field>."""
     new_id = new_id or uid
-    def config_option(opt, label, class_ref, seq, is_list=False):
+    def config_option(opt, label, class_ref, seq, is_list=False, group=None, property_type="OBJECT"):
+        group_name = f"<groupName>{escape(group)}</groupName>" if group else '<groupName isNull="true" />'
         return (f'<configOption name="{opt}">{BOOKKEEPING}<coachViewConfigOptionId>66.{new_id()}</coachViewConfigOptionId><coachViewId>{view_id}</coachViewId>'
-                f"<isList>{str(is_list).lower()}</isList><propertyType>OBJECT</propertyType><label>{escape(label)}</label><classId>{class_ref}</classId>"
+                f"<isList>{str(is_list).lower()}</isList><propertyType>{property_type}</propertyType><label>{escape(label)}</label><classId>{class_ref}</classId>"
                 f'<processId isNull="true" /><actionflowId isNull="true" /><isAdaptive>false</isAdaptive><seq>{seq}</seq><description isNull="true" />'
-                f'<groupName isNull="true" /><guid>{new_id()}</guid><versionId>{uid()}</versionId></configOption>')
+                f'{group_name}<guid>{new_id()}</guid><versionId>{uid()}</versionId></configOption>')
 
     def inline_script(script, kind, seq):
         return (f'<inlineScript name="{script}">{BOOKKEEPING}<coachViewInlineScriptId>68.{new_id()}</coachViewInlineScriptId><coachViewId>{view_id}</coachViewId>'
