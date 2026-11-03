@@ -8,8 +8,10 @@ toolkits the coaches use (System Data and UI Toolkit) by ID, but their contents 
 because every BAW server already has them. That is the format the Operations REST API exports with
 format=twxWithoutToolkits.
 
-The built-in IDs and header match BAW 26.0.0 on Cloud Pak for Business Automation. To match another
-server exactly, read them from any app exported from that server with read_base().
+The built-in IDs and header match BAW 26.0.0 on Cloud Pak for Business Automation. BAW does not import
+a package stamped with a newer build than its own, so for an older server (24.0.x, 25.0.x) read the
+header, the system toolkits and the settings fields from any app exported from that server with
+read_base().
 """
 
 import re
@@ -94,6 +96,9 @@ PROJECT_DEFAULTS = """<?xml version="1.0" encoding="UTF-8"?>
     </projectDefaults>
 </teamworks>
 """
+# Process App Settings fields that only newer BAW builds write: solutionTargetStore since 25.0.x, the app logging
+# fields since 26.0.0. A package for an older server leaves out the ones that server's exports do not have.
+NEWER_SETTINGS = ("solutionTargetStore", "appLoggingEnabled", "logName", "logLevel")
 
 BUSINESS_OBJECT = """<?xml version="1.0" encoding="UTF-8"?>
 <teamworks>
@@ -215,9 +220,9 @@ def toolkit_dependencies(package: str) -> list[dict]:
 
 
 def read_base(path: Path) -> dict:
-    """What a generated app takes from an app exported from the target server: the package header,
-    the system toolkits' IDs, the target environment, the app's own identity (to add a snapshot to it),
-    and its dependencies on our widget toolkits, so a new snapshot keeps them."""
+    """What a generated app or toolkit takes from an app exported from the target server: the package header,
+    the system toolkits' IDs, the target environment, the settings fields that server writes, the app's own
+    identity (to add a snapshot to it), and its dependencies on our widget toolkits, so a new snapshot keeps them."""
     with zipfile.ZipFile(path) as z:
         package = z.read("META-INF/package.xml").decode("utf-8")
         defaults = next((z.read(f"objects/{oid}.xml").decode("utf-8") for oid in
@@ -235,8 +240,9 @@ def read_base(path: Path) -> dict:
             toolkits[project.group(3)] = (dep_id, rank, project.group(1), project.group(2), branch, *snap.groups())
     t = target(package)
     environment = re.search(r"<targetEnvironment>([^<]+)</targetEnvironment>", defaults)
+    settings = tuple(f for f in NEWER_SETTINGS if re.search(rf"<{f}[\s/>]", defaults)) if defaults else NEWER_SETTINGS
     return {"header": header.group(0), "toolkits": {**SYSTEM_TOOLKITS, **toolkits}, "sql": sql_ids(path),
-            "environment": environment.group(1) if environment else TARGET_ENVIRONMENT,
+            "environment": environment.group(1) if environment else TARGET_ENVIRONMENT, "settings": settings,
             "acronym": t["acronym"], "name": t["name"], "projectId": t["projectId"], "branchId": t["branchId"],
             "branchName": t["branchName"], "snapshot": t["snapshot"], "dependencies": toolkit_dependencies(package)}
 
@@ -267,7 +273,15 @@ def sql_ids(path: Path) -> dict:
 
 
 def builtin() -> dict:
-    return {"header": HEADER, "toolkits": SYSTEM_TOOLKITS, "sql": SYSTEM_SQL, "environment": TARGET_ENVIRONMENT}
+    return {"header": HEADER, "toolkits": SYSTEM_TOOLKITS, "sql": SYSTEM_SQL, "environment": TARGET_ENVIRONMENT, "settings": NEWER_SETTINGS}
+
+
+def project_defaults(base: dict, **fields) -> str:
+    """The Process App Settings object (PROJECT_DEFAULTS filled with fields), without the newer settings fields
+    the base's server does not write."""
+    keep = base.get("settings", NEWER_SETTINGS)
+    return "".join(line for line in PROJECT_DEFAULTS.format(**fields).splitlines(keepends=True)
+                   if not (m := re.match(r"\s*<(\w+)", line)) or m.group(1) not in NEWER_SETTINGS or m.group(1) in keep)
 
 
 def dependency_xml(d: dict) -> str:
