@@ -18,16 +18,17 @@ Examples:
 import argparse
 import json
 import os
+import re
 import ssl
 import sys
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
 
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
-# Test clusters often use self-signed certificates.
-SSL_CTX = ssl._create_unverified_context()
 
 
 class ConfigError(Exception):
@@ -45,16 +46,37 @@ def load_env_file() -> dict:
     return values
 
 
+TLS_KEYS = ("BAW_TLS_INSECURE", "BAW_CA_FILE")
+
+
 def missing_settings():
     """Environment first, then .env for anything not set. Returns the settings still missing.
-    POSTGRES_* stays out of os.environ, so child processes never see the database passwords (pg_ops reads them)."""
+    POSTGRES_* stays out of os.environ, so child processes never see the database passwords (pg_ops reads them).
+    The TLS settings stay out too: tls_settings reads them on every use, so editing .env takes effect without a restart."""
     for key, value in load_env_file().items():
-        if not key.startswith("POSTGRES_") and not os.environ.get(key):
+        if not key.startswith("POSTGRES_") and key not in TLS_KEYS and not os.environ.get(key):
             os.environ[key] = value
     missing = [k for k in ("BAW_URL", "BAW_USER") if not os.environ.get(k)]
     if not (os.environ.get("BAW_PASSWORD") or os.environ.get("BAW_APIKEY")):
         missing.append("BAW_PASSWORD or BAW_APIKEY")
     return missing
+
+
+def tls_settings() -> tuple:
+    """(insecure, ca_path) from BAW_TLS_INSECURE and BAW_CA_FILE, the environment first, then .env, read fresh on every call.
+    Certificates are verified unless BAW_TLS_INSECURE is 1, true or yes (the same test coach-ui/scripts/verify-service.mjs applies).
+    BAW_CA_FILE adds a CA to the system roots for the BAW client; a relative path starts at the repository root."""
+    env = load_env_file()
+    insecure = bool(re.fullmatch(r"1|true|yes", (os.environ.get("BAW_TLS_INSECURE") or env.get("BAW_TLS_INSECURE", "")).strip(), re.IGNORECASE))
+    ca = (os.environ.get("BAW_CA_FILE") or env.get("BAW_CA_FILE", "")).strip()
+    path = None
+    if ca:
+        path = Path(ca)
+        if not path.is_absolute():
+            path = ENV_FILE.parent / path
+        if not path.is_file():
+            raise ConfigError("BAW_CA_FILE does not point to an existing file")
+    return insecure, path
 
 
 def configured() -> bool:
@@ -68,16 +90,43 @@ def load_env():
         raise ConfigError(f"Missing BAW settings: {', '.join(missing)}. Set them in {ENV_FILE} or in the environment.")
 
 
+class SameOriginRedirects(urllib.request.HTTPRedirectHandler):
+    """Follows a redirect only within BAW_URL's scheme and host, so the token and CSRF header never reach another server."""
+
+    def __init__(self, base):
+        parts = urllib.parse.urlsplit(base)
+        self.origin = (parts.scheme, parts.netloc.lower())
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parts = urllib.parse.urlsplit(urllib.parse.urljoin(req.full_url, newurl))
+        if (parts.scheme, parts.netloc.lower()) != self.origin:
+            target = parts.hostname or "an unknown host"  # never the userinfo, which could hold credentials
+            raise urllib.error.URLError(f"BAW redirected to {parts.scheme}://{target}, which is not BAW_URL's server; not following it")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 class BawOps:
     def __init__(self):
         load_env()
         self.base = os.environ["BAW_URL"].rstrip("/")
+        self.tls = tls_settings()
+        insecure, ca = self.tls
+        if insecure:
+            context = ssl._create_unverified_context()
+        else:
+            context = ssl.create_default_context()
+            if ca:
+                try:
+                    context.load_verify_locations(cafile=str(ca))
+                except ssl.SSLError:
+                    raise ConfigError("BAW_CA_FILE is not a valid PEM certificate file") from None
+        self.opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context), SameOriginRedirects(self.base))
         self.token = self._authorize()
         self.csrf = self._csrf()
 
     def _request(self, method, path, body=None, headers=None, raw=False, timeout=300):
         req = urllib.request.Request(self.base + path, data=body, method=method, headers=headers or {})
-        with urllib.request.urlopen(req, context=SSL_CTX, timeout=timeout) as resp:
+        with self.opener.open(req, timeout=timeout) as resp:
             data = resp.read()
             return (data, resp.headers) if raw else json.loads(data or b"{}")
 

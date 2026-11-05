@@ -502,10 +502,12 @@ browser (test_service)            cookie ibm-private-cloud-session=&lt;token&gt;
 
   <div class="note warn">
     <div class="body">
-      <strong>Certificate verification is off.</strong>
-      <p>Both <code>baw_ops.py</code> and <code>verify-service.mjs</code> skip TLS verification so they work
-      against test clusters with self-signed certificates. That is acceptable for a TechZone test server and
-      not for production.</p>
+      <strong>Certificates are verified by default.</strong>
+      <p>Both <code>baw_ops.py</code> and <code>verify-service.mjs</code> check the server certificate and refuse
+      redirects to another host or to <code>http</code>. A private CA goes in <code>BAW_CA_FILE</code> (Node and Python;
+      Chrome needs it in the system trust store). On a test cluster, <code>BAW_TLS_INSECURE=true</code> skips the
+      certificate checks; it is read on every call. PostgreSQL has its own settings, <code>POSTGRES_CA_FILE</code>
+      and <code>POSTGRES_SSLMODE</code>. Do not turn the opt-out on for production.</p>
     </div>
   </div>
 </section>
@@ -526,8 +528,6 @@ browser (test_service)            cookie ibm-private-cloud-session=&lt;token&gt;
     <li><strong>Track the run-URL dependency.</strong> <code>/bas/rest/bpm/wle/v1/exposed/service</code> and the
       other <code>/rest/bpm/wle/v1</code> routes that <code>test_process</code> uses are outside the published specs; check it on each BAW upgrade, or move to a documented route if one starts
       returning human services with run URLs.</li>
-    <li><strong>Settle certificate trust</strong> before pointing the tools at anything other than a test
-      cluster.</li>
   </ol>
 </section>
 
