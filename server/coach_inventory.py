@@ -308,6 +308,8 @@ def field_spec(it, variable):
     spec = {"path": path, "label": it["label"] or humanize(path), "type": kind}
     if it["options"]:
         spec["options"] = it["options"]
+    if it["viewId"]:
+        spec["viewId"] = it["viewId"]
     widget = "text" if kind == "output" else kind
     config = widget_config(it)
     spec.update({k: config[k] for k in widget_spec_keys(widget) if config.get(k)})

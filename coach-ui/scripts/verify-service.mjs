@@ -37,12 +37,18 @@ if (!args.url && (!args.app || !args.service)) {
   process.exit(2);
 }
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Test clusters often use self-signed certificates
 const envFile = new URL('../../.env', import.meta.url);
 const fileEnv = fs.existsSync(envFile) ? Object.fromEntries(fs.readFileSync(envFile, 'utf8').split('\n')
   .filter((l) => /^\s*BAW_[A-Z_]*\s*=/.test(l))
   .map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim().replace(/^["']|["']$/g, '')])) : {};
 const setting = (key) => process.env[key] || fileEnv[key];
+// Certificates are verified unless the cluster is explicitly marked insecure; a parent's NODE_TLS_REJECT_UNAUTHORIZED must not switch verification off.
+const insecure = /^(1|true|yes)$/i.test((setting('BAW_TLS_INSECURE') || '').trim());
+if (insecure) process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+else delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+if (setting('BAW_CA_FILE') && !process.env.NODE_EXTRA_CA_CERTS) {
+  console.error('BAW_CA_FILE is set but NODE_EXTRA_CA_CERTS is not: Node will not trust that CA when run standalone. The MCP server run_browser sets it; Chrome also needs the CA in the system trust store.');
+}
 const BASE = setting('BAW_URL')?.replace(/\/+$/, '');
 const secret = setting('BAW_PASSWORD') ? { password: setting('BAW_PASSWORD') } : { api_key: setting('BAW_APIKEY') };
 if (!BASE || !setting('BAW_USER') || !(secret.password || secret.api_key)) {
@@ -54,7 +60,21 @@ const BROWSERS = [process.env.BROWSER_PATH, '/Applications/Brave Browser.app/Con
   '/usr/bin/chromium', '/usr/bin/google-chrome'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const auth = await fetch(`${BASE}/icp4d-api/v1/authorize`, {
+// A certificate failure names the settings that fix it. A redirect is never followed: the login body carries the password, and a 307 would resend it to wherever the Location header points.
+const CERT_CODES = /^(UNABLE_TO_VERIFY_LEAF_SIGNATURE|UNABLE_TO_GET_ISSUER_CERT_LOCALLY|SELF_SIGNED_CERT_IN_CHAIN|DEPTH_ZERO_SELF_SIGNED_CERT|CERT_HAS_EXPIRED|CERT_NOT_YET_VALID|ERR_TLS_CERT_ALTNAME_INVALID)$/;
+const baw = async (url, init) => {
+  try {
+    return await fetch(url, { ...init, redirect: 'error' });
+  } catch (e) {
+    const code = e?.cause?.code;
+    if (CERT_CODES.test(code || '')) {
+      throw new Error(`Certificate check failed (${code}) for ${new URL(url).host}: set BAW_CA_FILE to the cluster's CA (it is passed to Node as NODE_EXTRA_CA_CERTS; Chrome needs the CA in the system trust store), or set BAW_TLS_INSECURE=true for a test cluster`);
+    }
+    if (String(e?.cause?.message || e?.message).includes('redirect')) throw new Error(`${new URL(url).host} answered with a redirect, which is refused so credentials are not re-sent`);
+    throw e;
+  }
+};
+const auth = await baw(`${BASE}/icp4d-api/v1/authorize`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ username: setting('BAW_USER'), ...secret }),
 });
@@ -63,7 +83,7 @@ if (!token) throw new Error(`Login failed (HTTP ${auth.status})`);
 
 let item = { runURL: args.url && new URL(args.url, BASE).href };
 if (!args.url) {
-  const exposed = await (await fetch(`${BASE}/bas/rest/bpm/wle/v1/exposed/service`, { headers: { Authorization: `Bearer ${token}` } })).json();
+  const exposed = await (await baw(`${BASE}/bas/rest/bpm/wle/v1/exposed/service`, { headers: { Authorization: `Bearer ${token}` } })).json();
   item = exposed.data.exposedItemsList.find((i) => i.processAppAcronym === args.app && i.display === args.service
     && (args.snapshot ? i.snapshotName === args.snapshot : i.tip));
   if (!item) throw new Error(`No exposed service "${args.service}" in ${args.app} ${args.snapshot || '(tip)'}`);
@@ -200,17 +220,34 @@ async function fill(frame, react) {
 }
 
 const executablePath =BROWSERS.find((p) => p && fs.existsSync(p));
+// Cookies are bound to the port and scheme they were set for, so the token cookie reaches the BAW port only. Puppeteer merges this flag into the single --enable-features list it passes to Chrome, next to its own features.
 const browser = await puppeteer.launch({
-  executablePath, headless: 'new', acceptInsecureCerts: true,
-  args: ['--no-first-run', '--ignore-certificate-errors', `--user-data-dir=${fs.mkdtempSync(path.join(os.tmpdir(), 'baw-verify-'))}`],
+  executablePath, headless: 'new', acceptInsecureCerts: insecure,
+  args: ['--no-first-run', '--enable-features=EnablePortBoundCookies,EnableSchemeBoundCookies', ...(insecure ? ['--ignore-certificate-errors'] : []), `--user-data-dir=${fs.mkdtempSync(path.join(os.tmpdir(), 'baw-verify-'))}`],
 });
-const report = { app: args.app, service: args.service || args.url, snapshot: item.snapshotName, steps: [], errors: [], ok: false };
+const bawOrigin = new URL(BASE).origin;
+const report = { app: args.app, service: args.service || args.url, snapshot: item.snapshotName, steps: [], errors: [], notes: [], ok: false };
+// A run URL on another origin gets no token, so the page is expected to ask for a login: say why instead of failing quietly.
 try {
+  const runOrigin = new URL(item.runURL).origin;
+  if (runOrigin !== bawOrigin) report.notes.push(`run URL is on ${runOrigin}, not BAW_URL's origin: no credentials are sent to it`);
   fs.mkdirSync(args.out, { recursive: true });
   const page = await browser.newPage();
   await page.setViewport({ width: 1400, height: 1000 });
-  await page.setCookie({ name: 'ibm-private-cloud-session', value: token, domain: new URL(BASE).hostname, path: '/', secure: true });
-  await page.setExtraHTTPHeaders({ Authorization: `Bearer ${token}` });
+  // The token goes only to the BAW origin: a host-only cookie the page cannot read, bound to the BAW port and the https scheme (sourcePort/sourceScheme, with the port-bound cookie features enabled at launch), and an
+  // Authorization header added per request, so a cross-origin image, script or redirect target never sees it (an Authorization header of the page's own is dropped).
+  await page.setCookie({ name: 'ibm-private-cloud-session', value: token, url: BASE, httpOnly: true, secure: true, sameSite: 'Lax', sourcePort: Number(new URL(BASE).port) || 443, sourceScheme: 'Secure' });
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    if (req.isInterceptResolutionHandled()) return;
+    let origin = null;
+    try { origin = new URL(req.url()).origin; } catch { /* not a URL: send without credentials */ }
+    const headers = { ...req.headers() };
+    delete headers.authorization;
+    if (origin === bawOrigin) headers.authorization = `Bearer ${token}`;
+    // A request the page already abandoned (navigation, close) rejects here: that must not take the run down.
+    req.continue({ headers }).catch((e) => report.notes.push(`request not continued: ${String(e).slice(0, 120)}`));
+  });
   page.on('pageerror', (e) => report.errors.push(String(e).slice(0, 300)));
   page.on('console', (m) => { if (m.type() === 'error') report.errors.push(`console: ${m.text().slice(0, 300)}`); });
   page.on('response', (r) => { // a server error says why in its body (for example a service call from the coach that BAW rejects)
@@ -283,6 +320,7 @@ try {
   report.ok = !report.failure && report.errors.length === 0;
 } catch (e) {
   report.failure = String(e).slice(0, 300);
+  if (/ERR_CERT_|ERR_SSL_/.test(report.failure)) report.failure += ' - Chrome does not trust the BAW certificate: add its CA to the system trust store, or set BAW_TLS_INSECURE=true for a test cluster (BAW_CA_FILE only reaches Node)';
 } finally {
   await browser.close();
   console.log(JSON.stringify(report, null, 1));
