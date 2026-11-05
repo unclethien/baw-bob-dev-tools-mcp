@@ -61,7 +61,7 @@ You design the app and write **one JSON spec**. The baw-dev-tools MCP tools buil
 
 5. **Check the flow:** `inspect_coaches` on the returned `.twx`. Every step must show its fields and a button leading to the next coach. With `"tabs"` the first coach shows one section per tab and `sectionStyle: "tabs"`.
 
-6. **STOP: ask before importing.** If `create_app` returned `changedInBaw`, first ask about each group as the coach-groups skill says, and rebuild with `replace_groups` for the ones to replace. Do not call `install_app` yet. Tell the user the `.twx` path, the app, acronym and snapshot, and what `inspect_coaches` shows (one line per coach), then ask:
+6. **STOP: ask before importing.** If `create_app` returned `changedInBaw`, first ask about each group as the coach-groups skill says, and rebuild with `replace_groups` for the ones to replace. If it returned `changedInBawDropped`, tell the user those BAW-edited groups are not in the new snapshot; change the spec back so it builds the group under its earlier name to keep one, or do nothing to accept the drop (`replace_groups` does not apply). Do not call `install_app` yet. Tell the user the `.twx` path, the app, acronym and snapshot, and what `inspect_coaches` shows (one line per coach), then ask:
    > The app is built. Do you want me to import it into BAW now?
 
    If the user says no, stop and give them the `.twx` path and the import steps (Workflow Center, Process Apps, Import), so they can import it later.

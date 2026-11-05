@@ -31,6 +31,7 @@ import hashlib
 import html
 import re
 import uuid
+import zipfile
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
@@ -220,6 +221,34 @@ def changed_in_baw(view_text):
     return stored is None or stored != fields_fingerprint(layout_fields(view_text))
 
 
+def view_id(acronym, name):
+    """The ID of the group View called name in this app: the same in every build."""
+    return "64." + stable_ids(acronym, f"group/{name}")()
+
+
+def dropped_changed_views(base_twx, acronym, built_names):
+    """Names, as they are now in BAW, of the group Views in base_twx (an export of this same app) that this module
+    built, that someone changed in BAW, and whose ID the build no longer produces. A View counts as built here when
+    its ID is view_id() of its own name, or when its description still carries a build fingerprint: the second rule
+    keeps a View that someone renamed in BAW. The "(Modernized)" Views are left out."""
+    built_ids = {view_id(acronym, name) for name in built_names}
+    found = []
+    with zipfile.ZipFile(base_twx) as z:
+        for entry in z.namelist():
+            if not (entry.startswith("objects/64.") and entry.endswith(".xml")):
+                continue
+            text = z.read(entry).decode("utf-8", errors="replace")
+            head = re.match(r'﻿?\s*(?:<\?xml[^>]*\?>\s*)?<teamworks>\s*<coachView id="([^"]+)" name="([^"]*)"',
+                            text)
+            if not head or head.group(1) in built_ids:
+                continue
+            name = html.unescape(head.group(2))
+            ours = head.group(1) == view_id(acronym, name) or read_fingerprint(text) is not None
+            if ours and not name.endswith(" (Modernized)") and changed_in_baw(text):
+                found.append(name)
+    return found
+
+
 def option_name(path):
     return f"{path.replace('.', '_')}Visibility"
 
@@ -255,15 +284,16 @@ def group_view(acronym, name, variable, bo_ref, visibility_ref, fields, items, a
     fields: (path, kind, label, hideable) per field, in layout order. items: the View's layout items (ns2 prefix), built
     by the caller; each field view must bind to tw.businessData.<variable>.<path>, and the caller has already
     passed each hideable field's item through bind_visibility."""
+    group_id, version = view_id(acronym, name), uid()
     new_id = stable_ids(acronym, f"group/{name}")
-    view_id, version = "64." + new_id(), uid()
+    new_id()  # the sequence's first ID is the View's own, so the IDs view_xml draws next stay what they were
     options = [(option_name(path), option_label(label), visibility_ref) for path, _, label, hideable in fields if hideable]
     description = (f"Reusable group of {len(fields)} fields. Place it on a coach bound to the {variable} variable; "
                    "each field's visibility option hides it there. Built by baw-dev-tools, fingerprint @FINGERPRINT@")
-    xml = view_xml(view_id, version, escape(name, {'"': "&quot;"}), binding_ref=bo_ref, binding_name=variable, options=options, load=GROUP_JS,
+    xml = view_xml(group_id, version, escape(name, {'"': "&quot;"}), binding_ref=bo_ref, binding_name=variable, options=options, load=GROUP_JS,
                    change=GROUP_CHANGE_JS, emit_boundary=False, description=description, new_id=new_id, layout=top_level(items))
     xml = xml.replace("@FINGERPRINT@", fields_fingerprint(layout_fields(xml)), 1)
-    return view_id, version, xml.replace("<lastModifiedBy>coach_views</lastModifiedBy>", f"<lastModifiedBy>{author}</lastModifiedBy>", 1)
+    return group_id, version, xml.replace("<lastModifiedBy>coach_views</lastModifiedBy>", f"<lastModifiedBy>{author}</lastModifiedBy>", 1)
 
 
 def placement_options(fields, hide=(), readonly=False):

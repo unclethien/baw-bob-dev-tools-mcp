@@ -41,6 +41,7 @@ sys.path.insert(0, str(SERVER))
 
 import app_template  # noqa: E402
 import generate_app  # noqa: E402
+import group_views  # noqa: E402
 import widget_toolkit  # noqa: E402
 from baw_ops import BawOps, ConfigError, configured, missing_settings  # noqa: E402
 
@@ -408,6 +409,12 @@ def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | N
     relabelled), the build keeps their version and lists it in "changedInBaw"; other edits to a group (help text,
     choices, styling) belong in the spec, since a rebuild replaces them; then ask the user whether to keep it or replace it with the spec's, and for the ones to replace
     build again with replace_groups (same snapshot name, before install_app).
+    When the app is on the server (or base is an exported .twx of the same app) and the spec no longer builds a group
+    (its section was renamed, removed or made inline, or its group renamed or removed), the old group View is not in
+    the new snapshot. If someone changed that View in BAW, its current name is listed in "changedInBawDropped" (a View
+    named "... (Modernized)" is never listed): to keep it, change the spec back so it builds that group under the name
+    it had when it was built, and to accept the drop do nothing. replace_groups does not apply to it, because a name
+    that is no longer in the spec makes the build stop.
     A spec with a "database" section ({"table": "public.name", "key": "<field>", "columns": {"<field>": "<column>"}})
     stores the form in a table of bawexternal: a Load button fills the form from the row with the key, and Submit
     saves it. The key is required: it becomes a required field and the primary key. The data source is fixed
@@ -448,13 +455,17 @@ def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | N
                          *(["--base", base_twx] if base_twx else []),
                          *[a for g in replace_groups or [] for a in ("--replace-group", g)])
         database = json.loads(database_json.read_text()) if database_json.exists() else None
+        groups = generate_app.load_spec(spec_path).get("groups") or []  # with the default ones: a View per section
+        dropped = (group_views.dropped_changed_views(base_twx, acronym, {g["name"] for g in groups})
+                   if base_twx and target_of(base_twx)["acronym"] == acronym else [])
     result = {"twx": rel(dest), "newApp": not existing, "summary": summary + (f"\n{note}" if note else "")}
-    groups = generate_app.load_spec(spec_path)["groups"]  # with the default ones: a View per section
     if groups:
         result["groups"] = [{"name": g["name"], "view": g["name"], "preview": f"{g['name']} Preview"} for g in groups]
     kept = re.search(r"^Changed in BAW, kept: (.+)$", summary, re.M)
     if kept:
         result["changedInBaw"] = json.loads(kept.group(1))
+    if dropped:
+        result["changedInBawDropped"] = dropped
     if database:
         result["database"] = database
     if not online:
