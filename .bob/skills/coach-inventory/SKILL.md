@@ -14,7 +14,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
    When the app was rebuilt after you edited a coach spec of it (the App Builder added a button or a field), pass that spec as `previous`. Your edits are carried onto the new spec, matched by service, coach, field path, group and button, and `carriedOver` reports them: `values` moved, `appChangedSince` (the app changed that value too, so the app's value stays: check each one) and `notFound` (its field, coach or group is gone). Moving fields between sections is not carried. Then improve only what is new.
 
 2. **Read the spec.** Each service has a `variable` (the business object behind its fields) and its `coaches` in flow order. Each coach has:
-   - `sections`, each holding `fields` (`path`, `label`, `type`, `readonly`, `required`);
+   - `sections`, each holding `fields` (`path`, `viewId`, `label`, `type`, `readonly`, `required`);
    - `buttons` (`label`, `viewId`, `primary`, `to`, and `type` when the button is an action widget other than Button);
    - `native`, the items that stay as BAW views, below the widgets;
    - `dropped`, the items that will not appear at all.
@@ -41,7 +41,7 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 
    At the top of the spec, set `"theme"` to the app's theme file, e.g. `"work/acme.theme.json"`. Use the file the app was built with when there is one. Otherwise follow the app-theme skill: ask the user to describe the look, or read it from a screenshot of the legacy screens, and write one.
 
-   Keep `path`, `viewId`, `id` and `type` as they are; only the modernizer-widget skill sets a field's or button's `type` to a new widget. Do not delete buttons: a button missing from the spec cannot be pressed.
+   Keep `path`, `viewId`, `id` and `type` as they are (`modernize_app` keeps a field's `viewId` on the widget it builds, so a handler that names the control still finds it, but only while the field keeps its `path`; a field that moves or is renamed gets a new ID. A handler that calls a method of the old UI Toolkit control may not find that method on the Modernizer widget, which is a known limitation); only the modernizer-widget skill sets a field's or button's `type` to a new widget. Do not delete buttons: a button missing from the spec cannot be pressed.
 
 4. **Check what will not be modernized.** Read `native` and `dropped` for every coach. Tell the user about anything important that is dropped, such as a Custom HTML block with instructions, and add its text to the coach's `intro` when it matters.
 

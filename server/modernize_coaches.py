@@ -183,6 +183,24 @@ def widget_layout(old, p, coach, views, theme, variable, spec):
     spans = elements(old, p)
     by_id = {vid: old[s:e] for s, e, vid in spans}
     next_id = item_ids(set(by_id))
+    # A field widget keeps its old layout item ID, which handlers in the coach's event scripts reference, only while
+    # that item's own binding (not a nested child's) is still the same variable path and no other item of the new
+    # layout has taken the ID; otherwise field_widget mints a new one. screen_spec keeps every section and field of
+    # the coach in order, so a spec field pairs with its old item by position: a path that repeats on one coach
+    # keeps each field's own ID.
+    view_ids = {id(f): raw.get("viewId") for s, r in zip(spec["sections"], coach["sections"])
+                for f, raw in zip(s["fields"], r.get("fields", []))}
+    used = {n["viewId"] for n in coach["native"]} | {b["viewId"] for b in coach["buttons"]}
+
+    def field_id(f):
+        vid = view_ids.get(id(f))
+        own = by_id.get(vid, "").split(f"<{p}:contentBoxContrib>", 1)[0]
+        bound = re.search(rf"<{p}:binding>([^<]*)</{p}:binding>", own)
+        if vid and vid not in used and bound and bound.group(1) == f"tw.local.{variable}.{f['path']}":
+            used.add(vid)
+            return vid
+        return None
+
     widget = lambda kind, options, tag="layoutItem": view_item(  # noqa: E731
         p, next_id(widget_toolkit.widgets(TOOLKIT)[kind]["view"]), views[kind], options, tag=tag)
     head = [
@@ -193,7 +211,7 @@ def widget_layout(old, p, coach, views, theme, variable, spec):
     ]
     sections = [s for s in spec["sections"] if s["fields"]]
     fields = lambda s: ([place_group(p, next_id, variable, s, "contributions")] if "group" in s  # noqa: E731
-                        else [field_widget(p, next_id, views, variable, f) for f in s["fields"]])
+                        else [field_widget(p, next_id, views, variable, f, item_id=field_id(f)) for f in s["fields"]])
     hide = [("@helpText", ""), ("@labelVisibility", "HIDE")]
     if spec["sectionStyle"] == "tabs" and len(sections) > 1:
         tabs = [view_item(p, next_id("Vertical Layout"), VIEWS["Vertical Layout"], [("@label", s["title"]), *hide], children=fields(s), tag="contributions")
