@@ -11,6 +11,11 @@ Settings (environment first, then .env):
       the admin login. It is used only to set up Bob's login and for approved system-database changes.
   POSTGRES_BOB_USER (default bob_mcp), POSTGRES_BOB_PASSWORD
       Bob's login, a plain role that PostgreSQL itself limits. The setup writes both to .env.
+  POSTGRES_SSLMODE, POSTGRES_CA_FILE (default BAW_CA_FILE), BAW_TLS_INSECURE
+      POSTGRES_SSLMODE is a libpq sslmode: disable, allow, prefer, require, verify-ca or verify-full. Unset, it is
+      verify-full, which checks the server certificate and host name against the CA file, else the system trust
+      store (a CA file replaces the trusted roots), or prefer when BAW_TLS_INSECURE is on. A server with SSL off
+      needs prefer; with prefer or disable, passwords and rows cross the network unencrypted.
   POSTGRES_APP_DATABASE (default bawexternal), POSTGRES_APP_ROLE (default: that database's owner)
       the one database Bob writes to. Its sessions run as the app role, the role BAW's jdbc/bawexternal uses,
       so the tables Bob creates are the ones BAW apps see. Every other database is read-only for Bob.
@@ -44,7 +49,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from baw_ops import ENV_FILE, load_env_file  # noqa: E402
+from baw_ops import ENV_FILE, ConfigError, load_env_file  # noqa: E402
 
 ROOT = ENV_FILE.parent
 WORK = ROOT / "work"
@@ -84,7 +89,7 @@ REFUSED = {
 # In the app database Bob's session runs as the same role as BAW's pooled connections, which PostgreSQL lets it
 # signal. Matched on the raw text, so the names are also caught inside strings handed to a function that runs them.
 SIGNALS = re.compile(r"pg_(?:terminate|cancel)_backend", re.IGNORECASE)
-RUNS_TEXT = re.compile(r"\b(?:query_to_xml\w*|cursor_to_xml\w*|table_to_xml\w*|schema_to_xml\w*|database_to_xml\w*|ts_stat)\b|U&['\"]",
+RUNS_TEXT = re.compile(r"\b(?:dblink\w*|query_to_xml\w*|cursor_to_xml\w*|table_to_xml\w*|schema_to_xml\w*|database_to_xml\w*|ts_stat|ts_rewrite)\b|U&['\"]",
                        re.IGNORECASE)
 CODE_OBJECTS = {"FUNCTION", "PROCEDURE", "TRIGGER", "EVENT", "RULE", "AGGREGATE", "OPERATOR", "CAST", "LANGUAGE",
                 "ROUTINE", "CONSTRAINT"}  # CONSTRAINT: CREATE CONSTRAINT TRIGGER
@@ -99,6 +104,10 @@ class PgError(Exception):
     pass
 
 
+class SettingError(PgError, ConfigError):
+    """A PostgreSQL setting that is wrong; the message names the setting, never its value."""
+
+
 # ---------------------------------------------------------------- settings
 
 
@@ -111,7 +120,33 @@ def settings() -> dict:
     return {"host": get("POSTGRES_HOST") or urlparse(get("BAW_URL", "")).hostname,
             "port": get("POSTGRES_PORT"), "user": get("POSTGRES_USER"), "password": get("POSTGRES_PASSWORD"),
             "bob_user": get("POSTGRES_BOB_USER", "bob_mcp"), "bob_password": get("POSTGRES_BOB_PASSWORD"),
-            "app_database": get("POSTGRES_APP_DATABASE", "bawexternal"), "app_role": get("POSTGRES_APP_ROLE")}
+            "app_database": get("POSTGRES_APP_DATABASE", "bawexternal"), "app_role": get("POSTGRES_APP_ROLE"),
+            "ca_file": get("POSTGRES_CA_FILE") or get("BAW_CA_FILE"),
+            "insecure": bool(re.fullmatch(r"1|true|yes", (get("BAW_TLS_INSECURE") or "").strip(), re.IGNORECASE)),
+            "sslmode": (get("POSTGRES_SSLMODE") or "").strip()}
+
+
+SSLMODES = ("disable", "allow", "prefer", "require", "verify-ca", "verify-full")
+
+
+def tls_args(s: dict) -> dict:
+    """libpq TLS arguments, the same for every connection. POSTGRES_SSLMODE picks the mode; unset it is verify-full
+    (certificate and host name checked), or prefer when BAW_TLS_INSECURE is on. Only the verifying modes get a root
+    certificate: POSTGRES_CA_FILE, else BAW_CA_FILE, else the system trust store (libpq's "system"; the psycopg binary
+    build bundles its own OpenSSL, which may not find the macOS store, so set a CA file there)."""
+    mode = s["sslmode"] or ("prefer" if s["insecure"] else "verify-full")
+    if mode not in SSLMODES:
+        raise SettingError(f"POSTGRES_SSLMODE must be one of {', '.join(SSLMODES)}")
+    if mode not in ("verify-ca", "verify-full"):
+        return {"sslmode": mode}
+    root = "system"
+    if s["ca_file"]:
+        path = Path(s["ca_file"])
+        path = path if path.is_absolute() else ROOT / path
+        if not path.is_file():
+            raise SettingError("POSTGRES_CA_FILE (or BAW_CA_FILE) does not point to an existing file")
+        root = str(path)
+    return {"sslmode": mode, "sslrootcert": root}
 
 
 def pg_missing_settings() -> list[str]:
@@ -162,7 +197,7 @@ def connect(database: str, admin: bool = False, timeout: int = 30, options: str 
         options += f" -c role={_ready['app_role']}"
     try:
         return psycopg.connect(host=s["host"], port=int(s["port"]), user=user, password=password, dbname=database,
-                               connect_timeout=10, sslmode="prefer", require_auth="scram-sha-256",
+                               connect_timeout=10, **tls_args(s), require_auth="scram-sha-256",
                                keepalives=1, keepalives_idle=15, keepalives_interval=5, tcp_user_timeout=45000,
                                application_name="baw-dev-tools", options=options)
     except psycopg.Error as e:
@@ -275,7 +310,7 @@ def login_works(s: dict) -> bool:
     psycopg = _psycopg()
     try:
         psycopg.connect(host=s["host"], port=int(s["port"]), user=s["bob_user"], password=s["bob_password"],
-                        dbname="postgres", connect_timeout=10, require_auth="scram-sha-256").close()
+                        dbname="postgres", connect_timeout=10, **tls_args(s), require_auth="scram-sha-256").close()
         return True
     except psycopg.OperationalError as e:
         if getattr(e, "sqlstate", None) in ("28P01", "28000") or "password authentication failed" in str(e):
@@ -522,6 +557,13 @@ def describe_one(conn, sql: str) -> list[str]:
     return [described.fname(i).decode(encoding) for i in range(described.nfields)]
 
 
+def statement_refusal(sql: str, words: tuple, app: bool) -> str | None:
+    """Why this text may not run as Bob, or None. Shared by run_sql and the SELECT form of export_table, so a
+    statement refused in one cannot be run through the other."""
+    return refusal(words, app) or (SIGNALS.search(sql) and "signalling other sessions") \
+        or (RUNS_TEXT.search(sql) and "functions that run SQL given as text") or schema_elements(sql) or None
+
+
 def execute(database: str, sql: str, limit: int = 200) -> dict:
     """Run exactly one statement as Bob. Read-only (and always rolled back) on every database except the app
     database, where a complete statement is committed."""
@@ -531,8 +573,7 @@ def execute(database: str, sql: str, limit: int = 200) -> dict:
         raise PgError(f"limit must be between 1 and {LIMIT_MAX}")
     app = database == settings()["app_database"]
     words = leading_words(sql)
-    why = refusal(words, app) or (SIGNALS.search(sql) and "signalling other sessions") \
-        or (RUNS_TEXT.search(sql) and "functions that run SQL given as text") or schema_elements(sql)
+    why = statement_refusal(sql, words, app)
     if why:
         raise PgError(f"Refused: {why} cannot run through run_sql" + ("" if app else f" on {database}") + ".")
     with session(database) as conn:
@@ -747,6 +788,11 @@ def export_csv(database: str, source: str, dest: str, overwrite: bool = False) -
         raise PgError(f"{dest!r} already exists; choose another name or pass overwrite")
     words = leading_words(source)
     is_select = bool(words) and words[0] in ("SELECT", "WITH", "TABLE", "VALUES")
+    if is_select:
+        app = database == settings()["app_database"]
+        why = statement_refusal(source, words, app)
+        if why:
+            raise PgError(f"Refused: {why} cannot run through export_table" + ("" if app else f" on {database}") + ".")
     with session(database, timeout=FILE_TIMEOUT, options=FILE_TX) as conn:
         conn.read_only = True
         try:
@@ -995,7 +1041,7 @@ def backup_table(database: str, table: str, where: str | None = None) -> list[di
 # included, and in decoded quoted names.
 DENIED = re.compile(r"(?<![a-z0-9_$])(?:pg_read_\w*|pg_ls_\w*|pg_stat_file|lo_\w*|dblink\w*|pg_terminate_backend|"
                     r"pg_cancel_backend|pg_reload_conf|pg_\w*replication_slot\w*|pg_replication_origin_\w*|pg_logical_\w*|"
-                    r"pg_switch_wal|pg_backup_\w*|pg_stat_reset\w*|pg_log_\w*|set_config|\w*_to_xml\w*|ts_stat|"
+                    r"pg_switch_wal|pg_backup_\w*|pg_stat_reset\w*|pg_log_\w*|set_config|\w*_to_xml\w*|ts_stat|ts_rewrite|"
                     r"pg_authid|pg_shadow|pg_user_mappings?|pg_subscription|pg_stat_activity|pg_stat_statements\w*|pg_file_settings|"
                     r"pg_hba_file_rules|pg_ident_file_mappings|pg_largeobject\w*)(?![a-z0-9_$])")
 UNICODE_NAME = re.compile(r'[Uu]&"((?:[^"]|"")*)"')
@@ -1245,6 +1291,14 @@ def explain(e, database: str, connecting: str | None = None) -> str:
     elif connecting:
         s = settings()
         text += f". Connecting to {s['host']}:{s['port']} as {connecting}, database {database}"
+        if "does not support SSL" in text:
+            text += ". Set POSTGRES_SSLMODE=prefer for a server with SSL off; passwords and rows then cross the network unencrypted"
+        elif "does not match host name" in text or "hostname" in text.lower():
+            text += (". The certificate does not name this host: set POSTGRES_SSLMODE=verify-ca to check only the CA, "
+                     "or set POSTGRES_HOST to the name in the certificate")
+        elif "certificate" in text.lower() or "SSL error" in text:
+            text += (". Set POSTGRES_CA_FILE (or BAW_CA_FILE) to the PostgreSQL server's CA certificate (the psycopg binary "
+                     "build may not read the macOS trust store), or POSTGRES_SSLMODE=prefer, which does not check it")
     return scrub(text)
 
 
