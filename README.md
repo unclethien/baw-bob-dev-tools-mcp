@@ -40,6 +40,7 @@ Guard rails:
 - Reusing a snapshot name is refused, because BAW would silently keep the old content.
 - There is no delete tool.
 - Credentials stay inside the server process and are never returned to the agent.
+- Certificates are verified for BAW and, by default, PostgreSQL (`POSTGRES_SSLMODE=verify-full`). The BAW client refuses redirects to another host or to `http`.
 
 ## How it fits together
 
@@ -109,9 +110,13 @@ Settings are read from the environment first, then `.env`:
 | `BAW_USER` | Cloud Pak user |
 | `BAW_PASSWORD` | That user's password, or |
 | `BAW_APIKEY` | A Cloud Pak Platform API key (used when `BAW_PASSWORD` is not set) |
+| `BAW_CA_FILE` | Optional: a PEM file with the CA that signed the BAW certificate. It is added to the system's trusted roots for the BAW client. A relative path starts at the folder that holds `.env` |
+| `BAW_TLS_INSECURE` | Optional: `true` (also `1` or `yes`) turns certificate checks off for BAW and the browser test, and makes `POSTGRES_SSLMODE` default to `prefer`. Redirects to another host or to `http` stay refused. Use it only on a test cluster; default is off |
 | `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | The PostgreSQL admin login, for the six database tools. Optional: without them those tools say what is missing and the other 15 work as before |
 | `POSTGRES_HOST` | The PostgreSQL host. Default: the host of `BAW_URL` |
 | `POSTGRES_BOB_USER`, `POSTGRES_BOB_PASSWORD` | Bob's limited login. The server writes both to `.env` itself; do not set them |
+| `POSTGRES_CA_FILE` | Optional: a PEM file with the CA that signed the PostgreSQL certificate. It replaces the trusted roots and is used only with `verify-ca` and `verify-full`. Defaults to `BAW_CA_FILE` |
+| `POSTGRES_SSLMODE` | Optional: `disable`, `allow`, `prefer`, `require`, `verify-ca` or `verify-full`. Default `verify-full`, or `prefer` when `BAW_TLS_INSECURE` is on. See the database security notes below |
 | `POSTGRES_APP_DATABASE`, `POSTGRES_APP_ROLE` | The one database Bob writes to (default `bawexternal`) and the role BAW's data source uses there (default: that database's owner) |
 
 ## Use it with IBM Bob
@@ -192,7 +197,7 @@ uv run --script server/pg_ops.py remove-login
 | `change_system_db` | | every database except `bawexternal` | **yes** |
 
 Limits, so a call cannot hurt the shared server:
-- One statement per call. Transaction control, `SET`, `RESET`, `COPY`, `DO`, `CALL` and creating functions, procedures, triggers or rules are refused on every database. A system database runs inside a read-only transaction that is always rolled back.
+- One statement per call. Transaction control, `SET`, `RESET`, `COPY`, `DO`, `CALL` and creating functions, procedures, triggers or rules are refused on every database. A system database runs inside a read-only transaction that is always rolled back. `export_table` accepts a single `SELECT` and applies the same refusals as `run_sql`: it cannot signal other sessions, run SQL given as text (`query_to_xml`, `ts_stat`, `ts_rewrite` and similar) or change anything.
 - `run_sql` returns at most `limit` rows (default 200, at most 1000) and 256 KB, and cuts one value at 2000 characters. A write in `bawexternal` is committed only when its whole result fits; a cut-short result is not committed and the answer says so. `"committed": "unknown"` means the commit may or may not have happened: check the data before you run it again.
 - A statement stops after 30 s (120 s for an export or import); a wait for a lock stops after 5 s. The login has at most 5 connections and 1 GB of temporary files.
 - Once `bawexternal` is over 1 GB, only reads, `DELETE`, `TRUNCATE` and `DROP TABLE` run.
@@ -232,7 +237,7 @@ The Load and Save services of a generated app are callable by any signed-in BAW 
 
 ### Risks
 
-- **The connection is not encrypted.** The NodePort has SSL off, so passwords and rows cross the network in the clear. Use a test cluster and test data.
+- **Certificates are verified.** If the cluster uses a private CA, set `BAW_CA_FILE` (and `POSTGRES_CA_FILE` if PostgreSQL uses another CA). `BAW_TLS_INSECURE=true` turns the checks off for BAW and the browser test; use it only on a test cluster. `test_service` also needs the CA in the system trust store, because Chrome does not read `BAW_CA_FILE`. Python 3.13 applies strict X.509 checks: an older private CA (for example one without a key identifier extension) can fail in the MCP server while Node and Chrome accept it. Fix the CA; do not relax the check. The browser test sends its session cookie bound to the BAW port and scheme (Chrome's port-bound and scheme-bound cookie features), so another port on the same host does not receive it. **PostgreSQL encryption depends on `POSTGRES_SSLMODE`.** The default `verify-full` needs a server with SSL on and a certificate that matches the host. If the server has SSL off (the cluster's NodePort does), set `POSTGRES_SSLMODE=prefer`: passwords and table rows then cross the network unencrypted, and `prefer` and `disable` do not check the certificate at all. Use a test cluster and test data.
 - **Each Load or Save call commits on its own.** An app that fails halfway through a form does not roll back what an earlier call saved.
 - **A failed call shows PostgreSQL's own message on the coach** (for example `relation "public.x" does not exist`), including table and column names.
 - **One huge value is still read whole.** The row and size caps apply after PostgreSQL's driver has read a row into memory, so a single row with a very large `bytea` or `text` value is not cut before it is read. `describe_table` marks such columns; select `length(col)` or `left(col, 200)` of them.
