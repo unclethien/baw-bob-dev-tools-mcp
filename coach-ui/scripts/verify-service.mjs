@@ -135,31 +135,57 @@ async function typeInto(frame, label, text) {
   return true;
 }
 
-// --fill: type into the React form's empty editable fields (the field's example placeholder,
-// today's date for date pickers, or "Test"), tick unticked checkboxes, turn on switches that are off (a Toggle
-// widget), pick the first option of empty dropdowns and of radio groups with nothing chosen. Returns the count.
-async function fill(frame) {
+// --fill: type into the coach's empty editable fields (the field's example placeholder, today's date for date
+// pickers, 1 for number inputs, or "Test"), tick unticked checkboxes, turn on switches that are off (a Toggle
+// widget), pick the first option of empty dropdowns and of radio groups with nothing chosen. Works in React
+// coaches (inside .pp-app) and in classic UI Toolkit ones (the whole frame). Returns the count.
+async function fill(frame, react) {
+  const at = react ? '.pp-app ' : '';
   let count = 0;
-  for (const input of await frame.$$('.pp-app input:not([readonly]):not([type=checkbox]):not([type=radio]), .pp-app textarea:not([readonly])')) {
-    const { empty, placeholder, visible } = await input.evaluate((el) => ({ empty: !el.value, placeholder: el.placeholder, visible: !!el.offsetParent }));
+  const typable = 'input:not([readonly]):not([disabled]):not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=button]):not([type=submit])';
+  for (const input of await frame.$$(`${at}${typable}, ${at}textarea:not([readonly]):not([disabled])`)) {
+    const { empty, placeholder, visible, type } = await input.evaluate((el) => ({ empty: !el.value, placeholder: el.placeholder, visible: !!el.offsetParent, type: el.type }));
     if (!empty || !visible) continue;
-    const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-    await input.type(placeholder === 'mm/dd/yyyy' ? today : placeholder || 'Test');
+    const now = new Date();
+    const today = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    await input.type(type === 'number' ? '1' : type === 'date' ? iso : placeholder === 'mm/dd/yyyy' ? today : placeholder || 'Test');
     await input.press('Tab');
-    count++;
+    if (await input.evaluate((el) => !!el.value).catch(() => true)) count++; // a field that refused the text (a classic date picker) stays empty
   }
-  for (const box of await frame.$$('.pp-app input[type=checkbox]:not(:checked):not([readonly])')) {
-    await box.evaluate((el) => el.parentElement.querySelector('label')?.click());
-    count++;
+  for (const box of await frame.$$(`${at}input[type=checkbox]:not(:checked):not([readonly]):not([disabled])`)) {
+    // React hides the input behind its label; a classic checkbox is the visible input itself.
+    const ticked = await box.evaluate((el, react) => {
+      if (react) { el.parentElement.querySelector('label')?.click(); return true; }
+      if (!el.offsetParent) return false;
+      el.click();
+      return true;
+    }, react);
+    if (ticked) count++;
   }
-  for (const toggle of await frame.$$('.pp-app button[role=switch][aria-checked=false]:not([disabled]):not([aria-readonly=true])')) {
+  for (const toggle of await frame.$$(`${at}button[role=switch][aria-checked=false]:not([disabled]):not([aria-readonly=true])`)) {
     if (!(await toggle.evaluate((el) => !!el.offsetParent))) continue;
     await toggle.click();
     count++;
   }
-  for (const select of await frame.$$('.pp-app select:not([disabled])')) {
+  for (const select of await frame.$$(`${at}select:not([disabled])`)) {
     const value = await select.evaluate((el) => (!el.value && el.offsetParent ? [...el.options].find((o) => o.value)?.value : null));
     if (value) { await select.select(value); count++; }
+  }
+  if (!react) {
+    // Classic radio groups are not wrapped in a fieldset: group the radios by name.
+    return count + await frame.evaluate(() => {
+      const seen = new Set();
+      let picked = 0;
+      for (const radio of document.querySelectorAll('input[type=radio]:not([readonly]):not([disabled])')) {
+        if (!radio.offsetParent || !radio.name || seen.has(radio.name)) continue;
+        seen.add(radio.name);
+        if ([...document.querySelectorAll(`input[type=radio][name="${CSS.escape(radio.name)}"]`)].some((r) => r.checked)) continue;
+        radio.click();
+        picked++;
+      }
+      return picked;
+    });
   }
   for (const group of await frame.$$('.pp-app fieldset')) {
     const picked = await group.evaluate((el) => {
@@ -229,7 +255,7 @@ try {
     report.steps.push({ step, ...info, typed: typed.length ? typed : undefined, screenshot: file, duplicate: hashes.has(hash) || undefined });
     hashes.add(hash);
     if (!info.button) { report.failure = 'no forward button'; break; }
-    if (args.fill && info.react) report.steps.at(-1).filled = await fill(current.frame);
+    if (args.fill) report.steps.at(-1).filled = await fill(current.frame, info.react);
     // Compare against the screen as it is now (typed and filled), not as it was when first inspected.
     const now = await current.frame.evaluate(inspectCoach).catch(() => null);
     const before = now ? now.signature : signature;
