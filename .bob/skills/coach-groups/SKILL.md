@@ -71,6 +71,8 @@ Bob sees changes made in BAW only once they are in a **snapshot**: `create_app` 
 4. For the ones to keep, change the spec to match BAW's version (labels, order, added fields), so the next rebuild does not ask again.
 5. For the ones to replace, build again with `replace_groups: ["<group>", ...]` and the same snapshot name. Use the group's name ("Group Contact"); for `modernize_app` the View's name ("Group Contact (Modernized)") works too. A name that is not a group of the spec is refused.
 
+`create_app` also lists, in `changedInBawDropped`, groups someone changed in BAW that the spec no longer builds, because a section was renamed, removed or made inline, or a group was renamed or removed. Such a group is not in the new snapshot. Say so before `install_app` and ask: change the spec back so it builds the group under the name it had when it was built, to keep it, or do nothing to accept the drop. Never use `replace_groups` for it: a name that is no longer in the spec makes the build stop.
+
 If the build says a kept group "uses fields the app spec does not have", someone added a field in BAW: add that field to the spec (same name and type) and build again, or replace the group.
 
 ## Report
