@@ -358,6 +358,9 @@ chmod 600 .env</code></pre>
         <tr><td class="mono">BAW_PASSWORD</td><td>Your password, <em>or</em> leave it empty and set:</td></tr>
         <tr><td class="mono">BAW_APIKEY</td><td>Your Platform API key. Used only when <code>BAW_PASSWORD</code> is empty</td></tr>
         <tr><td class="mono">POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD</td><td>Optional: the PostgreSQL admin login, for Bob's database tools. See <a href="#database">use the database tools</a></td></tr>
+        <tr><td class="mono">BAW_CA_FILE, POSTGRES_CA_FILE</td><td>Optional: a PEM file with the CA that signed the BAW or PostgreSQL certificate. For BAW it is added to the system's trusted roots; for PostgreSQL it replaces them (and applies only to <code>verify-ca</code> and <code>verify-full</code>). A relative path starts at the folder that holds <code>.env</code>. <code>POSTGRES_CA_FILE</code> defaults to <code>BAW_CA_FILE</code></td></tr>
+        <tr><td class="mono">POSTGRES_SSLMODE</td><td>Optional: one of <code>disable</code>, <code>allow</code>, <code>prefer</code>, <code>require</code>, <code>verify-ca</code>, <code>verify-full</code>. Default <code>verify-full</code>, or <code>prefer</code> when <code>BAW_TLS_INSECURE</code> is on. With <code>prefer</code> or <code>disable</code>, a server that has SSL off receives passwords and rows unencrypted</td></tr>
+        <tr><td class="mono">BAW_TLS_INSECURE</td><td>Optional: <code>true</code> (also <code>1</code> or <code>yes</code>) turns certificate checks off for BAW and the browser test, and makes <code>prefer</code> the PostgreSQL default. Use it only on a test cluster. Changes take effect on the next tool call, without a restart</td></tr>
       </tbody>
     </table>
   </div>
@@ -391,6 +394,8 @@ HSSX2      app      Smart Hire</code></pre>
         <tr><td class="mono">nodename nor servname provided</td><td>The host name in <code>BAW_URL</code> is wrong, or you need the VPN. On Linux it reads <code>Name or service not known</code></td></tr>
         <tr><td class="mono">HTTP Error 500</td><td>Usually <code>BAW_URL</code> has a path after the host name, such as <code>/bas/bpm</code>; remove it</td></tr>
         <tr><td class="mono">timed out</td><td>It waits a long time, then fails: the server is not reachable from your network. Check the VPN</td></tr>
+        <tr><td class="mono">CERTIFICATE_VERIFY_FAILED</td><td>The server's certificate is not trusted. Set <code>BAW_CA_FILE</code> to the cluster's CA certificate (<code>POSTGRES_CA_FILE</code> for PostgreSQL), or <code>BAW_TLS_INSECURE=true</code> on a test cluster. Python 3.13 also checks certificates strictly, so an older private CA can fail in Python while Node and Chrome accept it; reissue the CA instead of relaxing the check</td></tr>
+        <tr><td class="mono">server does not support SSL</td><td>The PostgreSQL server has SSL off (the cluster's NodePort does). Set <code>POSTGRES_SSLMODE=prefer</code>; passwords and rows then cross the network unencrypted, so use it on a test cluster only</td></tr>
       </tbody>
     </table>
   </div>
@@ -506,8 +511,10 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
   <h3 id="database">Use the database tools (optional)</h3>
   <p>Six tools let Bob read the platform's PostgreSQL server, and build and fill tables in <code>bawexternal</code>, the
   database set aside for app data. Apps built from a spec with a <code>database</code> section load and save rows there.
-  The tools need the admin login of the server in <code>.env</code>; use a test server and test data, because the
-  connection is not encrypted.</p>
+  The tools need the admin login of the server in <code>.env</code>; use a test server and test data. The connection is checked against the certificate
+  (<code>verify-full</code>), so set <code>POSTGRES_CA_FILE</code> or <code>BAW_CA_FILE</code> when the cluster uses a private CA. On macOS, set it even for a
+  public CA: the psycopg build this server uses may not read the macOS trust store.
+  If the server has SSL off, set <code>POSTGRES_SSLMODE=prefer</code> (or <code>disable</code>): the login and the rows then cross the network unencrypted.</p>
   <ol>
     <li>Fill in <code>POSTGRES_PORT</code>, <code>POSTGRES_USER</code> and <code>POSTGRES_PASSWORD</code> in
     <code>.env</code>. <code>POSTGRES_HOST</code> is optional: the host of <code>BAW_URL</code> is used without it.</li>
@@ -631,6 +638,16 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
       <a href="baw-import-export-terminal-guide.html">terminal guide</a>, which includes those checks.</p>
     </div>
   </div>
+
+  <h3 id="upgrade">Upgrading from an older copy</h3>
+  <p>Certificates are now verified by default for BAW, PostgreSQL and the browser test, and the BAW client no longer
+  follows a redirect to another host or to <code>http</code>. If a server with a private CA now fails with
+  <code>CERTIFICATE_VERIFY_FAILED</code>, set <code>BAW_CA_FILE</code> in <code>.env</code> (see step 4). For
+  <code>test_service</code>, also add that CA to your system trust store, because Chrome does not read
+  <code>BAW_CA_FILE</code>. PostgreSQL uses <code>POSTGRES_CA_FILE</code> (default <code>BAW_CA_FILE</code>) and
+  <code>POSTGRES_SSLMODE</code>; a cluster whose NodePort has SSL off needs <code>POSTGRES_SSLMODE=prefer</code>.
+  On a test cluster only, <code>BAW_TLS_INSECURE=true</code> skips the certificate checks again, but redirects to another host or to
+  <code>http</code> stay refused. The browser test now binds its session cookie to the BAW port.</p>
 </section>
 
 <hr class="rule" aria-hidden="true">
@@ -645,6 +662,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
         <tr><td>Fewer than 21 tools</td><td>An old copy of the project</td><td><code>git pull</code>, then restart the server from Bob's MCP panel</td></tr>
         <tr><td class="mono">Login to BAW_URL &hellip; failed with HTTP 401</td><td>Wrong credentials</td><td>Fix <code>.env</code>; check with step 6</td></tr>
         <tr><td class="mono">Cannot reach BAW_URL</td><td>Wrong host, or no VPN</td><td>Fix <code>BAW_URL</code>; check with step 6</td></tr>
+        <tr><td class="mono">CERTIFICATE_VERIFY_FAILED, or BAW redirected to &hellip;</td><td>The certificate is not trusted, or BAW sent the client to another host or to <code>http</code></td><td>Set <code>BAW_CA_FILE</code> (<code>POSTGRES_CA_FILE</code> or <code>POSTGRES_SSLMODE=verify-ca</code>/<code>prefer</code> for PostgreSQL); for the browser test also add the CA to the system trust store. <code>BAW_TLS_INSECURE=true</code> on a test cluster. Fix <code>BAW_URL</code> if it redirects</td></tr>
         <tr><td class="mono">Invalid app spec</td><td>The spec breaks a rule</td><td>Each line names the problem; see <a href="app-spec-reference.html#errors">validation errors</a></td></tr>
         <tr><td class="mono">Snapshot &hellip; already exists</td><td>The snapshot name is used</td><td>Bump <code>app.snapshot</code></td></tr>
         <tr><td>Install ends in <code>failure</code></td><td>Often an acronym already used by another app</td><td>Pick another acronym; read <code>details</code> in the result</td></tr>

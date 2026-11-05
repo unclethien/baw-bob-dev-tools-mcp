@@ -20,7 +20,7 @@ Status reconstructed from git history and `plans/` (plans are gitignored and loc
 
 - Real automated tests: none exist; verification is by building examples and running `test_service`.
 - Unverified: behavior of pooled connections after a column type change in a table an installed app uses.
-- Encrypted PostgreSQL connections (currently SSL off on the NodePort).
+- Encrypted PostgreSQL traffic on the cluster: the client verifies the certificate by default (`POSTGRES_SSLMODE=verify-full`), but SSL is off on the NodePort, so today it needs `POSTGRES_SSLMODE=prefer` and traffic is unencrypted.
 - Possible growth: tables and file uploads in app specs (not expressible today), more widget kinds.
 
 ## Maintenance
