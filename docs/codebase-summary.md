@@ -19,7 +19,7 @@
 |---|---|
 | `baw_mcp.py` | MCP entry point; registers the 21 tools and shells out to the other modules |
 | `baw_ops.py` | BAW Operations REST client (list, export, install); settings from env then `.env` |
-| `generate_app.py` | App spec JSON to installable `.twx`: coaches, flow, review/confirmation, process and database sections |
+| `generate_app.py` | App spec JSON to installable `.twx`: coaches, flow, review/confirmation, required-field blocking, process (approval or plain review) and database sections; refuses unknown keys |
 | `coach_builder.py` | Shared building blocks: `Layout`, `coachflow`, service and business-object XML, `write_twx` |
 | `coach_views.py` | Coach View and managed file XML; the generic "Coach Screen" view that mounts React screens |
 | `coach_theme.py` | Theme file loading, validation, CSS and icon helpers |
