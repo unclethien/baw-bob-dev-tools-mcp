@@ -37,11 +37,16 @@ def _event(kind):
             "<repeatable>false</repeatable><doCloseTask>true</doCloseTask></component>")
 
 
+def object_list(var, bo_id, *more):
+    """(variable, class id, ...) per business object; var and bo_id are lists when the process has several."""
+    return list(zip(var, bo_id, *more)) if isinstance(var, list) else [(var, bo_id, *more)]
+
+
 def _task(node, var, bo_id, team):
-    service, (input_id, output_id) = node["service"], node["io"]
-    mapping = lambda tag, src, dst, pid, extra="": (
-        f'<{tag} id="{bpd_id()}"><mappingMode>basic</mappingMode><name>{var}</name><classId>/{bo_id}</classId>{extra}'
-        f"<value>tw.local.{var}</value><sourcePath>{src}</sourcePath><targetPath>{dst}</targetPath><parameterId>{pid}</parameterId></{tag}>")
+    service, objects = node["service"], object_list(var, bo_id, node["io"])
+    mapping = lambda tag, src, dst, pid, name, bo, extra="": (
+        f'<{tag} id="{bpd_id()}"><mappingMode>basic</mappingMode><name>{name}</name><classId>/{bo}</classId>{extra}'
+        f"<value>tw.local.{name}</value><sourcePath>{src}</sourcePath><targetPath>{dst}</targetPath><parameterId>{pid}</parameterId></{tag}>")
     subject = escape(node["name"])
     return ("<component><loopType>0</loopType><loopMaximum>1</loopMaximum><startQuantity>1</startQuantity><isAutoflowable>false</isAutoflowable>"
             "<MIOrdering>1</MIOrdering><MIFlowCondition>0</MIFlowCondition><cancelRemainingInstances>false</cancelRemainingInstances>"
@@ -54,8 +59,10 @@ def _task(node, var, bo_id, team):
             f"<priorityType>0</priorityType><priority>30.30</priority><subject>{subject}</subject><narrative>{subject}</narrative><forceSend>true</forceSend>"
             "<timeSchedule>(use default)</timeSchedule><timeScheduleType>0</timeScheduleType><timeZone>(use default)</timeZone><timeZoneType>0</timeZoneType>"
             "<holidaySchedule>(use default)</holidaySchedule><holidayScheduleType>0</holidayScheduleType><isDueDateEnabled>true</isDueDateEnabled>"
-            + mapping("inputActivityParameterMapping", f"tw.local.{var}", f"tw.inputs.{var}", input_id, "<input>true</input>")
-            + mapping("outputActivityParameterMapping", f"tw.outputs.{var}", f"tw.local.{var}", output_id)
+            + "".join(mapping("inputActivityParameterMapping", f"tw.local.{name}", f"tw.inputs.{name}", io[0], name, bo, "<input>true</input>")
+                      for name, bo, io in objects)
+            + "".join(mapping("outputActivityParameterMapping", f"tw.outputs.{name}", f"tw.local.{name}", io[1], name, bo)
+                      for name, bo, io in objects)
             + f'<laneFilter id="{bpd_id()}"><serviceType>1</serviceType><teamRef>{team}</teamRef></laneFilter>'
             f'<teamFilter id="{bpd_id()}"><serviceType>1</serviceType></teamFilter></implementation></component>')
 
@@ -67,13 +74,15 @@ def _gateway():
 def process_xml(pid, version, name, var, bo_id, lanes, nodes, flows, author, description=""):
     """pid: "25.<uuid>". lanes: lane names, top to bottom.
     nodes: {"key", "kind" (start | end | task | gateway), "name", "lane", "x"}; a task also has
-    "service" (the service's "1.<uuid>") and "io" (its input and output parameter ids).
+    "service" (the service's "1.<uuid>") and "io" (its input and output parameter ids; a list of them, one per object,
+    when var and bo_id are lists for a process with several business objects).
     flows: {"from", "to", "name", "condition" (JavaScript, for a gateway's branch; the branch without one
     is the default), "out", "in" (port positions such as rightCenter, topCenter)}."""
     team = f"{TWSYS}/{ALL_USERS}"
     ids = {n["key"]: bpd_id() for n in nodes}
     flow_ids = [bpd_id() for _ in flows]
-    lane_ids, var_id, case_folder = [bpd_id() for _ in lanes], bpd_id(), str(uuid.uuid4())
+    lane_ids, case_folder = [bpd_id() for _ in lanes], str(uuid.uuid4())
+    var_ids = [bpd_id() for _ in object_list(var, bo_id)]
     pool_id, start_scenario = bpd_id(), bpd_id()
     # Studio names an unnamed flow after its target.
     flows = [{**f, "label": f.get("name") or f"to {next(n['name'] for n in nodes if n['key'] == f['to'])}"} for f in flows]
@@ -105,16 +114,18 @@ def process_xml(pid, version, name, var, bo_id, lanes, nodes, flows, author, des
         f'<metricSettings itemType="32" /><connection><lineType>0</lineType><condition id="{bpd_id()}">'
         + (f"<expression>{escape(f['condition'])}</expression>" if f.get("condition") else "") + "</condition></connection></flow>"
         for i, f in enumerate(flows))
-    variable = (f'<privateVariable id="{var_id}"><name>{var}</name><description /><classId>/{bo_id}</classId><arrayOf>false</arrayOf>'
-                "<hasDefault>false</hasDefault><defaultValue /><visibleInSearch>false</visibleInSearch><isProcessInstanceCorrelator>false</isProcessInstanceCorrelator>"
-                "<isSharedContext>false</isSharedContext></privateVariable>")
+    variable = "".join(
+        f'<privateVariable id="{var_id}"><name>{name}</name><description /><classId>/{bo}</classId><arrayOf>false</arrayOf>'
+        "<hasDefault>false</hasDefault><defaultValue /><visibleInSearch>false</visibleInSearch><isProcessInstanceCorrelator>false</isProcessInstanceCorrelator>"
+        "<isSharedContext>false</isSharedContext></privateVariable>"
+        for (name, bo), var_id in zip(object_list(var, bo_id), var_ids))
     start = next(n["key"] for n in nodes if n["kind"] == "start")
     width = max(n["x"] for n in nodes) + 200
     title, desc = escape(name), escape(description or name)
     null = lambda *names: "".join(f'<{n} isNull="true" />' for n in names)
     tracking = pid.replace("25.", "p").replace("-", "")[:30]
     bpmn2 = bpmn2_xml(pid, name, description or name, var, bo_id, lanes, nodes, flows,
-                      dict(ids=ids, flows=flow_ids, lanes=lane_ids, var=var_id, case=case_folder, tracking=tracking))
+                      dict(ids=ids, flows=flow_ids, lanes=lane_ids, vars=var_ids, case=case_folder, tracking=tracking))
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <teamworks><bpd id="{pid}" name="{title}"><lastModified>0</lastModified><lastModifiedBy>{author}</lastModifiedBy>{null("tenantId")}<bpdId>{pid}</bpdId>
 <isTrackingEnabled>false</isTrackingEnabled><isSpcEnabled>false</isSpcEnabled>{null("restrictedName")}<isCriticalPathEnabled>false</isCriticalPathEnabled>
@@ -150,8 +161,8 @@ def process_xml(pid, version, name, var, bo_id, lanes, nodes, flows, author, des
 
 def bpmn2_xml(pid, name, description, var, bo_id, lanes, nodes, flows, ref):
     """The BPMN 2 model of the same diagram, as Studio writes it when it converts a BPD. ref holds the ids
-    the legacy diagram uses (ids, flows, lanes, var, case, tracking), so both models describe one process."""
-    ids, flow_ids, team, bo = ref["ids"], ref["flows"], ALL_USERS, f"/{bo_id}"
+    the legacy diagram uses (ids, flows, lanes, vars, case, tracking), so both models describe one process."""
+    ids, flow_ids, team = ref["ids"], ref["flows"], ALL_USERS
     xsi = 'xmlns:xsi="{}"'.format(BPMN_NS["xsi"])
     visual = lambda n: '<ns16:nodeVisualInfo x="{}" y="{}" width="{}" height="{}"/>'.format(
         n["x"], (LANE_HEIGHT - NODE_SIZE[n["kind"]][1]) // 2, *((32, 32) if n["kind"] == "gateway" else NODE_SIZE[n["kind"]]))
@@ -161,7 +172,7 @@ def bpmn2_xml(pid, name, description, var, bo_id, lanes, nodes, flows, ref):
     outgoing = lambda key: "".join(f"<ns6:outgoing>{i}</ns6:outgoing>" for i in out_ids(key))
     performer = "".join(f'<ns6:resourceRole {xsi} xsi:type="ns2:tActivityPerformer" distribution="None" name="{r}"><ns2:teamFilterService/></ns6:resourceRole>'
                         for r in ("Lane", "Team")) + f'<ns6:resourceRole {xsi} xsi:type="ns6:tPerformer" name="Expert"/>'
-    expression = lambda end: f'<ns6:{end} {xsi} xsi:type="ns6:tFormalExpression" evaluatesToTypeRef="{bo}">tw.local.{var}</ns6:{end}>'
+    expression = lambda end, name, bo: f'<ns6:{end} {xsi} xsi:type="ns6:tFormalExpression" evaluatesToTypeRef="/{bo}">tw.local.{name}</ns6:{end}>'
 
     def node(n):
         key, title, kind = n["key"], escape(n["name"]), n["kind"]
@@ -174,7 +185,7 @@ def bpmn2_xml(pid, name, description, var, bo_id, lanes, nodes, flows, ref):
         if kind == "gateway":
             return (f'<ns6:exclusiveGateway default="{default(key)}" gatewayDirection="Unspecified" {head}><ns6:extensionElements>{visual(n)}'
                     f"</ns6:extensionElements>{incoming(key)}{outgoing(key)}</ns6:exclusiveGateway>")
-        input_id, output_id = n["io"]
+        objects = object_list(var, bo_id, n["io"])
         return (f'<ns6:callActivity calledElement="{n["service"]}" default="{default(key)}" {head}><ns6:extensionElements>'
                 f"<ns2:activityType>UserTask</ns2:activityType><ns2:userTaskSettings><ns2:narrative>{title}</ns2:narrative><ns2:subject>{title}</ns2:subject>"
                 "<ns2:enableAutoFlow>false</ns2:enableAutoFlow><ns2:enableCleanState>false</ns2:enableCleanState>"
@@ -185,9 +196,11 @@ def bpmn2_xml(pid, name, description, var, bo_id, lanes, nodes, flows, ref):
                 "<ns2:timeScheduleName>(use default)</ns2:timeScheduleName><ns2:timezoneType>0</ns2:timezoneType><ns2:holidayScheduleType>0</ns2:holidayScheduleType>"
                 "<ns2:holidayScheduleName>(use default)</ns2:holidayScheduleName></ns2:activityWorkSchedule></ns2:userTaskSettings>"
                 f'<ns2:activityExtension conditional="false"/>{visual(n)}</ns6:extensionElements>{incoming(key)}{outgoing(key)}'
-                f"<ns6:dataInputAssociation><ns6:targetRef>{input_id}</ns6:targetRef><ns6:assignment>{expression('from')}</ns6:assignment></ns6:dataInputAssociation>"
-                f"<ns6:dataOutputAssociation><ns6:sourceRef>{output_id}</ns6:sourceRef><ns6:assignment>{expression('to')}</ns6:assignment></ns6:dataOutputAssociation>"
-                f"{performer}</ns6:callActivity>")
+                + "".join(f"<ns6:dataInputAssociation><ns6:targetRef>{io[0]}</ns6:targetRef><ns6:assignment>{expression('from', name, bo)}</ns6:assignment></ns6:dataInputAssociation>"
+                          for name, bo, io in objects)
+                + "".join(f"<ns6:dataOutputAssociation><ns6:sourceRef>{io[1]}</ns6:sourceRef><ns6:assignment>{expression('to', name, bo)}</ns6:assignment></ns6:dataOutputAssociation>"
+                          for name, bo, io in objects)
+                + f"{performer}</ns6:callActivity>")
 
     def flow(i, f):
         # Studio stores a branch condition as "<expression> == true".
@@ -222,7 +235,8 @@ def bpmn2_xml(pid, name, description, var, bo_id, lanes, nodes, flows, ref):
             f'</ns2:workSchedule></ns2:bpdExtension><ns4:caseExtension><ns4:caseFolder id="{ref["case"]}"/></ns4:caseExtension></ns6:extensionElements>'
             f'<ns6:ioSpecification/><ns6:laneSet id="{bpd_id()}">{lane_xml}</ns6:laneSet>'
             + "".join(node(n) for n in nodes)
-            + f'<ns6:dataObject itemSubjectRef="itm.{bo_id}" isCollection="false" name="{var}" id="{ref["var"]}"><ns6:extensionElements>'
-            '<ns3:defaultValue useDefault="false"/><ns2:isProcessIdentifier>false</ns2:isProcessIdentifier></ns6:extensionElements></ns6:dataObject>'
+            + "".join(f'<ns6:dataObject itemSubjectRef="itm.{bo}" isCollection="false" name="{name}" id="{var_id}"><ns6:extensionElements>'
+                      '<ns3:defaultValue useDefault="false"/><ns2:isProcessIdentifier>false</ns2:isProcessIdentifier></ns6:extensionElements></ns6:dataObject>'
+                      for (name, bo), var_id in zip(object_list(var, bo_id), ref["vars"]))
             + "".join(flow(i, f) for i, f in enumerate(flows))
             + f'{roles}</ns6:process><ns6:interface name="{title}Interface" id="_{uuid.uuid4()}"/></ns6:definitions>')

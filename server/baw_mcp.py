@@ -18,6 +18,7 @@ POSTGRES_* settings in .env. Those passwords stay in this process: child process
 Run:  uv run --script server/baw_mcp.py      (Bob starts it from .bob/mcp.json)
 """
 
+import functools
 import json
 import os
 import re
@@ -25,6 +26,7 @@ import ssl
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import zipfile
 from pathlib import Path
@@ -183,11 +185,31 @@ def target_of(twx: Path) -> dict:
     return target
 
 
+def tool():
+    """Register a tool whose BAW failures reach the caller with their reason. The MCP server shows only "Error executing
+    tool" for an exception that is not a ToolError, which leaves the agent guessing between a server outage, an expired
+    login and a refused import."""
+    def register(fn):
+        @functools.wraps(fn)
+        def run(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except urllib.error.HTTPError as e:
+                detail = e.read(300).decode("utf-8", "replace").strip() if e.fp else ""
+                raise ToolError(f"BAW answered HTTP {e.code} {e.reason}" + (f": {detail}" if detail else "")) from e
+            except (urllib.error.URLError, OSError) as e:
+                raise ToolError(f"Cannot reach BAW_URL ({os.environ.get('BAW_URL', 'not set')}): {getattr(e, 'reason', e)}") from e
+        return mcp.tool()(run)
+    return register
+
+
 def snapshots(acronym: str) -> list[dict]:
     try:
         versions = ops().versions(acronym)["versions"]
-    except urllib.error.HTTPError:  # no such app
-        return []
+    except urllib.error.HTTPError as e:
+        if e.code in (400, 404):  # no such app
+            return []
+        raise
     return sorted((v for v in versions if not v.get("archived")), key=lambda v: v.get("creation_date", ""))
 
 
@@ -219,21 +241,21 @@ def installed_toolkit(toolkit: str, snapshot: str | None, why: str) -> Path:
 # ---------------------------------------------------------------- server: read
 
 
-@mcp.tool()
+@tool()
 def list_apps() -> list[dict]:
     """Process apps and toolkits installed on the BAW server."""
     return [{"acronym": c.get("container"), "name": c.get("container_name"), "toolkit": bool(c.get("toolkit"))}
             for c in ops().list_containers().get("containers", []) if not c.get("archived")]
 
 
-@mcp.tool()
+@tool()
 def list_snapshots(acronym: str) -> list[dict]:
     """Snapshots of one process app, oldest first."""
     check_acronym(acronym)
     return [{"snapshot": v["version_name"], "created": v.get("creation_date")} for v in snapshots(acronym)]
 
 
-@mcp.tool()
+@tool()
 def list_services(acronym: str, snapshot: str | None = None) -> list[dict]:
     """Services of an app that users can launch, with their run URLs (newest snapshot unless one is named)."""
     check_acronym(acronym)
@@ -241,7 +263,7 @@ def list_services(acronym: str, snapshot: str | None = None) -> list[dict]:
             for i in ops().services(acronym, snapshot)]
 
 
-@mcp.tool()
+@tool()
 def export_app(acronym: str, snapshot: str | None = None) -> dict:
     """Download a snapshot of a process app (the newest unless named) to work/<ACR>-<snapshot>.twx."""
     check_acronym(acronym)
@@ -258,7 +280,7 @@ def export_app(acronym: str, snapshot: str | None = None) -> dict:
     return {"twx": rel(dest), "snapshot": version["version_name"], "bytes": size}
 
 
-@mcp.tool()
+@tool()
 def view_image(path: str) -> Image:
     """Show an image file from the project: a screenshot of a UI to build an app from, or a
     screenshot test_service took. Paths are relative to the project root, e.g. screenshots/form.png."""
@@ -285,7 +307,7 @@ def open_image(path: str, box):
     return image.crop((round(box[0] * w), round(box[1] * h), max(round(box[2] * w), round(box[0] * w) + 1), max(round(box[3] * h), round(box[1] * h) + 1)))
 
 
-@mcp.tool()
+@tool()
 def image_colors(path: str, box: list[float] | None = None, count: int = 5) -> list[dict]:
     """The main colours of an image file, or of one region of it, as hex with their share of the area.
     box is [left, top, right, bottom] as fractions (0-1) of the image, e.g. [0, 0, 1, 0.15] for a
@@ -298,7 +320,7 @@ def image_colors(path: str, box: list[float] | None = None, count: int = 5) -> l
     return [{"hex": "#{:02x}{:02x}{:02x}".format(*palette[i * 3:i * 3 + 3]), "share": round(n / total, 3)} for n, i in colours]
 
 
-@mcp.tool()
+@tool()
 def crop_image(path: str, box: list[float], dest: str) -> Image:
     """Cut a region out of an image file and save it as a PNG in work/, e.g. the logo of a screenshot
     for the app spec's banner.logo. box is [left, top, right, bottom] as fractions (0-1) of the image.
@@ -336,7 +358,7 @@ def db(call: str, *args, **kwargs):
         raise ToolError(str(e))
 
 
-@mcp.tool()
+@tool()
 def list_tables(database: str | None = None) -> dict:
     """Without a database: every database of the platform's PostgreSQL server that you can read, with its size;
     bawexternal, the app database, is marked "writable". With a database: its schemas, tables and views with
@@ -345,7 +367,7 @@ def list_tables(database: str | None = None) -> dict:
     return {"databases": db("databases")} if database is None else db("tables", database)
 
 
-@mcp.tool()
+@tool()
 def describe_table(database: str, table: str) -> dict:
     """Columns (name, type, nullable, default), primary key, unique and foreign keys and indexes of a table or view,
     as "table" or "schema.table". Columns marked "large" can hold very long values (bytea, text, json, xml): in
@@ -353,7 +375,7 @@ def describe_table(database: str, table: str) -> dict:
     return db("describe", database, table)
 
 
-@mcp.tool()
+@tool()
 def run_sql(database: str, sql: str, limit: int = 200) -> dict:
     """Run exactly one SQL statement and return up to limit rows (at most 1000) and 256 KB.
     bawexternal is the app database: you may CREATE, INSERT, UPDATE, DELETE and DROP there freely, as the role the
@@ -368,7 +390,7 @@ def run_sql(database: str, sql: str, limit: int = 200) -> dict:
     return db("execute", database, sql, limit)
 
 
-@mcp.tool()
+@tool()
 def export_table(database: str, source: str, file: str, overwrite: bool = False) -> dict:
     """Write a table ("table" or "schema.table"), or the result of one SELECT, from any readable database to a CSV
     file with a header line. file is a path under work/, e.g. work/rows.csv; an existing file is replaced only with
@@ -378,7 +400,7 @@ def export_table(database: str, source: str, file: str, overwrite: bool = False)
     return db("export_csv", database, source, file, overwrite)
 
 
-@mcp.tool()
+@tool()
 def import_table(table: str, file: str, mode: str = "append") -> dict:
     """Load a CSV file (a header line, then rows) or a .json file (an array of objects) from work/ into an existing
     table of bawexternal, in one transaction. The header or the keys must be columns of the table; values go in as
@@ -389,7 +411,7 @@ def import_table(table: str, file: str, mode: str = "append") -> dict:
     return db("import_file", table, file, mode)
 
 
-@mcp.tool()
+@tool()
 def change_system_db(database: str, sql: str, backup_tables: list[str | dict] | None = None) -> dict:
     """Run one write on a system database (any database except bawexternal; use run_sql there) as the admin login.
     This asks the user first, so use it only when a task needs a write that run_sql refuses, never for a
@@ -406,7 +428,7 @@ def change_system_db(database: str, sql: str, backup_tables: list[str | dict] | 
 # ---------------------------------------------------------------- build
 
 
-@mcp.tool()
+@tool()
 def inspect_coaches(twx: str, previous: str | None = None) -> dict:
     """Read every coach of an app's client-side human services into an editable coach spec
     (work/<name>.coaches.json): sections, fields, buttons and where each button goes. Set its "theme"
@@ -453,7 +475,7 @@ def base_package(base: str, tmp: Path) -> Path:
     return path
 
 
-@mcp.tool()
+@tool()
 def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | None = None, replace_groups: list[str] | None = None) -> dict:
     """Build an installable .twx from an app spec (see app-specs/example-equipment-request.json, and
     app-specs/example-themed-quote.json for tabs, a banner, placed columns and field icons). The spec's
@@ -544,14 +566,14 @@ def create_app(app_spec: str, toolkit_snapshot: str | None = None, base: str | N
     return result
 
 
-@mcp.tool()
+@tool()
 def build_screens() -> str:
     """Compile the React screens and widgets (coach-ui/src) into the bundles. Returns compiler output;
     fix any error it reports in your screen file and build again."""
     return run(["npm", "run", "build", "--silent"], cwd=COACH_UI, timeout=300) or "Built coach-ui/bundle"
 
 
-@mcp.tool()
+@tool()
 def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: str | None = None, replace_groups: list[str] | None = None) -> dict:
     """Add a React + Carbon copy of each service, "<service> (Modernized)", driven by the coach spec and
     styled by its "theme" file. Each coach is rebuilt from Modernizer Widgets inside native Panels or a Tab
@@ -588,7 +610,7 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: st
     return result
 
 
-@mcp.tool()
+@tool()
 def build_widget_toolkit(toolkit: str, snapshot: str, base: str | None = None) -> dict:
     """Build a toolkit of coach widgets for Coach Designer's palette as work/<ACRONYM>-<snapshot>.twx, then install it
     with install_app. toolkit: "modernizer" is Modernizer Widgets (MDW), the React + Carbon widgets of modernized
@@ -630,7 +652,7 @@ def build_widget_toolkit(toolkit: str, snapshot: str, base: str | None = None) -
 # ---------------------------------------------------------------- server: change and test
 
 
-@mcp.tool()
+@tool()
 def install_app(twx: str) -> dict:
     """Install a .twx (an app, or a toolkit from build_widget_toolkit) on the server as a new snapshot and wait until it finishes."""
     path = local(twx)
@@ -642,9 +664,10 @@ def install_app(twx: str) -> dict:
             "details": str(result.get("result", ""))[:1000]}
 
 
-@mcp.tool()
+@tool()
 def test_service(acronym: str, service: str, snapshot: str | None = None, fill: bool = True,
-                 press: list[str] | None = None, values: dict[str, str] | None = None) -> dict:
+                 press: list[str] | None = None, values: dict[str, str] | None = None,
+                 tabs: bool = False, expect_blocked: bool | None = None) -> dict:
     """Run a service in a real browser: screenshot every screen, fill empty fields with sample
     values (fill), press the forward button, and report each step. "ok": true means every screen
     rendered and every button moved on. Look at the screenshots before calling the work done.
@@ -652,12 +675,23 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
     of that screen is pressed (it replaces what the field holds and beats fill), e.g. {"Request ID": "R-1"}.
     press: button labels to press instead of the forward button, in order, each on the first screen
     that shows it, e.g. ["Load"]; the run then goes on with the forward button. A value never typed
-    or a button never pressed makes "ok" false and is listed under "untyped" and "unpressed"."""
+    or a button never pressed makes "ok" false and is listed under "untyped" and "unpressed".
+    tabs: on a screen with a Tab Section, open every tab before the forward button, fill that tab's
+    fields (with fill) and screenshot it; "tabs" under each step lists the tabs visited. Date fields
+    are filled with today's date and a Boolean radio with "Yes". A filled run on tabs that each have
+    their own buttons (form.tabNextLabel) does this anyway, since its finishing button checks every tab.
+    expect_blocked: before anything is filled, press the forward button once on the first screen and
+    pass only if the screen stays, no request is sent, error indicators are visible and the first tab
+    with an error is selected; "blocked" under that step reports it. The run then goes on as usual.
+    Left out, it is on when work/<ACRONYM>.app.json names this service and marks a field required on its first screen."""
     check_acronym(acronym)
     if not configured():
         raise offline()
     out = WORK / ("shots-" + re.sub(r"[^A-Za-z0-9]+", "-", f"{acronym}-{snapshot or 'tip'}-{service}").strip("-"))
     args = ["--app", acronym, "--service", service] + (["--snapshot", snapshot] if snapshot else []) + (["--fill"] if fill else [])
+    if expect_blocked is None:
+        expect_blocked = spec_requires(acronym, "service", service)
+    args += (["--tabs"] if tabs else []) + (["--expect-blocked"] if expect_blocked else [])
     args += [a for label in press or [] for a in ("--press", label)]
     args += [a for label, text in (values or {}).items() for a in ("--value", f"{label}={text}")]
     report = run_browser(args, out)
@@ -666,6 +700,25 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
         left = [f"{what}: {', '.join(report[key])}" for what, key in (("never pressed", "unpressed"), ("never typed", "untyped")) if report.get(key)]
         report.setdefault("failure", "; ".join(left))
     return report
+
+
+def spec_requires(acronym: str, key: str, name: str) -> bool:
+    """Whether Bob's spec of the app (work/<ACRONYM>.app.json) names this service or process and marks a field
+    required on its first screen (every tab of a tabbed form, else the first step): that screen's forward button
+    then has to refuse while the field is empty, so the test checks that."""
+    try:
+        spec = json.loads((WORK / f"{acronym}.app.json").read_text())
+    except (OSError, ValueError):
+        return False
+    if not isinstance(spec, dict) or not isinstance(spec.get(key), dict) or spec[key].get("name") != name:
+        return False
+    groups = {g.get("name"): g.get("fields") or [] for g in spec.get("groups") or [] if isinstance(g, dict)}
+    steps = [s for s in spec.get("steps") or [] if isinstance(s, dict)] or [{"fields": spec.get("fields") or []}]
+    first = steps if spec.get("layout") == "tabs" else steps[:1]
+    fields = [f for s in first for f in s.get("fields") or []]
+    fields += [f for s in first for sec in s.get("sections") or [] if isinstance(sec, dict) and not sec.get("readonly")
+               for f in (groups.get(sec["group"], []) if sec.get("group") else sec.get("fields") or [])]
+    return any(isinstance(f, dict) and f.get("required") is True for f in fields)
 
 
 def run_browser(args: list, out: Path) -> dict:
@@ -681,15 +734,27 @@ def run_browser(args: list, out: Path) -> dict:
     return report
 
 
-@mcp.tool()
-def test_process(acronym: str, process: str, snapshot: str | None = None, press: list[str] | None = None, max_tasks: int = 8) -> dict:
+@tool()
+def test_process(acronym: str, process: str, snapshot: str | None = None, press: list[str] | None = None, max_tasks: int = 8,
+                 fill: bool = True, expect_blocked: bool | None = None, tabs: bool = False,
+                 draft_then_resume: str | None = None, values: dict[str, str] | None = None) -> dict:
     """Run a workflow (process) of an app end to end: start an instance, then open each task as it
     arrives in a real browser, fill empty fields, press the forward button and screenshot every screen.
     press: button labels to press instead, in order, each on the first screen that shows it, e.g.
-    ["Send Back"] sends the work back once before it is approved. Reports every task and the final state."""
+    ["Send Back"] sends the work back once before it is approved. Reports every task and the final state.
+    fill: false leaves the fields empty (the forward button then stops at the required check).
+    tabs: as in test_service, applied to every task. expect_blocked: as in test_service, applied to the first task only, the one that starts empty;
+    left out, it is on when work/<ACRONYM>.app.json names this process and marks a field required on its first screen.
+    draft_then_resume: a draft button label, e.g. "Save as Draft". On the first task the fields in
+    values (label -> text, required) are typed and that button is pressed; the coach must close and the
+    task stay open in the inbox. The task is then reopened (polled for up to 60 seconds until it can be
+    opened), every typed value must still be there, and the run goes on as usual. "draft" under that
+    task reports both opens."""
     check_acronym(acronym)
     if not configured():
         raise offline()
+    if draft_then_resume and not values:
+        raise ToolError("draft_then_resume needs values: the field label -> text to type before the draft button is pressed, e.g. {\"Group Name\": \"Acme\"}")
     found = [p for p in ops().processes(acronym, snapshot) if p["display"] == process]
     if not found:
         raise ToolError(f"No startable process {process!r} in {acronym} {snapshot or '(tip)'}; "
@@ -697,24 +762,82 @@ def test_process(acronym: str, process: str, snapshot: str | None = None, press:
     instance = ops().start(found[0])
     piid, queue, tasks = instance["piid"], list(press or []), []
     out = WORK / ("shots-" + re.sub(r"[^A-Za-z0-9]+", "-", f"{acronym}-{process}-{piid}").strip("-"))
+    flags = (["--fill"] if fill else []) + (["--tabs"] if tabs else [])
+    if expect_blocked is None:
+        expect_blocked = spec_requires(acronym, "process", process)
+    drafting = draft_then_resume
     while len(tasks) < max_tasks:
         instance = ops().instance(piid)
-        open_tasks = [t for t in instance.get("tasks", []) if t.get("status") not in ("Closed", "Completed")]
+        open_tasks = open_task_list(instance)
         if not open_tasks:
             break
         task = open_tasks[0]
-        args = ["--url", ops().task_url(task["tkiid"]), "--fill"] + [a for label in queue for a in ("--press", label)]
-        report = run_browser(args, out / f"{len(tasks) + 1:02d}-task-{re.sub(r'[^A-Za-z0-9]+', '-', str(task['tkiid']))}")
+        stem = out / f"{len(tasks) + 1:02d}-task-{re.sub(r'[^A-Za-z0-9]+', '-', str(task['tkiid']))}"
+        draft = None
+        if drafting:
+            first = run_browser(["--url", ops().task_url(task["tkiid"]), "--draft", drafting] + [a for label, text in values.items() for a in ("--value", f"{label}={text}")],
+                                stem / "draft")
+            reopened = wait_for_task(piid, task["tkiid"])
+            draft = {"button": drafting, "closed": bool(first.get("draft", {}).get("closed")), "ok": first["ok"], "failure": first.get("failure"),
+                     "stillOpen": reopened is not None, "taskStatus": task_state(reopened) if reopened else None, "tab": first.get("draft", {}).get("tab")}
+            drafting = None
+            if not first["ok"] or reopened is None:
+                draft["failure"] = draft["failure"] or f"task {task['name']!r} is not open in the inbox 60 seconds after {draft['button']!r}"
+                draft["ok"] = False
+                tasks.append({"task": task["name"], "id": task["tkiid"], "ok": False, "failure": draft["failure"], "errors": first.get("errors", []),
+                              "steps": first.get("steps", []), "notes": first.get("notes", []), "draft": draft})
+                break
+        # Only the first task starts empty; a resumed draft holds what was typed, so it need not be blocked.
+        blocked_flag = ["--expect-blocked"] if expect_blocked and not tasks and not draft else []
+        args = ["--url", ops().task_url(task["tkiid"])] + flags + blocked_flag + [a for label in queue for a in ("--press", label)]
+        if draft:
+            args += [a for label, text in values.items() for a in ("--check", f"{label}={text}")]
+        report = run_browser(args, stem)
         for step in report.get("steps", []):
             if queue and step.get("button") == queue[0]:
                 queue.pop(0)
-        tasks.append({"task": task["name"], "id": task["tkiid"], "ok": report["ok"], "failure": report.get("failure"),
-                      "errors": report["errors"], "steps": report["steps"], "notes": report.get("notes", [])})
-        if not report["ok"]:
+        entry = {"task": task["name"], "id": task["tkiid"], "ok": report["ok"], "failure": report.get("failure"),
+                 "errors": report["errors"], "steps": report["steps"], "notes": report.get("notes", [])}
+        if draft:
+            draft["resumed"] = report.get("checked", [])
+            draft["reopenedTab"] = next((step.get("tab") for step in report.get("steps", []) if step.get("tab")), None)
+            draft["ok"] = draft["ok"] and bool(draft["resumed"]) and all(c["ok"] for c in draft["resumed"])
+            entry["draft"] = draft
+            entry["ok"] = entry["ok"] and draft["ok"]
+        if "--tabs" in flags:
+            entry["tabs"] = [step["tabs"] for step in report["steps"] if step.get("tabs")]
+        if blocked_flag:
+            entry["blocked"] = [step["blocked"] for step in report["steps"] if step.get("blocked")]
+        tasks.append(entry)
+        if not entry["ok"]:
             break
     state = ops().instance(piid)["executionState"]
     return {"process": process, "instance": piid, "state": state, "tasks": tasks, "unpressed": queue,
             "ok": state == "Completed" and all(t["ok"] for t in tasks) and not queue}
+
+
+def open_task_list(instance: dict) -> list:
+    """The tasks of a process instance that are not finished."""
+    return [t for t in instance.get("tasks", []) if task_state(t) not in ("Closed", "Completed")]
+
+
+def task_state(task: dict) -> str | None:
+    """A task's status as BAW reports it: Received, Claimed or Closed. Its separate state field reads STATE_READY, STATE_CLAIMED
+    and so on; a claim seen only there is reported as Claimed."""
+    return "Claimed" if task.get("state") == "STATE_CLAIMED" else task.get("status")
+
+
+def wait_for_task(piid, tkiid, seconds: int = 60) -> dict | None:
+    """Poll until the task is listed as open after a draft (a postponed task stays in its owner's inbox, still claimed);
+    None when it is not open within the time."""
+    deadline = time.monotonic() + seconds
+    while True:
+        found = [t for t in open_task_list(ops().instance(piid)) if t["tkiid"] == tkiid]
+        if found:
+            return found[0]
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(3)
 
 
 if __name__ == "__main__":

@@ -4,3 +4,6 @@
 .env.*
 !.env.example
 db-backups/
+
+# Test fixtures hold prepared answers (such as the Large Group quote spec); Bob builds from the requirement, not from these.
+server/tests/

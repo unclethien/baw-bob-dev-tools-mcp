@@ -361,7 +361,8 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
       <thead><tr><th scope="col">Key</th><th scope="col">Required</th><th scope="col">Default</th><th scope="col">What it is</th></tr></thead>
       <tbody>
         <tr><td class="mono"><a href="#app">app</a></td><td>Yes</td><td></td><td>Name, acronym and snapshot of the process app</td></tr>
-        <tr><td class="mono"><a href="#app">businessObject</a></td><td>Yes</td><td></td><td>The data type that holds every field, and the variable name for it</td></tr>
+        <tr><td class="mono"><a href="#app">businessObject</a></td><td>Yes</td><td></td><td>The data type that holds every field, and the variable name for it. Use <code>businessObjects</code> (a list) for more than one</td></tr>
+        <tr><td class="mono"><a href="#app">businessObjects</a></td><td>No</td><td></td><td>A list of <code>{ name, variable }</code> instead of <code>businessObject</code>; a <a href="#groups">group</a> picks the one that holds its fields</td></tr>
         <tr><td class="mono"><a href="#app">service</a></td><td>Yes</td><td></td><td>The service users launch</td></tr>
         <tr><td class="mono"><a href="#layout">layout</a></td><td>No</td><td class="mono">"steps"</td><td><code>"steps"</code> (a screen per step) or <code>"tabs"</code> (one screen, a tab per step)</td></tr>
         <tr><td class="mono"><a href="#layout">form</a></td><td>No</td><td></td><td>Title, intro and buttons of the tabbed screen (<code>"tabs"</code> only)</td></tr>
@@ -395,6 +396,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono">app.snapshot</td><td>Optional, default <code>1.0.0</code>. Must be new for every build of the same app</td><td class="mono">1.0.0</td></tr>
         <tr><td class="mono">businessObject.name</td><td>Required. A JavaScript identifier: letters, digits and <code>_</code>, not starting with a digit</td><td class="mono">LeaveRequest</td></tr>
         <tr><td class="mono">businessObject.variable</td><td>Required. An identifier; the service stores the answers in <code>tw.local.&lt;variable&gt;</code></td><td class="mono">leave</td></tr>
+        <tr><td class="mono">businessObjects</td><td>Optional. A list of <code>{ "name", "variable" }</code> objects instead of the single <code>businessObject</code> (use one or the other). The first object also holds the generated properties; a group says which object owns its fields with <code>businessObject</code> (see <a href="#groups">groups</a>)</td><td class="mono">[ { "name": "Quote", "variable": "quote" }, { "name": "Member", "variable": "member" } ]</td></tr>
         <tr><td class="mono">service.name</td><td>Required. What users see, and what you pass to <code>test_service</code></td><td class="mono">Leave Request</td></tr>
         <tr><td class="mono">service.description</td><td>Optional. Defaults to the service name</td><td></td></tr>
       </tbody>
@@ -441,6 +443,8 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono">form.title</td><td><code>service.name</code></td><td>Title of the tabbed screen</td></tr>
         <tr><td class="mono">form.intro</td><td>none</td><td>Text under the title</td></tr>
         <tr><td class="mono">form.nextLabel</td><td>Next, or Submit when <code>"review": false</code></td><td>Text of the button that leaves the screen</td></tr>
+        <tr><td class="mono">form.tabNextLabel</td><td>none</td><td>Only with <code>"layout": "tabs"</code>. Gives each tab its own button bar: every tab but the last ends with a Next button with this text that only switches to the next tab, and the last tab ends with the <code>form.nextLabel</code> button, which checks the required fields and leaves the screen. Without it, one shared bar sits under the tabs</td></tr>
+        <tr><td class="mono">form.draftLabel</td><td>none</td><td>Only with <code>"layout": "tabs"</code> and a <code>process</code>. Adds a Save as Draft button with this text to every tab, before the Next or finishing button (on the shared bar when there is no <code>form.tabNextLabel</code>). It never checks required fields. The task is postponed: it returns to the inbox and reopens with the saved values, on the tab the user left</td></tr>
         <tr><td class="mono">form.cancelLabel</td><td>none</td><td>Adds a button with this text that ends the service</td></tr>
       </tbody>
     </table>
@@ -552,6 +556,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono">columns</td><td>No</td><td>1 to 6, as in a <a href="#sections">section</a></td></tr>
         <tr><td class="mono">widths</td><td>No</td><td>Relative column widths, as in a section</td></tr>
         <tr><td class="mono">fields</td><td>Yes</td><td>The group's <a href="#fields">fields</a>. Each belongs to the business object once, however often the group is placed, and is not listed in any other section</td></tr>
+        <tr><td class="mono">businessObject</td><td>No</td><td>The <code>name</code> of one of the <a href="#app">business objects</a> that holds this group's fields. Default: the first</td></tr>
       </tbody>
     </table>
   </div>
@@ -600,8 +605,9 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono">name</td><td>Yes</td><td>An identifier, unique across <em>all</em> steps. <code>referenceNumber</code> is reserved when there is a confirmation</td></tr>
         <tr><td class="mono">label</td><td>Yes</td><td>The text shown next to the input</td></tr>
         <tr><td class="mono">type</td><td>No</td><td>One of the <a href="#types">field types</a>; default <code>String</code></td></tr>
+        <tr><td class="mono">control</td><td>No</td><td>Another control for the type: <code>"Radio"</code> on a <code>Boolean</code> gives a Yes/No radio group that starts blank; <code>"Select"</code> on an <code>Integer</code> with <code>options</code> gives a whole-number dropdown. Any other pair is refused</td></tr>
         <tr><td class="mono">options</td><td>Select and Radio</td><td>The choices: a list of strings, or of <code>{"value", "label"}</code> when the stored value differs from the text shown</td></tr>
-        <tr><td class="mono">required</td><td>No</td><td><code>true</code> shows the required marker. It is a visual marker only; the generated service has no validation, so it does not stop Next</td></tr>
+        <tr><td class="mono">required</td><td>No</td><td><code>true</code> shows the required marker and blocks the button that finishes the form while the field is empty: Send for Review on a <code>tabs</code> form with per-tab buttons, otherwise the Submit or Next button that leads to the review page. The review task's finishing button is blocked too. Empty means null, an empty or blank string; <code>false</code> and <code>0</code> count as answers, so a Boolean checkbox is never missing. Number boxes, number dropdowns and Yes/No radios start empty, not 0 or No. The empty fields are marked and a summary line appears above the buttons; with <code>layout: tabs</code> the form jumps to the first tab holding one. Fields in a read-only group are not checked. Next, Back and Cancel are never blocked</td></tr>
         <tr><td class="mono">help</td><td>No</td><td>Adds a help icon with this text</td></tr>
         <tr><td class="mono">wide</td><td>No</td><td><code>true</code>: full width in a multi-column section</td></tr>
         <tr><td class="mono">column</td><td>No</td><td>1, 2, &hellip;: the column it sits in. All or none of a section's non-wide fields</td></tr>
@@ -612,7 +618,9 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
 <pre><code>{ "name": "priority", "label": "Priority", "type": "Radio", "options": ["Low", "Normal", "High"] }
 { "name": "costCentre", "label": "Cost Centre", "type": "Select",
   "options": [ { "value": "CC100", "label": "100 - Finance" }, { "value": "CC200", "label": "200 - IT" } ] }
-{ "name": "email", "label": "Email", "required": true, "help": "We send the decision here.", "icon": "mail" }</code></pre>
+{ "name": "email", "label": "Email", "required": true, "help": "We send the decision here.", "icon": "mail" }
+{ "name": "smoker", "label": "Smoker?", "type": "Boolean", "control": "Radio", "required": true }
+{ "name": "dependents", "label": "Dependents", "type": "Integer", "control": "Select", "options": [0, 1, 2, 3] }</code></pre>
 </section>
 
 <hr class="rule" aria-hidden="true">
@@ -628,7 +636,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono">Date</td><td class="mono">Date</td><td>Date Time Picker</td><td>Dates</td></tr>
         <tr><td class="mono">Boolean</td><td class="mono">Boolean</td><td>Checkbox</td><td>Yes/no questions and confirmations. Starts unticked</td></tr>
         <tr><td class="mono">Integer</td><td class="mono">Integer</td><td>Integer</td><td>Counts and quantities</td></tr>
-        <tr><td class="mono">Decimal</td><td class="mono">Decimal</td><td>Decimal</td><td>Money and percentages</td></tr>
+        <tr><td class="mono">Decimal</td><td class="mono">Decimal</td><td>Decimal, shown with two decimal places</td><td>Money and percentages</td></tr>
         <tr><td class="mono">Select</td><td class="mono">String</td><td>Single Select</td><td>A choice from a list (a dropdown); needs <code>options</code></td></tr>
         <tr><td class="mono">Radio</td><td class="mono">String</td><td>Radio Button Group</td><td>A choice from up to about four options, all visible; needs <code>options</code></td></tr>
       </tbody>
@@ -786,6 +794,11 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono">approval.approveLabel</td><td>Approve</td><td>Text of the button that ends the workflow</td></tr>
         <tr><td class="mono">approval.returnLabel</td><td>Send Back</td><td>Text of the button that returns the work to the first task; also the label of that path in the diagram</td></tr>
         <tr><td class="mono">approval.commentsLabel</td><td>Comments</td><td>Label of the comments box</td></tr>
+        <tr><td class="mono">review</td><td>off</td><td>An object (<code>{}</code> for the defaults) adds a review task that follows the first task and then ends the workflow. Not allowed together with <code>approval</code></td></tr>
+        <tr><td class="mono">review.name</td><td>Review</td><td>Name of the review task and title of its screen</td></tr>
+        <tr><td class="mono">review.lane</td><td>Reviewer</td><td>Lane of the review task and the end</td></tr>
+        <tr><td class="mono">review.completeLabel</td><td>Submit</td><td>Text of the one button that finishes the review</td></tr>
+        <tr><td class="mono">review.editLabel</td><td>Edit</td><td>Text of the button in each group's heading that unlocks that group for editing</td></tr>
       </tbody>
     </table>
   </div>
@@ -802,6 +815,10 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
   "Sent back") and <code>reviewComments</code>, so no field of the spec may use those names. Every lane is
   open to all users; change who works on each lane in the process editor. The form service can still be
   launched on its own by URL; the approval service runs only as a task of the workflow.</p>
+  <p>A <code>review</code> task is the lighter alternative: the work goes from the first task to the review task
+  and then ends, with no decision, no comments and no Send Back. The review screen shows every group read-only.
+  Each group's heading has an edit button; pressing it unlocks that group, and the changes go back to the
+  workflow. The finishing button checks the required fields of the groups that were unlocked.</p>
 </section>
 
 <hr class="rule" aria-hidden="true">
@@ -871,7 +888,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
     is saved as NULL, and a NULL loads as an empty box. Submit refuses text that is not a whole number (Integer) or a
     number such as <code>1234.56</code> (Decimal) with a message such as "Quantity must be a whole number." before any row
     is written. A process or caller that reads the business object sees a String where the spec says Integer. A
-    <code>required</code> number keeps the number control and saves 0 when left empty.</li>
+    <code>required</code> number keeps the number control; a required number left empty is reported as empty by the check on Submit instead of being saved as 0.</li>
     <li><strong>The key is required.</strong> Load with no key, and Submit with no key, stay on the screen with a message and
     write nothing. Load of an unknown key says "No record found for &hellip;" and keeps what was typed. A row that was loaded
     keeps its reference number when it is saved again.</li>
@@ -919,6 +936,7 @@ Invalid app spec:
         <tr><td class="mono">is not a theme setting</td><td>Check the spelling against the <a href="#theme">theme keys</a>; they are case-sensitive</td></tr>
         <tr><td class="mono">is not an app banner setting</td><td>Move <code>product</code> and <code>logo</code> from the spec's banner to the theme file's <code>banner</code></td></tr>
         <tr><td class="mono">banner.logo &hellip; must be an image file inside the project</td><td>Save the image under the project folder (e.g. <code>work/</code>) and give the path relative to it</td></tr>
+        <tr><td class="mono">is not a setting</td><td>Unknown keys are refused at every level of the spec. Check the spelling against the key tables on this page</td></tr>
         <tr><td class="mono">unknown group</td><td>A section names a group that <code>groups</code> does not define; check the spelling</td></tr>
         <tr><td class="mono">is not placed in any step</td><td>Place the group in a section (<code>{"group": "&lt;name&gt;"}</code>) or remove it</td></tr>
         <tr><td class="mono">cannot hide it</td><td>A required field cannot be hidden; remove it from <code>hide</code></td></tr>
@@ -944,7 +962,7 @@ Invalid app spec:
   <ul>
     <li><strong>Tables, file uploads, links and menus.</strong> Add them in a hand-written React screen for that coach
     in the BAW Coach Modernizer (the react-coach-screen skill).</li>
-    <li><strong>Validation and rules.</strong> No required-field blocking, no field-to-field rules, no show/hide logic.</li>
+    <li><strong>Validation and rules.</strong> Only the required-field check on the finishing button; no field-to-field rules, no show/hide logic.</li>
     <li><strong>Lookups and integrations.</strong> Dropdown options are fixed in the spec, and nothing calls another system.
     The one exception is the <a href="#database"><code>database</code></a> section, which loads and saves one table. It
     has no list or search screen, no joins and no tables of rows inside a form.</li>
