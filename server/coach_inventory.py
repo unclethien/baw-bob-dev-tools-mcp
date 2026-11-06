@@ -366,7 +366,10 @@ def inventory_service(root, names, groups=None):
                              else "no fields bound to a business object")
     variable = counts.most_common(1)[0][0] if counts else ""
     service["variable"], service["classRef"] = variable, variables.get(variable, "")
-    if variable and not service["classRef"]:
+    if len(counts) > 1 and service["modernize"]:
+        names = ", ".join(f"tw.local.{name}" for name in sorted(counts))
+        service["modernize"], service["reason"] = False, f"binds fields to several business objects ({names})"
+    if variable and not service["classRef"] and service["modernize"]:
         service["modernize"], service["reason"] = False, f"no declared type for tw.local.{variable}"
     previews = {f"{g['base']} Preview" for g in (groups or {}).values()} | {f"{g['base']}{SUFFIX} Preview" for g in (groups or {}).values()}
     if service["name"] in previews:
@@ -377,8 +380,10 @@ def inventory_service(root, names, groups=None):
         for section in reader.sections:
             kept = []
             for it in section["fields"]:
-                if renderable(it) and it["binding"].startswith(f"tw.local.{variable}."):
-                    kept.append(field_spec(it, variable))
+                # a group placement keeps its fields under its own variable, which may be another business object
+                own = it["binding"].split(".")[2] if section.get("group") and it["binding"].count(".") >= 3 else variable
+                if renderable(it) and it["binding"].startswith(f"tw.local.{own}."):
+                    kept.append(field_spec(it, own))
                 else:
                     native.append({"viewId": it["viewId"], "view": it["view"], "label": it["label"], "binding": it["binding"]})
             section["fields"] = kept
@@ -391,7 +396,7 @@ def inventory_service(root, names, groups=None):
                 primary = (b["config"].get("kind") or "").lower() in ("", "primary", "danger")
             else:
                 primary = b["colorStyle"] == "P" or (b["colorStyle"] != "D" and not BACKWARD.search(b["label"]))
-            button = {"label": b["label"] or b["viewId"], "viewId": b["viewId"], "primary": primary, "to": target or "(not wired)"}
+            button = {"label": b["label"] or b["viewId"], "viewId": b["viewId"], "primary": primary, "to": target or "(no flow: stays on the coach)"}
             kind = b["widget"] if b["widget"] in CONTRACT else "button"
             if kind != "button":  # another boundary widget of the toolkit
                 button["type"] = kind

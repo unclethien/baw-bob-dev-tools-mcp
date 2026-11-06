@@ -27,3 +27,9 @@ db-backups/
 # The local knowledge graph for Bob and its rule; rebuilt on each machine, never committed
 graphify-out/
 .bob/rules/graphify.md
+
+# Bob's scratch files, which include dumps of the Word documents it reads (client documents)
+.bob/tmp/
+
+# Local audit log
+audit.log

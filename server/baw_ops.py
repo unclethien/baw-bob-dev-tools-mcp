@@ -146,8 +146,21 @@ class BawOps:
         headers.update(extra or {})
         return headers
 
+    def _signed(self, method, path, body=None, extra=None, **kw):
+        """A call with the session's token. The token and the CSRF token expire while a long-lived MCP server keeps
+        this session, and BAW then answers 401 or 403, so log in again once and repeat the call."""
+        try:
+            return self._request(method, path, body, self._headers(extra), **kw)
+        except urllib.error.HTTPError as e:
+            if e.code not in (401, 403):
+                raise
+            self.token = self._authorize()
+            self.csrf = None
+            self.csrf = self._csrf()
+            return self._request(method, path, body, self._headers(extra), **kw)
+
     def get(self, path, accept="application/json", **kw):
-        return self._request("GET", path, headers=self._headers({"Accept": accept}), **kw)
+        return self._signed("GET", path, extra={"Accept": accept}, **kw)
 
     def list_containers(self):
         return self.get("/bas/ops/std/bpm/containers")
@@ -169,7 +182,7 @@ class BawOps:
         return [i for i in mine if (i.get("snapshotName") == snapshot if snapshot else i.get("tip"))]
 
     def post(self, path, body=b""):
-        return self._request("POST", path, body, self._headers({"Content-Type": "application/json"}))
+        return self._signed("POST", path, body, {"Content-Type": "application/json"})
 
     def processes(self, acronym, snapshot=None):
         """Startable processes (BPDs) of an app: the tip snapshot unless a snapshot name is given."""
@@ -194,10 +207,8 @@ class BawOps:
             f"--{boundary}\r\nContent-Disposition: form-data; name=\"install_file\"; filename=\"{twx.name}\"\r\n"
             f"Content-Type: application/octet-stream\r\n\r\n"
         ).encode() + twx.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
-        result = self._request(
-            "POST", "/bas/ops/std/bpm/containers/install", body,
-            self._headers({"Content-Type": f"multipart/form-data; boundary={boundary}"}),
-        )
+        result = self._signed("POST", "/bas/ops/std/bpm/containers/install", body,
+                              {"Content-Type": f"multipart/form-data; boundary={boundary}"})
         url = result.get("url", "")
         if not url:
             return result

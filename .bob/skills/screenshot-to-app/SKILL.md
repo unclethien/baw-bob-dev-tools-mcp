@@ -18,7 +18,7 @@ The result must match the screenshot in **layout and look**, not only in fields:
 - **A file in the project** (for example `work/form.png`): call `view_image` with its path. `screenshots/example-supplier-registration.png` is a demo.
 - **Attached in the chat:** you can see it, but `image_colors` and `crop_image` need a file. Ask the user to save it in `work/` (not committed, so client screens stay private) so you can read exact colours, and cut out the logo if they ask for that. If they can't, read the colours by eye.
 - **An attached image and a named file that show different screens:** the attached image is the one the user means. Say which one you built from.
-- Several screenshots are several steps, in the order the user gives them, unless they are one long page captured while scrolling: the same header or tab at the top, and fields that repeat from one picture to the next. Then merge them into one step, keep each repeated field once, and tell the user where a picture cuts a section off. A screenshot with tabs across the top is one screen with `"layout": "tabs"`, one step per tab.
+- Several screenshots are several steps, in the order the user gives them, unless they are one long page captured while scrolling: the same header or tab at the top, and fields that repeat from one picture to the next. Then merge them into one step, keep each repeated field once, and tell the user where a picture cuts a section off. A screenshot with tabs across the top is one screen with `"layout": "tabs"`, one step per tab (buttons on each tab: `form.tabNextLabel`).
 
 ## 2. Read the layout and the fields
 
@@ -38,14 +38,15 @@ Write down, top to bottom and left to right:
 | Box for a count or a year | `Integer`. Money, rates and percentages: `Decimal` |
 | Dropdown (box with ▼) | `Select` with `options` |
 | Round option buttons, `( )` or `◯` | `Radio` with `options`, in the order shown |
-| Square tick box, even a small one next to an icon | `Boolean`; its label is the `label` |
-| `*` or "(required)" next to a label | `"required": true` |
+| Square tick box, even a small one next to an icon | `Boolean`; its label is the `label`. Yes/No round buttons: `Boolean` with `"control": "Radio"` |
+| `*` or "(required)" next to a label | `"required": true`. If the user says all fields are required, set it on every field |
 | Small grey text under a field, or a `?` / ⓘ icon next to the label | `help` (write a short, plausible sentence for an icon) |
 | Forward button text ("Continue", "Submit") | step `nextLabel` (with tabs: `form.nextLabel`); back button: `backLabel` |
 | Cancel, Close or Exit button | `cancelLabel` on the step (with tabs: on `form`). It ends the service |
 
 - **Labels:** copy the visible text exactly, without the `*` or a trailing colon.
-- **Field names:** camelCase from the label (`Tax ID` becomes `taxId`), unique across the whole app.
+- **Field names:** the requirement's own names when a written requirement gives them; otherwise camelCase from the label (`Tax ID` becomes `taxId`), unique across the whole app.
+- **A written requirement beats the screenshot.** Build the tabs, fields and sections the requirement names, with its names and types. Take layout, columns, labels and control style from the screenshot, and keep the requested type underneath (a whole-number field drawn as a dropdown is an `Integer` with `"control": "Select"`). List every screenshot item you left out and every control or type compromise as an assumption at the design stop.
 - **Dropdown options:** a closed dropdown hides its options. Use the options the user gives you. Otherwise choose short, plausible ones for the domain and list them as assumptions in the report.
 - **Values typed into the screenshot** are not part of the design. Never copy names, numbers, addresses or anything that looks like real data into the spec. The same goes for a person's name in a greeting: keep the greeting, drop the name.
 
@@ -82,7 +83,7 @@ Every section becomes a reusable View by default, named after its title (coach-g
 
 Build only the screens in the screenshots, plus what they clearly lead to. If the last screen's forward button says "Continue" or "Next", the user expects something after it: add a read-only review (`"review": { "title": ... }`) and, for a submission, a `confirmation`. If it says "Submit" and the user asked for nothing more, set `"review": false`.
 
-A screenshot shows one screen, not who works on it next. When the user asks for a workflow around it (a hand-off, a review, an approval, a BPMN diagram), add a `process` section as in the baw-app-builder skill: the form becomes the first task in its lane, and an `approval` adds a review task in a second lane with Approve and Send Back. After step 5 below, also run `test_process` with `press: ["<Send Back label>"]`.
+A screenshot shows one screen, not who works on it next. When the user asks for a workflow around it (a hand-off, a review, an approval, a BPMN diagram), add a `process` section as in the baw-app-builder skill: the form becomes the first task in its lane, and an `approval` adds a review task in a second lane with Approve and Send Back (a `review` instead adds a plain review task with Edit buttons). After step 5 below, also run `test_process` (with `approval`: `press: ["<Send Back label>"]`).
 
 ## 5. Approve, build, import, compare
 
