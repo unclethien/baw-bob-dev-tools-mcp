@@ -61,6 +61,8 @@ class Layout:
         self.counts = {}
         self.bound = []  # (layout item id, binding) of every bound view, for styling them later
         self.group_fields = []  # fields of the editable groups placed on the coach, for styling them too
+        self.required = []  # {"path": [control IDs], "group": bool, "tab": index or None} of every required field placed
+        self.last_id = None  # layout item ID of the latest view, so a caller can name the control it just made
 
     def _item_id(self, kind):
         self.counts[kind] = self.counts.get(kind, 0) + 1
@@ -68,13 +70,14 @@ class Layout:
 
     def _config(self, options):
         out = []
-        for name, value in options:
+        for name, value, *dynamic in options:  # a third item "dynamic" makes the value a JavaScript expression
             val = f"<{self.p}:value />" if value in (None, "") else f"<{self.p}:value>{escape(value)}</{self.p}:value>"
-            out.append(f"<{self.p}:configData><{self.p}:id>{uid()}</{self.p}:id><{self.p}:optionName>{name}</{self.p}:optionName>{val}</{self.p}:configData>")
+            kind = f"<{self.p}:valueType>dynamic</{self.p}:valueType>" if dynamic else ""
+            out.append(f"<{self.p}:configData><{self.p}:id>{uid()}</{self.p}:id><{self.p}:optionName>{name}</{self.p}:optionName>{val}{kind}</{self.p}:configData>")
         return "".join(out)
 
     def view(self, kind, label="", binding=None, children=None, options=(), show_label=True, item_id=None, tag="contributions", view_uuid=None, help=""):
-        item_id = item_id or self._item_id(kind)
+        item_id = self.last_id = item_id or self._item_id(kind)
         config = [("@label", label), ("@helpText", help), ("@labelVisibility", "SHOW" if show_label else "HIDE"), *options]
         xml = f'<{self.p}:{tag} xsi:type="{self.p}:ViewRef" version="8550"><{self.p}:id>{uid()}</{self.p}:id><{self.p}:layoutItemId>{item_id}</{self.p}:layoutItemId>'
         xml += self._config(config) + f"<{self.p}:viewUUID>{view_uuid or VIEWS[kind]}</{self.p}:viewUUID>"
@@ -85,15 +88,15 @@ class Layout:
             xml += f"<{self.p}:contentBoxContrib><{self.p}:id>{uid()}</{self.p}:id><{self.p}:contentBoxId>ContentBox1</{self.p}:contentBoxId>{''.join(children)}</{self.p}:contentBoxContrib>"
         return xml + f"</{self.p}:{tag}>"
 
-    def html(self, content, tag="contributions"):
-        item_id = self._item_id("CustomHTML")
+    def html(self, content, tag="contributions", item_id=None):
+        item_id = item_id or self._item_id("CustomHTML")
         return (f'<{self.p}:{tag} xsi:type="{self.p}:CustomHTML" version="8550"><{self.p}:id>{uid()}</{self.p}:id><{self.p}:layoutItemId>{item_id}</{self.p}:layoutItemId>'
                 + self._config([("@customHTML.contentType", "TEXT"), ("@customHTML.textContent", content)]) + f"</{self.p}:{tag}>")
 
-    def button(self, label, style="D"):
-        """style: the UI Toolkit colour style, P (primary), D (default) or W (warning)."""
+    def button(self, label, style="D", options=()):
+        """style: the UI Toolkit colour style, P (primary), D (default) or W (warning). options: more (name, value) pairs."""
         item_id = self._item_id("Button")
-        return item_id, self.view("Button", label, item_id=item_id, options=[("colorStyle", style)], show_label=False)
+        return item_id, self.view("Button", label, item_id=item_id, options=[("colorStyle", style), *options], show_label=False)
 
     @staticmethod
     def wrap(items):
@@ -105,7 +108,15 @@ class Layout:
 
 LINK_VISUAL = ("<ns13:linkVisualInfo><ns13:sourcePortLocation>{src}</ns13:sourcePortLocation><ns13:targetPortLocation>{dst}</ns13:targetPortLocation>"
                "<ns13:showLabel>false</ns13:showLabel><ns13:showCoachControlLabel>{ctl}</ns13:showCoachControlLabel><ns13:labelPosition>0.0</ns13:labelPosition>"
-               "<ns13:saveExecutionContext>false</ns13:saveExecutionContext></ns13:linkVisualInfo>")
+               "<ns13:saveExecutionContext>{save}</ns13:saveExecutionContext></ns13:linkVisualInfo>")
+
+
+def object_refs(bo_id, var_id, var, io=None):
+    """The business objects a service handles, as (variable, class id, reference) triples. The arguments are lists
+    when there are several objects. The reference is the io pair (input id, output id) when the service is a process task,
+    otherwise the id of its private variable."""
+    refs = io or var_id
+    return list(zip(var, bo_id, refs)) if isinstance(var, list) else [(var, bo_id, refs)]
 
 
 def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
@@ -118,8 +129,9 @@ def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
     flows: (source, target, coach event or None, source port, target port[, (label, condition or None)]);
     "start" and "end" are implicit. The last item names a flow out of a gateway and gives its condition (None: the default).
     io: (input id, output id) to take the business object in and hand it back (a process task's
-    service); otherwise it is a private variable (var_id).
+    service); otherwise it is a private variable (var_id). Several business objects: bo_id, var_id, var and io are lists.
     """
+    objects = object_refs(bo_id, var_id, var, io)
     ids = {"start": uid(), "end": uid(), **{key: "2025." + uid() for key, _, _ in steps}}
     flow_ids = ["2027." + uid() for _ in flows]
     incoming = lambda node: "".join(f"<ns16:incoming>{flow_ids[i]}</ns16:incoming>" for i, f in enumerate(flows) if f[1] == node)
@@ -149,17 +161,22 @@ def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
             return (f'<ns16:exclusiveGateway default="{default}" name="{name}" id="{ids[key]}">'
                     f'<ns16:extensionElements><ns13:nodeVisualInfo x="{110 + 150 * i + 30}" y="197" width="32" height="32" /></ns16:extensionElements>'
                     f"{incoming(key)}{outgoing(key)}</ns16:exclusiveGateway>")
+        if isinstance(content, dict) and content.get("postpone"):  # saves the task and closes it until the user reopens it
+            return (f'<ns16:intermediateThrowEvent name="{name}" id="{ids[key]}"><ns16:extensionElements>'
+                    f'<ns13:nodeVisualInfo x="{110 + 150 * i + 8}" y="195" width="78" height="45" color="#F8F8F8" /></ns16:extensionElements>'
+                    f"{incoming(key)}{outgoing(key)}<ns2:postponeTaskEventDefinition /></ns16:intermediateThrowEvent>")
         default = next(flow_ids[j] for j, f in enumerate(flows) if f[0] == key)
         return (f'<ns16:scriptTask scriptFormat="text/x-javascript" default="{default}" name="{name}" id="{ids[key]}">'
                 f"{head}<ns16:script>{escape(content)}</ns16:script></ns16:scriptTask>")
 
-    def sequence_flow(i, src, dst, event, sp, tp, branch=(None, None)):
+    def sequence_flow(i, src, dst, event, sp, tp, branch=(None, None), save=False):
         label, condition = branch
         binding = f"<ns2:coachEventBinding id=\"{uid()}\"><ns2:coachEventPath>{buttons[event]}</ns2:coachEventPath></ns2:coachEventBinding>" if event else ""
-        visual = LINK_VISUAL.format(src=sp, dst=tp, ctl="true" if event else "false")
+        visual = LINK_VISUAL.format(src=sp, dst=tp, ctl="true" if event else "false", save="true" if save else "false")
+        sbo = '<ns2:sequenceFlowImplementation sboSyncEnabled="true" />' if save and event else ""
         test = f'<ns16:conditionExpression xsi:type="ns16:tFormalExpression">{escape(condition)}</ns16:conditionExpression>' if condition else ""
         return (f'<ns16:sequenceFlow sourceRef="{ids[src]}" targetRef="{ids[dst]}" name="{label or event or ""}" id="{flow_ids[i]}">'
-                f"<ns16:extensionElements>{visual}{binding}</ns16:extensionElements>{test}</ns16:sequenceFlow>")
+                f"<ns16:extensionElements>{sbo}{visual}{binding}</ns16:extensionElements>{test}</ns16:sequenceFlow>")
 
     body = (
         f'<ns16:startEvent name="Start" id="{ids["start"]}"><ns16:extensionElements><ns13:nodeVisualInfo x="40" y="205" width="24" height="24" color="#F8F8F8" /></ns16:extensionElements>{outgoing("start")}</ns16:startEvent>'
@@ -167,11 +184,14 @@ def coachflow(service, steps, flows, bo_id, var_id, var, io=None):
         f"<ns2:navigationInstructions><ns2:targetType>Default</ns2:targetType></ns2:navigationInstructions></ns16:extensionElements>{incoming('end')}</ns16:endEvent>"
         + "".join(step_xml(i, *step) for i, step in enumerate(steps))
         + "".join(sequence_flow(i, *f) for i, f in enumerate(flows))
-        + ("" if io else f'<ns16:dataObject itemSubjectRef="itm.{bo_id}" isCollection="false" name="{var}" id="{var_id}" />')
+        + "".join(f'<ns16:dataObject itemSubjectRef="itm.{bo}" isCollection="false" name="{name}" id="{ref}" />'
+                  for name, bo, ref in objects if not isinstance(ref, tuple))
+        + "".join(f'<ns16:dataObject itemSubjectRef="itm.{SYSTEM_TYPES[kind]}" isCollection="false" name="{name}" id="{ref}" />'
+                  for name, kind, ref in service.get("variables", ()))
         + f'<ns2:htmlHeaderTag id="{uid()}"><ns2:tagName>viewport</ns2:tagName><ns2:content>width=device-width,initial-scale=1.0</ns2:content><ns2:enabled>true</ns2:enabled></ns2:htmlHeaderTag>'
     )
-    params = "".join(f'<ns16:{kind} name="{var}" itemSubjectRef="itm.{bo_id}" isCollection="false" id="{pid}" />'
-                     for kind, pid in zip(("dataInput", "dataOutput"), io)) if io else ""
+    params = "".join(f'<ns16:{kind} name="{name}" itemSubjectRef="itm.{bo}" isCollection="false" id="{ref[position]}" />'
+                     for position, kind in enumerate(("dataInput", "dataOutput")) for name, bo, ref in objects if isinstance(ref, tuple))
     ns = " ".join(f'xmlns:ns{n}="{u}"' for n, u in [
         (16, "http://www.omg.org/spec/BPMN/20100524/MODEL"), (2, "http://www.ibm.com/xmlns/prod/bpm/bpmn/ext/process"),
         (13, "http://www.ibm.com/xmlns/prod/bpm/graph"), (19, "http://www.ibm.com/bpm/CoachDesignerNG")])
@@ -208,6 +228,7 @@ def exposed(service):
 
 
 def service_xml(pid, version, bo_id, var_id, service, flow, var, author):
+    """bo_id, var_id and var are lists when the service handles several business objects."""
     wrapper, end = "2025." + uid(), "2025." + uid()
     exit_id = "3008." + uid()
     items = item_xml(item_id=wrapper, pid=pid, name="CoachFlowWrapper", component="CoachFlow", component_id="3032." + uid(),
@@ -221,17 +242,28 @@ def service_xml(pid, version, bo_id, var_id, service, flow, var, author):
     items += item_xml(item_id=end, pid=pid, name="End", component="ExitPoint", component_id=exit_id, guid=uid(), version=uid(), x=700,
                          component_xml=f'<TWComponent><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><exitPointId>{exit_id}</exitPointId>'
                                        f"<haltProcess>false</haltProcess><guid>{uid()}</guid><versionId>{uid()}</versionId></TWComponent>")
-    if isinstance(var_id, tuple):  # (input id, output id): the object comes in and goes back out
-        variable = "".join(
-            f'<processParameter name="{var}"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" />'
-            f"<processParameterId>{param_id}</processParameterId><processId>{pid}</processId><parameterType>{kind}</parameterType><isArrayOf>false</isArrayOf>"
-            f'<classId>/{bo_id}</classId><seq>{kind}</seq><hasDefault>false</hasDefault><defaultValue isNull="true" /><isLocked>false</isLocked>'
-            f'<description isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></processParameter>' for kind, param_id in ((1, var_id[0]), (2, var_id[1])))
-    else:
-        variable = (f'<processVariable name="{var}"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" />'
-                    f'<processVariableId>{var_id}</processVariableId><description isNull="true" /><processId>{pid}</processId><namespace>2</namespace><seq>1</seq>'
-                    f"<isArrayOf>false</isArrayOf><isTransient>false</isTransient><classId>/{bo_id}</classId><hasDefault>false</hasDefault>"
-                    f'<defaultValue isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></processVariable>')
+    objects = object_refs(bo_id, var_id, var)
+    parameters = [(1, ref[0], name, bo) for name, bo, ref in objects if isinstance(ref, tuple)]  # (input id, output id): the object comes in and goes back out
+    parameters += [(2, ref[1], name, bo) for name, bo, ref in objects if isinstance(ref, tuple)]
+    variable = "".join(
+        f'<processParameter name="{name}"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" />'
+        f"<processParameterId>{param_id}</processParameterId><processId>{pid}</processId><parameterType>{kind}</parameterType><isArrayOf>false</isArrayOf>"
+        f'<classId>/{bo}</classId><seq>{seq}</seq><hasDefault>false</hasDefault><defaultValue isNull="true" /><isLocked>false</isLocked>'
+        f'<description isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></processParameter>'
+        for seq, (kind, param_id, name, bo) in enumerate(parameters, 1))
+    variable += "".join(
+        f'<processVariable name="{name}"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" />'
+        f'<processVariableId>{ref}</processVariableId><description isNull="true" /><processId>{pid}</processId><namespace>2</namespace><seq>{seq}</seq>'
+        f"<isArrayOf>false</isArrayOf><isTransient>false</isTransient><classId>/{bo}</classId><hasDefault>false</hasDefault>"
+        f'<defaultValue isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></processVariable>'
+        for seq, (name, bo, ref) in enumerate((o for o in objects if not isinstance(o[2], tuple)), 1))
+    extras = service.get("variables", ())  # service-local system-type variables: (name, type, id)
+    variable += "".join(
+        f'<processVariable name="{name}"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" />'
+        f'<processVariableId>{ref}</processVariableId><description isNull="true" /><processId>{pid}</processId><namespace>2</namespace><seq>{seq}</seq>'
+        f"<isArrayOf>false</isArrayOf><isTransient>false</isTransient><classId>{TWSYS}/{SYSTEM_TYPES[kind]}</classId><hasDefault>false</hasDefault>"
+        f'<defaultValue isNull="true" /><guid>{uid()}</guid><versionId>{uid()}</versionId></processVariable>'
+        for seq, (name, kind, ref) in enumerate(extras, 1 + sum(1 for o in objects if not isinstance(o[2], tuple))))
     link = (f'<link name="Untitled"><lastModified isNull="true" /><lastModifiedBy isNull="true" /><tenantId isNull="true" /><processLinkId>2027.{uid()}</processLinkId>'
             f'<processId>{pid}</processId><description isNull="true" /><fromProcessItemId>{wrapper}</fromProcessItemId><endStateId>Out</endStateId>'
             f"<toProcessItemId>{end}</toProcessItemId><guid>{uid()}</guid><versionId>{uid()}</versionId>{NO_LINK_LAYOUT}"
@@ -260,12 +292,14 @@ def business_object_xml(bo_id, version, name, props, author):
     return app_template.BUSINESS_OBJECT.format(id=bo_id, name=name, author=author, guid=uid(), version=version, properties=properties)
 
 
-def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, base: dict | None = None, extra=()):
+def write_twx(dest: Path, app: dict, bo: dict | list, var: str | list, services, author: str, base: dict | None = None, extra=()):
     """Package a new process app in BAW's twxWithoutToolkits format (see app_template.py).
 
-    app: {"name", "acronym", "snapshot"}. bo: {"id", "version", "name", "props"}.
-    services: (pid, versionId, variable id, or (input id, output id) when the service takes the object in and hands it back,
-    {"name", "description"}, flow(bo_id, var_id)). extra: more objects, (id, versionId, name, type, xml).
+    app: {"name", "acronym", "snapshot"}. bo: {"id", "version", "name", "props"}, or a list of them (with var, a list of
+    their variable names) when the app has several business objects.
+    services: (pid, versionId, variable id, or (input id, output id) when the service takes the object in and hands it back
+    (one per object, in a list, for several objects), {"name", "description"}, flow(bo_id, var_id)).
+    extra: more objects, (id, versionId, name, type, xml).
     base: app_template.read_base() of an app exported from the target server, for its BAW build and
     toolkit versions; when it is the same app (same acronym), the package becomes a new snapshot of it.
     """
@@ -275,8 +309,9 @@ def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, 
         {"projectId": "2066." + uid(), "branchId": "2063." + uid(), "branchName": "Main"}
     ids["snapshotId"] = "2064." + uid()
     env, defaults = ("62." + uid(), uid()), ("63." + uid(), uid())
+    bos = bo if isinstance(bo, list) else [bo]
     objects = [(pid, version, service["name"], "process") for pid, version, _, service, _ in services]
-    objects += [(bo["id"], bo["version"], bo["name"], "twClass"), (*env, "Environment Variables", "environmentVariableSet"),
+    objects += [(b["id"], b["version"], b["name"], "twClass") for b in bos] + [(*env, "Environment Variables", "environmentVariableSet"),
                 (*defaults, "Process App Settings", "projectDefaults")] + [x[:4] for x in extra]
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as out:
         for name, text in app_template.META_INF.items():
@@ -285,8 +320,10 @@ def write_twx(dest: Path, app: dict, bo: dict, var: str, services, author: str, 
         out.writestr(f"objects/{env[0]}.xml", app_template.ENV_VARS.format(id=env[0], version=env[1], guid=uid(), author=author))
         out.writestr(f"objects/{defaults[0]}.xml", app_template.project_defaults(
             base, id=defaults[0], version=defaults[1], guid=uid(), author=author, theme=app_template.DEFAULT_THEME, environment=base["environment"]))
-        out.writestr(f"objects/{bo['id']}.xml", business_object_xml(bo["id"], bo["version"], bo["name"], bo["props"], author))
+        for b in bos:
+            out.writestr(f"objects/{b['id']}.xml", business_object_xml(b["id"], b["version"], b["name"], b["props"], author))
+        bo_id = [b["id"] for b in bos] if isinstance(bo, list) else bo["id"]
         for pid, version, var_id, service, flow in services:
-            out.writestr(f"objects/{pid}.xml", service_xml(pid, version, bo["id"], var_id, service, flow(bo["id"], var_id), var, author))
+            out.writestr(f"objects/{pid}.xml", service_xml(pid, version, bo_id, var_id, service, flow(bo_id, var_id), var, author))
         for oid, _, _, _, xml in extra:
             out.writestr(f"objects/{oid}.xml", xml)

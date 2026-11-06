@@ -18,6 +18,11 @@ returns the work to the first task:
     Start -> <form task> -> <approval task> -> Approved? -> End
                   ^-------------- Send back ------'
 
+A "review" task instead (not together with "approval") shows every group read-only, each with an
+Edit button that unlocks it, and one button that finishes the work:
+
+    Start -> <form task> -> <review task> -> End
+
 A step lists its fields, or "sections" of fields, each a titled panel; "columns": 2 to 6 lays the
 fields out side by side ("wide": true keeps a field full width). By default fields fill the columns left
 to right, row by row; give every field a "column" (1, 2, ...) to place it, top to bottom, in that column,
@@ -31,7 +36,7 @@ BAW apps may use: {"table": "public.name", "key": "<field>", "columns": {"<field
 before testing the app. Every simple field is stored, in a column named by its snake_case name unless "columns" says otherwise.
 An Integer or Decimal field that is not "required" (and is not the key) is a text field in the app, a String in the business object, because
 BAW's number controls turn an empty value into 0: nothing typed is saved as NULL, a number is checked on Submit, and its column is still
-integer or numeric. A required number keeps its number control and saves 0 when left empty.
+integer or numeric. A required number keeps its number control; the required check on Submit treats an empty one as missing.
 
 "theme" names the app's theme file (colours, font, shapes, field icons, banner product and logo), and
 "banner" adds the app's own banner title and text; see coach_theme.py.
@@ -65,7 +70,7 @@ import coach_theme
 import group_views
 import sql_service
 import widget_toolkit
-from coach_builder import Layout, coachflow, uid, write_twx
+from coach_builder import SYSTEM_TYPES, TWSYS, Layout, coachflow, uid, write_twx
 from process_builder import process_xml
 
 FIELD_TYPES = {  # spec type -> (business object type, input view)
@@ -79,6 +84,10 @@ FIELD_TYPES = {  # spec type -> (business object type, input view)
     "Radio": ("String", "Radio Button Group"),
 }
 CHOICES = {"Select", "Radio"}
+CONTROLS = {  # (type, control) -> input view, for a field that picks from a few typed values
+    ("Boolean", "Radio"): "Radio Button Group",
+    ("Integer", "Select"): "Single Select",
+}
 NUMBER_TYPES = ("Integer", "Decimal")
 MAX_COLUMNS = 6
 PROJECT = Path(__file__).resolve().parent.parent
@@ -91,6 +100,28 @@ TOOLKIT = "builder"
 WIDGETS = {}  # App Builder Widgets view ID by kind, from the toolkit generate() builds against
 GROUPS = {}  # group name -> (View ID, group_views fields), from generate()
 KEPT = {}  # group changed in BAW that the last generate() kept -> its fields the spec does not have
+
+# The settings each part of an app spec may have; load_spec refuses any other key, so a typo is not silently ignored.
+# Keys the generator sets itself (numberText, _bo, _database, implicit) are not listed. "database" is checked by
+# sql_service and "theme" and "banner" by coach_theme.
+SPEC_KEYS = {
+    "spec": ("app", "businessObject", "businessObjects", "service", "layout", "steps", "groups", "review", "confirmation",
+             "database", "process", "theme", "banner", "form", "reusableViews"),
+    "app": ("name", "acronym", "snapshot"),
+    "businessObject": ("name", "variable"),
+    "service": ("name", "description"),
+    "form": ("title", "intro", "nextLabel", "tabNextLabel", "draftLabel", "cancelLabel"),
+    "review": ("title", "intro", "submitLabel"),
+    "confirmation": ("title", "message", "referencePrefix", "showFields"),
+    "process": ("name", "description", "formTask", "approval", "review"),
+    "formTask": ("name", "lane"),
+    "reviewTask": ("name", "lane", "completeLabel", "editLabel"),
+    "approval": ("name", "lane", "commentsLabel", "approveLabel", "returnLabel", "intro"),
+    "step": ("title", "intro", "fields", "sections", "columns", "widths", "nextLabel", "backLabel", "cancelLabel", "reusable"),
+    "section": ("title", "intro", "fields", "columns", "widths", "group", "hide", "readonly", "hideTitle", "reusable"),
+    "group": ("name", "columns", "widths", "fields", "businessObject"),
+    "field": ("name", "type", "label", "required", "options", "help", "wide", "column", "icon", "control"),
+}
 
 
 def visibility(value):
@@ -122,18 +153,85 @@ GROUP_CSS = """
 # ---------------------------------------------------------------- spec
 
 
+def key_errors(where, obj, kind):
+    """Errors for the keys of one part of a spec that SPEC_KEYS[kind] does not list."""
+    if not isinstance(obj, dict):
+        return []  # the part's own checks say what shape it needs
+    allowed = SPEC_KEYS[kind]
+    return [f"{where}: {k!r} is not a setting; use {', '.join(allowed)}" for k in obj if k not in allowed]
+
+
+def unknown_keys(spec):
+    """Errors for every key the spec has that SPEC_KEYS does not list, at every level."""
+    errors = key_errors("the spec", spec, "spec")
+    for kind in ("app", "service", "form", "confirmation", "process"):
+        errors += key_errors(kind, spec.get(kind), kind)
+    if isinstance(spec.get("review"), dict):
+        errors += key_errors("review", spec["review"], "review")
+    process = spec.get("process") if isinstance(spec.get("process"), dict) else {}
+    for kind in ("formTask", "approval"):
+        errors += key_errors(f"process.{kind}", process.get(kind), kind)
+    errors += key_errors("process.review", process.get("review"), "reviewTask")
+    objects = spec.get("businessObjects") if isinstance(spec.get("businessObjects"), list) else [spec.get("businessObject")]
+    for k, bo in enumerate(objects, 1):
+        errors += key_errors(f"business object {k}" if len(objects) > 1 else "businessObject", bo, "businessObject")
+    for i, step in enumerate(spec.get("steps") if isinstance(spec.get("steps"), list) else [], 1):
+        errors += key_errors(f"step {i}", step, "step")
+        sections = step.get("sections") if isinstance(step, dict) and isinstance(step.get("sections"), list) else []
+        for j, s in enumerate(sections, 1):
+            errors += key_errors(f"step {i} section {j}", s, "section")
+            errors += field_key_errors(f"step {i} section {j}", s)
+        errors += field_key_errors(f"step {i}", step)
+    for k, g in enumerate(spec.get("groups") if isinstance(spec.get("groups"), list) else [], 1):
+        errors += key_errors(f"group {g.get('name', k) if isinstance(g, dict) else k}", g, "group")
+        errors += field_key_errors(f"group {g.get('name', k) if isinstance(g, dict) else k}", g)
+    return errors
+
+
+def field_key_errors(where, part):
+    """Key errors of the fields a step, section or group lists."""
+    fields = part.get("fields") if isinstance(part, dict) and isinstance(part.get("fields"), list) else []
+    return [e for f in fields for e in key_errors(f"{where}: field {f.get('name')!r}" if isinstance(f, dict) else where, f, "field")]
+
+
+def business_objects(spec, errors):
+    """The spec's business objects as a list: "businessObjects", or the one "businessObject". Sets
+    spec["businessObjects"] and spec["businessObject"] (the first, which also carries the generated properties)."""
+    one, many = spec.get("businessObject"), spec.get("businessObjects")
+    if one is not None and many is not None:
+        errors.append("use businessObject (one) or businessObjects (a list), not both")
+    objects = [one if one is not None else {}] if many is None else many
+    if not isinstance(objects, list) or not objects:
+        errors.append('businessObjects must list at least one object: [{"name": "OrderBO", "variable": "order"}]')
+        objects = [{}]
+    for k, bo in enumerate(objects, 1):
+        where = "businessObject" if many is None else f"businessObjects[{k}]"
+        if not isinstance(bo, dict):
+            errors.append(f"{where} must be an object with a name and a variable")
+            objects[k - 1] = {}
+            continue
+        for key in ("name", "variable"):
+            if not isinstance(bo.get(key), str) or not IDENTIFIER.match(bo[key]):
+                errors.append(f"{where}.{key} must be an identifier")
+    for key in ("name", "variable"):
+        values = [bo.get(key) for bo in objects if bo.get(key)]
+        errors += [f"businessObjects: the {key} {v!r} is used twice" for v in sorted({v for v in values if values.count(v) > 1})]
+    spec["businessObjects"], spec["businessObject"] = objects, objects[0]
+    return objects
+
+
 def load_spec(path: Path) -> dict:
     spec = json.loads(path.read_text())
-    errors = []
+    if not isinstance(spec, dict):
+        raise SystemExit("Invalid app spec:\n  the spec must be a JSON object")
+    errors = unknown_keys(spec)
     app = spec.get("app", {})
     if not app.get("name"):
         errors.append("app.name is required")
     if not re.fullmatch(r"[A-Z][A-Z0-9]{1,7}", app.get("acronym", "")):
         errors.append("app.acronym must be 2-8 upper-case letters or digits, starting with a letter")
-    bo = spec.get("businessObject", {})
-    for key in ("name", "variable"):
-        if not IDENTIFIER.match(bo.get(key, "")):
-            errors.append(f"businessObject.{key} must be an identifier")
+    objects = business_objects(spec, errors)
+    variables = {bo.get("name"): bo.get("variable") for bo in objects}
     if not spec.get("service", {}).get("name"):
         errors.append("service.name is required")
     if spec.get("layout", "steps") not in ("steps", "tabs"):
@@ -141,17 +239,39 @@ def load_spec(path: Path) -> dict:
     steps = spec.get("steps") or []
     if not steps:
         errors.append("steps must list at least one step")
-    seen = {REFERENCE} if spec.get("confirmation") else set()
+    if (spec.get("form") or {}).get("tabNextLabel") is not None:
+        label = spec["form"]["tabNextLabel"]
+        if spec.get("layout", "steps") != "tabs":
+            errors.append('form.tabNextLabel needs layout "tabs": it labels the Next button at the end of each tab')
+        elif not isinstance(label, str) or not label.strip():
+            errors.append("form.tabNextLabel must be non-empty text, e.g. \"Next\"")
+    if (spec.get("form") or {}).get("draftLabel") is not None:
+        label = spec["form"]["draftLabel"]
+        if spec.get("layout", "steps") != "tabs":
+            errors.append('form.draftLabel needs layout "tabs": the Save as Draft button sits on the tabs screen')
+        elif not spec.get("process"):
+            errors.append("form.draftLabel needs a process: a draft is a postponed task, which only a process task can be")
+        elif not isinstance(label, str) or not label.strip():
+            errors.append("form.draftLabel must be non-empty text, e.g. \"Save as Draft\"")
+    reserved = {REFERENCE} if spec.get("confirmation") else set()  # generated properties, on the first object
     if "database" in spec:
-        seen.add(MESSAGE)
+        reserved.add(MESSAGE)
+    if "database" in spec and len(objects) > 1:
+        errors.append("database works with one business object; list one object, or drop the database section")
     process = spec.get("process")
     if process is not None:
         if not isinstance(process, dict) or not process.get("name"):
             errors.append("process.name is required (the workflow's name)")
         elif process.get("approval") is not None and not isinstance(process["approval"], dict):
             errors.append('process.approval must be an object, e.g. {"name": "Review", "lane": "Underwriting"}')
+        elif process.get("review") is not None and not isinstance(process["review"], dict):
+            errors.append('process.review must be an object, e.g. {"name": "Review Quote", "lane": "Underwriting"}')
+        elif process.get("review") is not None and process.get("approval") is not None:
+            errors.append("process.review and process.approval cannot be combined; use review for a task that "
+                          "finishes the work, approval for an Approve / Send back decision")
         elif process.get("approval") is not None:
-            seen |= {DECISION, COMMENTS}
+            reserved |= {DECISION, COMMENTS}
+    seen = {bo.get("variable"): set(reserved) if bo is objects[0] else set() for bo in objects}  # names taken per object
     groups = {}
     for k, g in enumerate(spec.get("groups") or [], 1):
         if not isinstance(g, dict) or not isinstance(g.get("name"), str) or not g["name"].strip():
@@ -163,8 +283,12 @@ def load_spec(path: Path) -> dict:
         if not g.get("fields"):
             errors.append(f"{where}: fields must list at least one field")
         errors += layout_errors(where, g)
+        if g.get("businessObject", objects[0].get("name")) not in variables:
+            errors.append(f"{where}: unknown businessObject {g['businessObject']!r}; objects: {', '.join(map(str, variables))}")
+        var = variables.get(g.get("businessObject", objects[0].get("name")), objects[0].get("variable"))
         for f in g.get("fields", []):
-            errors += field_errors(where, f, seen)
+            f["_bo"] = var
+            errors += field_errors(where, f, seen[var])
         groups[g.get("name")] = g
     used = set()
     for i, step in enumerate(steps, 1):
@@ -205,15 +329,17 @@ def load_spec(path: Path) -> dict:
         grouped = [f for s in step["sections"] if "group" in s for f in s["fields"]]
         for f in step.get("fields", []):
             if not any(f is g for g in grouped):  # a group's fields are checked once, with the group
-                errors += field_errors(f"step {i}", f, seen)
+                f["_bo"] = objects[0].get("variable")
+                errors += field_errors(f"step {i}", f, seen[f["_bo"]])
     for name in groups:
         if name not in used:
             errors.append(f"group {name!r} is not placed in any step; place it in a section ({{\"group\": \"{name}\"}}) or remove it")
     errors += coach_theme.validate(spec, PROJECT)
     if "database" in spec:
         errors += database_errors(spec)
+    shown = set().union(*seen.values())
     for name in (spec.get("confirmation") or {}).get("showFields", []):
-        if name not in seen:
+        if name not in shown:
             errors.append(f"confirmation.showFields: unknown field {name!r}")
     if errors:
         raise SystemExit("Invalid app spec:\n  " + "\n  ".join(errors))
@@ -231,9 +357,10 @@ def view_name(text):
 def taken_names(spec):
     """Names the default groups' Views and Preview services must not take: the app's services and explicit groups."""
     names = {spec["service"]["name"]}
-    approval = (spec.get("process") or {}).get("approval")
-    if approval is not None:
-        names.add(approval.get("name") or "Review")
+    for kind in ("approval", "review"):
+        task = (spec.get("process") or {}).get(kind)
+        if task is not None:
+            names.add(task.get("name") or "Review")
     if spec.get("_database"):
         names |= {f"Load {spec['businessObject']['name']}", f"Save {spec['businessObject']['name']}"}
     for g in spec.get("groups") or []:
@@ -253,7 +380,7 @@ def default_groups(spec):
     for step in spec["steps"]:
         for s in step["sections"]:
             inline = s.get("reusable") is False or (s.get("implicit") and step.get("reusable") is False)
-            if "group" in s or inline or not s.get("fields"):
+            if "group" in s or inline or not s.get("fields") or len({f.get("_bo") for f in s["fields"]}) > 1:
                 continue
             base = view_name(s.get("title")) or view_name(step["title"]) or "Fields"
             prefixed = view_name(f"{step['title']} {base}") if view_name(step["title"]) != base else ""
@@ -261,6 +388,9 @@ def default_groups(spec):
             name = next(c for c in candidates if c and c not in taken and f"{c} Preview" not in taken)
             taken |= {name, f"{name} Preview"}
             made.append({"name": name, "columns": s.get("columns", 1), "widths": s.get("widths"), "fields": s["fields"]})
+            owner = next((o for o in spec["businessObjects"] if o["variable"] == s["fields"][0].get("_bo")), None)
+            if owner and owner is not spec["businessObjects"][0]:
+                made[-1]["businessObject"] = owner["name"]
             s["group"] = name
     spec["groups"] = (spec.get("groups") or []) + made
 
@@ -282,6 +412,28 @@ def layout_errors(where, s):
     return errors
 
 
+def control_errors(where, f):
+    """Errors of a typed choice control; its options are normalized to {"value", "label"} with typed values: a Boolean
+    Radio defaults to Yes (true) and No (false), an Integer Select lists whole numbers."""
+    kind, control, name = f.get("type", "String"), f["control"], f.get("name")
+    if (kind, control) not in CONTROLS:
+        pairs = ", ".join(f"{t} + {c}" for t, c in CONTROLS)
+        return [f"{where}: field {name!r} cannot use control {control!r} with type {kind!r}; use one of {pairs}"]
+    options = f.get("options")
+    if kind == "Boolean":
+        options = options or ["Yes", "No"]
+        if len(options) != 2:
+            return [f"{where}: field {name!r} (Boolean Radio) takes two options: the text for Yes, then for No"]
+        labels = [o.get("label") if isinstance(o, dict) else o for o in options]
+        f["options"] = [{"value": True, "label": str(labels[0])}, {"value": False, "label": str(labels[1])}]
+        return []
+    items = [o if isinstance(o, dict) else {"value": o} for o in options or []]
+    if not items or not all(type(o.get("value")) is int for o in items):
+        return [f"{where}: field {name!r} (Integer Select) needs options: a list of whole numbers or {{\"value\", \"label\"}}"]
+    f["options"] = [{"value": o["value"], "label": str(o.get("label") or o["value"])} for o in items]
+    return []
+
+
 def field_errors(where, f, seen):
     """One field's errors; adds its name to seen. Choice options are normalized to {"value", "label"}."""
     errors = []
@@ -296,7 +448,9 @@ def field_errors(where, f, seen):
     if not f.get("label"):
         errors.append(f"{where}: field {name!r} needs a label")
     errors += [f"{where}: {e}" for e in coach_theme.field_errors(f)]
-    if f.get("type") in CHOICES:
+    if f.get("control"):
+        errors += control_errors(where, f)
+    elif f.get("type") in CHOICES:
         f["options"] = [o if isinstance(o, dict) else {"value": str(o), "label": str(o)} for o in f.get("options") or []]
         if not f["options"] or not all(o.get("value") for o in f["options"]):
             errors.append(f"{where}: field {name!r} ({f['type']}) needs options: a list of strings or {{\"value\", \"label\"}}")
@@ -307,8 +461,8 @@ def fields(spec):
     """Every field once, in order; a group placed in several steps has its fields once."""
     out, seen = [], set()
     for f in (f for step in spec["steps"] for f in step["fields"]):
-        if f["name"] not in seen:
-            seen.add(f["name"])
+        if (f["name"], f.get("_bo")) not in seen:
+            seen.add((f["name"], f.get("_bo")))
             out.append(f)
     return out
 
@@ -328,8 +482,8 @@ def database_errors(spec) -> list:
     if spec.get("confirmation"):
         stored.append({"name": REFERENCE, "label": "Reference Number", "type": "String", "derived": True})
     bo_name, process = spec.get("businessObject", {}).get("name"), spec.get("process")
-    approval = process.get("approval") if isinstance(process, dict) else None
-    taken = {spec.get("service", {}).get("name"), approval.get("name") if isinstance(approval, dict) else None}
+    tasks = [process.get(kind) if isinstance(process, dict) else None for kind in ("approval", "review")]
+    taken = {spec.get("service", {}).get("name"), *(t.get("name") for t in tasks if isinstance(t, dict))}
     errors += [f"database: the service name {n!r} is taken by a generated database service; use another name" for n in (f"Load {bo_name}", f"Save {bo_name}") if n in taken]
     plan, plan_errors = sql_service.table_plan(spec["database"], stored)
     if plan:
@@ -403,15 +557,81 @@ def header(spec, lay, title, intro, editable=True):
             widget(lay, "header", options=[("title", title), ("intro", intro), ("banner", banner)], show_label=False)]
 
 
-def actions(lay, buttons):
-    """buttons: (event, label, colour style P, D or W). Returns the layout item and {event: button item id}."""
-    made = [(event, *lay.button(label, style)) for event, label, style in buttons]
-    return widget(lay, "buttons", "Actions", children=[xml for _, _, xml in made], show_label=False, item_id="Action_Bar"), {e: i for e, i, _ in made}
+REQUIRED_MESSAGE = "This field is required"
+REQUIRED_SUMMARY = "Required_Summary"
+REQUIRED_CHECK = """var fields = %s;
+var missing = 0, first = null;
+for (var i = 0; i < fields.length; i++) {
+  var field = fields[i], control = page.ui.get(field[0]);
+  if (!control) continue;
+  var group = field[2] ? page.ui.get(field[2]) : null;
+  if (group && group.context.options._metadata.visibility.get("value") === "READONLY") continue;
+  var value = control.getData();
+  if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
+    control.setValid(false, "%s");
+    missing++;
+    if (first === null) first = field[1];
+  } else {
+    control.setValid(true);
+  }
+}
+var summary = document.getElementById("%s");
+if (summary) {
+  summary.innerHTML = missing
+    ? '<div role="alert" style="color:#da1e28;font-weight:600;margin:8px 0">' + missing + (missing === 1 ? " required field is empty" : " required fields are empty") + '</div>'
+    : "";
+}
+if (missing) {
+%s  return false;
+}
+return true;"""
+
+
+def required_check(fields, tabs_id=None):
+    """The On click handler that blocks a finishing button while a required field is empty. fields is the generator's
+    list of [control path, tab index or None, group path or None]; the paths are computed here because the
+    toolkit cannot know how the generator nests a field's Section and group. false and 0 are answers, and a field in
+    a read-only group placement is skipped, as its value is not the user's to give."""
+    switch = f'  if (first !== null) page.ui.get("{tabs_id}").setCurrentPane(first);\n' if tabs_id else ""
+    return REQUIRED_CHECK % (json.dumps(fields, separators=(",", ":")), REQUIRED_MESSAGE, REQUIRED_SUMMARY, switch)
+
+
+def required_fields(lay):
+    """The [control path, tab index, group path] of every required field placed on a coach."""
+    return [["/".join(e["path"]), e["tab"], "/".join(e["group"]) if e["group"] else None] for e in lay.required]
+
+
+def required_summary(lay, checks):
+    """The line above the button bar that the check fills with how many required fields are empty; none without a check."""
+    return [lay.html(f'<div id="{REQUIRED_SUMMARY}"></div>', item_id=f"Custom_{REQUIRED_SUMMARY}")] if checks else []
+
+
+def nest(lay, start, level):
+    """Required fields placed since start now sit inside one more container, which adds a level to their paths."""
+    for e in lay.required[start:]:
+        e["path"].insert(0, level)
+        if e["group"]:
+            e["group"].insert(0, level)
+
+
+def actions(lay, buttons, checks=None, bar_id="Action_Bar"):
+    """buttons: (event, label, colour style P, D or W[, extra options]). Returns the layout item and {event: button item id}.
+    A button whose event is in checks runs that On click handler first. A button with an event of None is
+    client-side only: it has no boundary event, so it is left out of the returned ids."""
+    checks = checks or {}
+    made = []
+    for event, label, style, *extra in buttons:
+        options = list(extra[0]) if extra else []
+        if event in checks:
+            options.append(("eventON_CLICK", checks[event]))
+        made.append((event, *lay.button(label, style, options)))
+    bar = widget(lay, "buttons", "Actions", children=[xml for _, _, xml in made], show_label=False, item_id=bar_id)
+    return bar, {event: item for event, item, _ in made if event}
 
 
 def choices(f):
     """Single Select / Radio Button Group with a static list: name is the stored value, value the text shown."""
-    if f.get("type") not in CHOICES:
+    if f.get("type") not in CHOICES and not f.get("control"):
         return []
     items = [{"name": o["value"], "value": o.get("label") or o["value"]} for o in f["options"]]
     return [("itemLookupMode", "L"), ("staticList", json.dumps(items))]
@@ -420,13 +640,27 @@ def choices(f):
 def field_type(f):
     """(business object type, input view) of a field. With a database, an optional number is held as text: BAW's number
     controls turn an empty value into 0, so only a text field can tell "not given" (stored as NULL) from 0."""
+    if f.get("control"):
+        return f["type"], CONTROLS[(f["type"], f["control"])]
     return ("String", "Text") if f.get("numberText") else FIELD_TYPES[f.get("type", "String")]
 
 
+INTEGER_SELECT_CHANGE = """var v = me.getData(); if (typeof v === "string") { me.context.binding.set("value", v === "" ? null : Number(v)); }"""
+# The Decimal control formats with no decimals when decimalPlaces is unset, and keeps the formatted value: 12.5 becomes 13.
+DECIMAL_PLACES = [("decimalPlaces", "2")]
+
+
 def input_view(lay, var, f, root="tw.local", item_id=None):
-    kind = field_type(f)[1]
-    return lay.view(kind, f["label"], binding=f"{root}.{var}.{f['name']}", options=(REQUIRED if f.get("required") else []) + choices(f),
+    kind, var = field_type(f)[1], f.get("_bo", var)
+    # A Single Select hands an Integer field its choice as text; the change handler turns it back into a number.
+    change = [("eventON_CHANGE", INTEGER_SELECT_CHANGE)] if f.get("control") == "Select" and f.get("type") == "Integer" else []
+    places = DECIMAL_PLACES if kind == "Decimal" else []
+    item = lay.view(kind, f["label"], binding=f"{root}.{var}.{f['name']}",
+                    options=(REQUIRED if f.get("required") else []) + choices(f) + change + places,
                     help=f.get("help", ""), item_id=item_id)
+    if f.get("required") and root == "tw.local":
+        lay.required.append({"path": [lay.last_id], "group": None, "tab": None})
+    return item
 
 
 def group_field(lay, var, f):
@@ -441,14 +675,22 @@ def group_fields(g):
     return [(f["name"], field_type(f)[1], f["label"], not f.get("required")) for f in g["fields"]]
 
 
-def place_group(lay, var, s, readonly=False):
+def place_group(lay, var, s, readonly=False, unlockable=False):
     """A coach's placement of a group View: bound to the coach's object, with the section's hidden fields and,
     for read-only coaches, a read-only visibility that every field in the group follows."""
     view_id, gfields = GROUPS[s["group"]]
+    var = s["fields"][0].get("_bo", var) if s.get("fields") else var
     if not (readonly or s.get("readonly")):
         lay.group_fields += [f for f in s["fields"] if f["name"] not in s.get("hide", [])]
-    options = group_views.placement_options(gfields, s.get("hide", []), readonly or s.get("readonly", False))
-    return lay.view("Group", s["group"], binding=f"tw.local.{var}", view_uuid=view_id, options=options, show_label=False)
+    options = group_views.placement_options(gfields, s.get("hide", []), readonly or s.get("readonly", False),
+                                            fresh=getattr(lay, "fresh", False) and not (readonly or s.get("readonly")))
+    item = lay.view("Group", s["group"], binding=f"tw.local.{var}", view_uuid=view_id, options=options, show_label=False)
+    if not (readonly or s.get("readonly")):
+        lay.required += [{"path": [lay.last_id, f["name"]], "group": [lay.last_id], "tab": None} for f in s["fields"] if f.get("required")]
+    elif unlockable:  # placed read-only, but the reader can unlock it, so its required fields are checked once it is editable
+        lay.required += [{"path": [lay.last_id, f["name"]], "group": [lay.last_id], "tab": None}
+                         for f in s["fields"] if f.get("required") and f["name"] not in s.get("hide", [])]
+    return item
 
 
 def column_widths(count, weights=None):
@@ -489,8 +731,11 @@ def columns(lay, var, fields, count, weights=None, make=input_view):
 
 
 def section(lay, var, s):
+    start = len(lay.required)
     content = [place_group(lay, var, s)] if "group" in s else columns(lay, var, s["fields"], s.get("columns", 1), s.get("widths"))
-    return widget(lay, "section", s["title"], children=content, options=[("intro", s.get("intro", ""))], show_label=not s.get("hideTitle"))
+    item = widget(lay, "section", s["title"], children=content, options=[("intro", s.get("intro", ""))], show_label=not s.get("hideTitle"))
+    nest(lay, start, lay.last_id)
+    return item
 
 
 def sections(lay, var, step):
@@ -513,33 +758,64 @@ def step_coach(spec, i):
     buttons = ([(f"back{i}", step.get("backLabel") or "Back", "D")] if i else []) + load + [(f"next{i}", forward, "P")]
     buttons += [(f"cancel{i}", step["cancelLabel"], "W")] if step.get("cancelLabel") else []
     body = [*message_view(spec, lay, f"s{i}"), *sections(lay, var, step)]
-    bar, events = actions(lay, buttons)
+    checks = {f"next{i}": required_check(required_fields(lay))} if lay.required else {}  # each step checks its own fields
+    bar, events = actions(lay, buttons, checks)
     count = f"Step {i + 1} of {len(spec['steps'])}: " if len(spec["steps"]) > 1 else ""
-    return Layout.wrap([*header(spec, lay, count + step["title"], step.get("intro", "")), *body, bar]), events
+    return Layout.wrap([*header(spec, lay, count + step["title"], step.get("intro", "")), *body, *required_summary(lay, checks), bar]), events
 
 
 def form_coach(spec):
-    """layout "tabs": every step is a tab of one screen; Next leaves the screen."""
+    """layout "tabs": every step is a tab of one screen; Next leaves the screen. With form.tabNextLabel each tab ends
+    with its own button bar instead: Next switches to the next tab, and the last tab's bar finishes the task."""
     var, form = spec["businessObject"]["variable"], spec.get("form") or {}
     lay = Layout()
-    tabs = [lay.view("Vertical Layout", s["title"], children=tab_content(lay, var, s)) for s in spec["steps"]]
-    body = lay.view("Tab Section", "Steps", children=tabs, show_label=False)
+    tabs_id = lay._item_id("Tab Section")
+    per_tab, draft = bool(form.get("tabNextLabel")), form.get("draftLabel")
+    lay.fresh = bool(draft)  # editable group placements get the freshForm option
+    last = len(spec["steps"]) - 1
+    tabs, contents, drafts = [], [], {}
+    for n, s in enumerate(spec["steps"]):
+        start = len(lay.required)
+        content = tab_content(lay, var, s)
+        for e in lay.required[start:]:
+            e["tab"] = n
+        if per_tab and n < last:
+            switch = f'page.ui.get("{tabs_id}").setCurrentPane({n + 1});\nreturn false;'
+            bar, made = actions(lay, [*([(f"draft{n}", draft, "D")] if draft else []),
+                                      (None, form["tabNextLabel"], "P", [("eventON_CLICK", switch)])], bar_id=f"Action_Bar{n + 1}")
+            drafts.update(made)
+            content = [*content, bar]
+        contents.append(content)
+        if not per_tab:
+            tabs.append(lay.view("Vertical Layout", s["title"], children=content))
+    finish = ("next0", form.get("nextLabel") or ("Next" if spec.get("review", True) else "Submit"), "P")
     buttons = [("load0", "Load", "D")] if spec.get("_database") else []
-    buttons += [("next0", form.get("nextLabel") or ("Next" if spec.get("review", True) else "Submit"), "P")]
+    buttons += [(f"draft{last}" if per_tab else "draft0", draft, "D")] if draft else []  # never checked for required fields
+    buttons += [finish]
     buttons += [("cancel0", form["cancelLabel"], "W")] if form.get("cancelLabel") else []
-    bar, events = actions(lay, buttons)
-    return Layout.wrap([*header(spec, lay, form.get("title", spec["service"]["name"]), form.get("intro", "")), *message_view(spec, lay, "s0"), body, bar]), events
+    checks = {"next0": required_check(required_fields(lay), tabs_id)} if lay.required else {}
+    if per_tab:
+        bar, events = actions(lay, buttons, checks, bar_id=f"Action_Bar{last + 1}")
+        events = {**drafts, **events}
+        contents[last] = [*contents[last], *required_summary(lay, checks), bar]
+        tabs = [lay.view("Vertical Layout", s["title"], children=c) for s, c in zip(spec["steps"], contents)]
+    body = lay.view("Tab Section", "Steps", binding="tw.local.currentTab" if draft else None, children=tabs, show_label=False, item_id=tabs_id)
+    top = [*header(spec, lay, form.get("title", spec["service"]["name"]), form.get("intro", "")), *message_view(spec, lay, "s0")]
+    if per_tab:
+        return Layout.wrap([*top, body]), events
+    bar, events = actions(lay, buttons, checks)
+    return Layout.wrap([*top, body, *required_summary(lay, checks), bar]), events
 
 
 def output(lay, var, f):
-    kind = field_type(f)[1]
+    kind, var = field_type(f)[1], f.get("_bo", var)
     binding = f"tw.local.{var}.{f['name']}"
     if kind in ("Text", "Text Area"):
         return lay.view("Output Text", f["label"], binding=binding)
-    return lay.view(kind, f["label"], binding=binding, options=READ_ONLY + choices(f))
+    return lay.view(kind, f["label"], binding=binding, options=READ_ONLY + choices(f) + (DECIMAL_PLACES if kind == "Decimal" else []))
 
 
-def read_only(lay, var, s, shown, spec):
+def read_only(lay, var, s, shown, spec, unlockable=False):
     """A section on the Review coach: its group placed read-only, once (a group a step shows again for reference is
     skipped), hiding only the fields every placement hides; or an output per field."""
     if "group" not in s:
@@ -548,7 +824,7 @@ def read_only(lay, var, s, shown, spec):
         return []
     shown.add(s["group"])
     hides = [set(p.get("hide", [])) for step in spec["steps"] for p in step["sections"] if p.get("group") == s["group"]]
-    return [place_group(lay, var, dict(s, hide=sorted(set.intersection(*hides))), readonly=True)]
+    return [place_group(lay, var, dict(s, hide=sorted(set.intersection(*hides))), readonly=True, unlockable=unlockable)]
 
 
 def review_coach(spec):
@@ -578,17 +854,29 @@ def confirmation_coach(spec):
 # ---------------------------------------------------------------- flow
 
 
-def init_script(spec):
-    var = spec["businessObject"]["variable"]
-    lines = [f"tw.local.{var} = {{}};"]  # client-side scripts have no tw.object factory
-    lines += [f"tw.local.{var}.{f['name']} = false;" for f in fields(spec) if f.get("type") == "Boolean"]
-    if spec.get("confirmation"):
-        lines.append(f'tw.local.{var}.{REFERENCE} = "";')
-    if spec.get("_database"):
-        lines.append(f'tw.local.{var}.{MESSAGE} = "";')
-    if spec.get("process"):  # a process task gets the object from the process; start fresh only the first time
-        return f"if (!tw.local.{var}) {{\n  " + "\n  ".join(lines) + "\n}"
-    return "\n".join(lines)
+def draft_label(spec):
+    return (spec.get("form") or {}).get("draftLabel") if spec.get("layout") == "tabs" else None
+
+
+def init_script(spec, only=None):
+    """Creates every business object, or only the one with variable `only` (a process task gets them from the process;
+    start fresh only the first time). A Boolean checkbox starts false; a Boolean Radio starts null, so the user has to answer."""
+    first, blocks = spec["businessObjects"][0]["variable"], []
+    for o in spec["businessObjects"]:
+        var = o["variable"]
+        if only and var != only:
+            continue
+        lines = [f"tw.local.{var} = {{}};"]  # client-side scripts have no tw.object factory
+        lines += [f"tw.local.{var}.{f['name']} = false;" for f in fields(spec)
+                  if f.get("type") == "Boolean" and not f.get("control") and f.get("_bo", first) == var]
+        if var == first and spec.get("confirmation"):
+            lines.append(f'tw.local.{var}.{REFERENCE} = "";')
+        if var == first and spec.get("_database"):
+            lines.append(f'tw.local.{var}.{MESSAGE} = "";')
+        blocks.append(f"if (!tw.local.{var}) {{\n  " + "\n  ".join(lines) + "\n}" if spec.get("process") else "\n".join(lines))
+    if draft_label(spec) and not only:  # a task resumed from a draft keeps freshForm false, so its answers stay as typed
+        blocks.append("if (tw.local.freshForm !== false) {\n  tw.local.freshForm = true;\n}")
+    return "\n".join(blocks)
 
 
 def assign_script(spec):
@@ -607,9 +895,17 @@ def flow(spec, run_sql=None):
         steps.append(("s0", (spec.get("form") or {}).get("title", spec["service"]["name"]), form_coach(spec)))
     else:
         steps += [(f"s{i}", s["title"], step_coach(spec, i)) for i, s in enumerate(spec["steps"])]
+    if draft_label(spec):
+        steps += [("draftmark", "Mark as draft", "tw.local.freshForm = false;"),  # a reopened draft keeps what was typed
+                  ("postpone", "Postpone Task", {"postpone": True})]
     finish = "assign" if confirm else "end"
     submit = "save_key" if plan else finish  # where Submit leads
     flows = [("start", "init", None, "rightCenter", "leftCenter"), ("init", "s0", None, "rightCenter", "leftCenter")]
+    if draft_label(spec):  # every Save as Draft button leaves through the one Postpone event, which returns to the tabs
+        buttons = len(spec["steps"]) if (spec.get("form") or {}).get("tabNextLabel") else 1
+        flows += [("s0", "draftmark", f"draft{n}", "rightCenter", "topCenter", (None, None)) for n in range(buttons)]
+        flows += [("draftmark", "postpone", None, "rightCenter", "leftCenter", (None, None), True),
+                  ("postpone", "s0", None, "bottomCenter", "leftBottom", (None, None), True)]
     for i in range(count):
         target = f"s{i + 1}" if i < count - 1 else ("review" if review else submit)
         flows.append((f"s{i}", target, f"next{i}", "rightCenter", "leftCenter"))
@@ -721,9 +1017,45 @@ def approval_coach(spec):
     return Layout.wrap([*header(spec, lay, title, appr.get("intro", ""), editable=False), *panels, comments, bar]), events
 
 
+def edit_review_coach(spec):
+    """Every section read-only, each group with an Edit button that unlocks it, and one button that finishes the task.
+    The finishing button checks the required fields of the groups that are editable by then."""
+    review = spec["process"]["review"]
+    lay = Layout()
+    shown, panels = set(), []
+    for step in spec["steps"]:
+        for s in step["sections"]:
+            if s.get("group") in shown:
+                continue
+            start = len(lay.required)
+            section_id = lay._item_id("Section")
+            if "group" in s:
+                content = read_only(lay, spec["businessObject"]["variable"], s, shown, spec, unlockable=True)
+                options = [("intro", ""), ("editLabel", review.get("editLabel") or "Edit"), ("editTarget", f"{section_id}/{lay.last_id}")]
+            else:
+                content = columns(lay, spec["businessObject"]["variable"], s["fields"], s.get("columns", 1), s.get("widths"), make=output)
+                options = [("intro", "")]
+            panels.append(widget(lay, "section", s["title"], children=content, options=options, item_id=section_id))
+            nest(lay, start, section_id)
+    event = "complete"
+    checks = {event: required_check(required_fields(lay))} if lay.required else {}
+    bar, events = actions(lay, [(event, review.get("completeLabel") or "Submit", "P")], checks)
+    title = review.get("name") or "Review"
+    return Layout.wrap([*header(spec, lay, title, "", editable=False), *panels, *required_summary(lay, checks), bar]), events
+
+
+def edit_review_flow(spec):
+    init = "\n".join(f"if (!tw.local.{o['variable']}) {{ tw.local.{o['variable']} = {{}}; }}" for o in spec["businessObjects"])
+    steps = [("init", "Initialize", init), ("s0", spec["process"]["review"].get("name") or "Review", edit_review_coach(spec))]
+    flows = [("start", "init", None, "rightCenter", "leftCenter"), ("init", "s0", None, "rightCenter", "leftCenter"),
+             ("s0", "end", "complete", "rightCenter", "leftCenter")]
+    return steps, flows
+
+
 def approval_flow(spec):
     var = spec["businessObject"]["variable"]
-    steps = [("init", "Initialize", f"if (!tw.local.{var}) {{ tw.local.{var} = {{}}; }}"),
+    init = "\n".join(f"if (!tw.local.{o['variable']}) {{ tw.local.{o['variable']} = {{}}; }}" for o in spec["businessObjects"])
+    steps = [("init", "Initialize", init),
              ("s0", spec["process"]["approval"].get("name") or "Review", approval_coach(spec)),
              ("ok", APPROVED, f"tw.local.{var}.{DECISION} = {json.dumps(APPROVED)};"),
              ("back", SENT_BACK, f"tw.local.{var}.{DECISION} = {json.dumps(SENT_BACK)};")]
@@ -733,9 +1065,9 @@ def approval_flow(spec):
     return steps, flows
 
 
-def process_definition(spec, form, approval, bo_id):
-    """The workflow as an extra .twx object (id, versionId, name, type, xml).
-    form, approval: (service id, (input id, output id)); approval may be None."""
+def process_definition(spec, form, approval, bo_id, review=None):
+    """The workflow as an extra .twx object (id, versionId, name, type, xml). bo_id: {object variable: class id}.
+    form, approval: (service id, (input id, output id), or a list of those pairs, one per object); approval and review may be None."""
     proc, var = spec["process"], spec["businessObject"]["variable"]
     task = proc.get("formTask") or {}
     first_lane = task.get("lane") or "Requester"
@@ -755,11 +1087,20 @@ def process_definition(spec, form, approval, bo_id):
                   {"from": "decision", "to": "form", "name": appr.get("returnLabel") or "Send Back", "out": "topCenter", "in": "bottomCenter",
                    "condition": f"tw.local.{var} != null && tw.local.{var}.{DECISION} == {json.dumps(SENT_BACK)}"},
                   {"from": "decision", "to": "end", "name": APPROVED}]
+    elif review:
+        rev = proc["review"]
+        lane = rev.get("lane") or "Reviewer"
+        lanes += [lane] if lane != first_lane else []
+        nodes += [{"key": "review", "kind": "task", "name": rev.get("name") or "Review", "lane": lane, "x": 300, "service": review[0], "io": review[1]},
+                  {"key": "end", "kind": "end", "name": "End", "lane": lane, "x": 450}]
+        flows += [{"from": "form", "to": "review"}, {"from": "review", "to": "end"}]
     else:
         nodes.append({"key": "end", "kind": "end", "name": "End", "lane": first_lane, "x": 300})
         flows.append({"from": "form", "to": "end"})
     pid, version = "25." + uid(), uid()
-    return pid, version, proc["name"], "bpd", process_xml(pid, version, proc["name"], var, bo_id, lanes, nodes, flows, "generate_app", proc.get("description", ""))
+    objects = spec["businessObjects"]
+    refs = ([o["variable"] for o in objects], [bo_id[o["variable"]] for o in objects]) if len(objects) > 1 else (var, bo_id[var])
+    return pid, version, proc["name"], "bpd", process_xml(pid, version, proc["name"], *refs, lanes, nodes, flows, "generate_app", proc.get("description", ""))
 
 
 # ---------------------------------------------------------------- package
@@ -784,8 +1125,13 @@ def kept_view(base_twx, view_id, bo_id, names):
     return version, text, [f["path"] for f in group_views.layout_fields(text) if f["path"] not in names]
 
 
+def group_variable(spec, group):
+    """The variable of the business object a group's fields live in."""
+    return group["fields"][0]["_bo"] if group["fields"] else spec["businessObjects"][0]["variable"]
+
+
 def group_objects(spec, bo_id, base=None, replace=()):
-    """The app's group Views, their Preview services and the visibility type their options use, as package objects;
+    """(bo_id: {object variable: class id}.) The app's group Views, their Preview services and the visibility type their options use, as package objects;
     fills GROUPS for the coaches that place them. A group View the app on the server (base) has and someone changed
     in BAW stays as it is (listed in KEPT), unless its group is in replace."""
     GROUPS.clear()
@@ -796,25 +1142,30 @@ def group_objects(spec, bo_id, base=None, replace=()):
                          + (", ".join(g["name"] for g in spec.get("groups") or []) or "none"))
     if not spec.get("groups"):
         return []
-    acronym, var = spec["app"]["acronym"], spec["businessObject"]["variable"]
+    acronym = spec["app"]["acronym"]
     type_id, type_version, type_xml = group_views.visibility_type(acronym)
     objects = [(type_id, type_version, group_views.VISIBILITY_TYPE, "twClass", type_xml)]
     for g in spec["groups"]:
+        var = group_variable(spec, g)
         lay = Layout("ns2")
         items = columns(lay, var, g["fields"], g.get("columns", 1), g.get("widths"), make=group_field)
-        view_id, version, xml = group_views.group_view(acronym, g["name"], var, f"/{bo_id}", f"/{type_id}", group_fields(g), items, "generate_app")
+        view_id, version, xml = group_views.group_view(acronym, g["name"], var, f"/{bo_id[var]}", f"/{type_id}", group_fields(g), items, "generate_app",
+                                                         blank_required=any(f.get("control") == "Radio" or (f.get("required") and f.get("type") in NUMBER_TYPES)
+                                                                            for f in g["fields"]),
+                                                         fresh_ref=f"{TWSYS}/{SYSTEM_TYPES['Boolean']}" if draft_label(spec) else None)
         GROUPS[g["name"]] = (view_id, group_fields(g))
-        kept = None if g["name"] in replace else kept_view(base, view_id, bo_id, {f["name"] for f in fields(spec)})
+        kept = None if g["name"] in replace else kept_view(base, view_id, bo_id[var], {f["name"] for f in fields(spec)})
         if kept:
             version, xml, missing = kept
             KEPT[g["name"]] = missing
         objects.append((view_id, version, g["name"], "coachView", xml))
     for g in spec["groups"]:
+        var = group_variable(spec, g)
         lay = Layout()
         body = widget(lay, "section", g["name"], children=[place_group(lay, var, {"group": g["name"], "fields": g["fields"]})])
         bar, events = actions(lay, [("ok", "OK", "P")])
         layout = Layout.wrap([*header(spec, lay, f"{g['name']} Preview", "The reusable group on its own."), body, bar])
-        objects.append(group_views.preview_service(acronym, f"{g['name']} Preview", var, bo_id, layout, events["ok"], init_script(spec), "generate_app"))
+        objects.append(group_views.preview_service(acronym, f"{g['name']} Preview", var, bo_id[var], layout, events["ok"], init_script(spec, only=var), "generate_app"))
     return objects
 
 
@@ -822,26 +1173,36 @@ def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None, re
     """toolkit: the App Builder Widgets .twx (widget_toolkit.py build builder) the app is to depend on."""
     WIDGETS.clear()
     WIDGETS.update(widget_toolkit.view_ids(TOOLKIT, toolkit))
-    bo, svc, app = spec["businessObject"], spec["service"], spec["app"]
-    props = [(f["name"], field_type(f)[0]) for f in fields(spec)]
+    objects, svc, app = spec["businessObjects"], spec["service"], spec["app"]
+    bo = objects[0]
+    props = {o["variable"]: [(f["name"], field_type(f)[0]) for f in fields(spec) if f["_bo"] == o["variable"]] for o in objects}
+    first = props[bo["variable"]]
     if spec.get("confirmation"):
-        props.append((REFERENCE, "String"))
+        first.append((REFERENCE, "String"))
     proc = spec.get("process")
     approval = proc and proc.get("approval") is not None
+    review = proc and proc.get("review") is not None
     if approval:
-        props += [(DECISION, "String"), (COMMENTS, "String")]
+        first += [(DECISION, "String"), (COMMENTS, "String")]
     if spec.get("_database"):
-        props.append((MESSAGE, "String"))
-    bo_id = "12." + uid()
-    extra = group_objects(spec, bo_id, base, replace_groups)
+        first.append((MESSAGE, "String"))
+    several = len(objects) > 1
+    bo_ids = {o["variable"]: "12." + uid() for o in objects}
+    extra = group_objects(spec, bo_ids, base, replace_groups)
     target = app_template.read_base(base) if base else app_template.builtin()
     run_sql = sql_service.database_services(spec["_database"], bo["name"], target["sql"]) if spec.get("_database") else None
     steps, flows = flow(spec, run_sql)
     service = {"name": svc["name"], "description": svc.get("description", svc["name"])}
-    io = lambda: ("2055." + uid(), "2055." + uid()) if proc else None
+    if draft_label(spec):  # local variables a postponed task keeps: whether the form is new, and the tab the user left
+        service["variables"] = [("freshForm", "Boolean", "2056." + uid()), ("currentTab", "Integer", "2056." + uid())]
+    pair = lambda: ("2055." + uid(), "2055." + uid())
+    io = lambda: ([pair() for _ in objects] if several else pair()) if proc else None
+    variables = [o["variable"] for o in objects]
+    names = variables if several else variables[0]
+    private = lambda: ["2056." + uid() for _ in objects] if several else "2056." + uid()
     form_io = io()
-    services = [("1." + uid(), uid(), form_io or "2056." + uid(), service,
-                 lambda b, v: coachflow(service, steps, flows, b, v, bo["variable"], io=form_io))]
+    services = [("1." + uid(), uid(), form_io or private(), service,
+                 lambda b, v: coachflow(service, steps, flows, b, v, names, io=form_io))]
     if run_sql:
         extra += [service[:5] for service in run_sql.values()]
     if proc:
@@ -850,12 +1211,19 @@ def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None, re
             a_io, a_steps, a_flows = io(), *approval_flow(spec)
             a_service = {"name": proc["approval"].get("name") or "Review", "description": f"{proc['name']}: {proc['approval'].get('name') or 'Review'}",
                          "exposed": False}  # opened only as the process's approval task
-            services.append(("1." + uid(), uid(), a_io, a_service, lambda b, v: coachflow(a_service, a_steps, a_flows, b, v, bo["variable"], io=a_io)))
+            services.append(("1." + uid(), uid(), a_io, a_service, lambda b, v: coachflow(a_service, a_steps, a_flows, b, v, names, io=a_io)))
             approval_ids = (services[-1][0], a_io)
-        extra.append(process_definition(spec, (services[0][0], form_io), approval_ids, bo_id))
+        review_ids = None
+        if review:
+            r_io, r_steps, r_flows = io(), *edit_review_flow(spec)
+            r_service = {"name": proc["review"].get("name") or "Review", "description": f"{proc['name']}: {proc['review'].get('name') or 'Review'}",
+                         "exposed": False}  # opened only as the process's review task
+            services.append(("1." + uid(), uid(), r_io, r_service, lambda b, v: coachflow(r_service, r_steps, r_flows, b, v, names, io=r_io)))
+            review_ids = (services[-1][0], r_io)
+        extra.append(process_definition(spec, (services[0][0], form_io), approval_ids, bo_ids, review_ids))
+    classes = [{"id": bo_ids[v], "version": uid(), "name": o["name"], "props": props[v]} for v, o in zip(variables, objects)]
     write_twx(dest, {"name": app["name"], "acronym": app["acronym"], "snapshot": app.get("snapshot", "1.0.0")},
-              {"id": bo_id, "version": uid(), "name": bo["name"], "props": props}, bo["variable"], services, "generate_app",
-              target, extra)
+              classes if several else classes[0], names, services, "generate_app", target, extra)
     with zipfile.ZipFile(dest) as twx:
         entries = {i.filename: twx.read(i) for i in twx.infolist()}
     package, _, add, drop = widget_toolkit.embed(entries["META-INF/package.xml"].decode("utf-8"), toolkit)
@@ -904,7 +1272,8 @@ def main():
     if spec.get("process"):
         proc = spec["process"]
         print(f"Process: {proc['name']}, task {(proc.get('formTask') or {}).get('name') or spec['service']['name']}"
-              + (f", then approval task {proc['approval'].get('name') or 'Review'} (Send back returns to the first task)" if proc.get("approval") is not None else ""))
+              + (f", then approval task {proc['approval'].get('name') or 'Review'} (Send back returns to the first task)" if proc.get("approval") is not None else "")
+              + (f", then review task {proc['review'].get('name') or 'Review'}" if proc.get("review") is not None else ""))
 
 
 if __name__ == "__main__":
