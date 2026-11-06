@@ -209,6 +209,9 @@ def css(theme, inputs, width):
         ".btn-primary:hover { filter: brightness(1.08); }",
         (f".btn:not(.btn-primary) {{ background: {secondary} !important; border-color: {secondary} !important; color: #fff !important; }}" if secondary
          else f".btn:not(.btn-primary) {{ background: #fff !important; border: 1px solid {button} !important; color: {button} !important; }}"),
+        # a section's Edit button (App Builder Widgets): small and outlined, on the coloured section heading
+        ".btn.abw-edit { padding: 1px 12px !important; min-width: 0; font-size: 12px; line-height: 1.5;"
+        " background: transparent !important; border: 1px solid currentColor !important; color: inherit !important; }",
         # the Button Bar widget's content box (App Builder Widgets)
         f'.app-button-bar > .ContentBox {{ display: flex !important; flex-wrap: wrap; align-items: center;'
         f' justify-content: {ALIGN[theme.get("buttonAlign", "left")]} !important; gap: 12px; }}',

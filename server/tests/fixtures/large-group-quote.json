@@ -1,0 +1,354 @@
+{
+  "app": {
+    "name": "Large Group Fully Insured Sales",
+    "acronym": "ZZLGQ"
+  },
+  "theme": "app-specs/example-quote-desk.theme.json",
+  "businessObjects": [
+    {
+      "name": "GenInfoBO",
+      "variable": "genInfo"
+    },
+    {
+      "name": "BenefitsBO",
+      "variable": "benefits"
+    }
+  ],
+  "service": {
+    "name": "Large Group Fully Insured Sales"
+  },
+  "layout": "tabs",
+  "review": false,
+  "form": {
+    "nextLabel": "Send for Review",
+    "tabNextLabel": "Next"
+  },
+  "steps": [
+    {
+      "title": "General Information",
+      "sections": [
+        {
+          "group": "QuoteDetails CV"
+        }
+      ]
+    },
+    {
+      "title": "Benefits Information",
+      "sections": [
+        {
+          "group": "BenefitsDetails CV"
+        }
+      ]
+    }
+  ],
+  "process": {
+    "name": "Large Group Fully Insured Sales",
+    "formTask": {
+      "name": "Generate Quote"
+    },
+    "review": {
+      "name": "Review Quote",
+      "lane": "Underwriting",
+      "completeLabel": "Submit",
+      "editLabel": "Edit"
+    }
+  },
+  "groups": [
+    {
+      "name": "QuoteDetails CV",
+      "businessObject": "GenInfoBO",
+      "fields": [
+        {
+          "name": "quoteNumber",
+          "type": "String",
+          "required": true,
+          "label": "Quote Number"
+        },
+        {
+          "name": "prospectRenewal",
+          "type": "String",
+          "required": true,
+          "label": "Prospect Renewal"
+        },
+        {
+          "name": "quoteDescription",
+          "type": "String",
+          "required": true,
+          "label": "Quote Description"
+        },
+        {
+          "name": "quoteType",
+          "type": "String",
+          "required": true,
+          "label": "Quote Type"
+        },
+        {
+          "name": "broker",
+          "type": "String",
+          "required": true,
+          "label": "Broker"
+        },
+        {
+          "name": "representative",
+          "type": "String",
+          "required": true,
+          "label": "Representative"
+        },
+        {
+          "name": "sicCode",
+          "type": "String",
+          "required": true,
+          "label": "SIC Code"
+        },
+        {
+          "name": "underwriter",
+          "type": "String",
+          "required": true,
+          "label": "Underwriter"
+        },
+        {
+          "name": "quoteId",
+          "type": "String",
+          "required": true,
+          "label": "Quote ID"
+        },
+        {
+          "name": "optionNumber",
+          "type": "String",
+          "required": true,
+          "label": "Option Number"
+        },
+        {
+          "name": "optionDescription",
+          "type": "String",
+          "required": true,
+          "label": "Option Description"
+        },
+        {
+          "name": "quoteEffectiveDate",
+          "type": "Date",
+          "required": true,
+          "label": "Quote Effective Date"
+        },
+        {
+          "name": "needByDate",
+          "type": "Date",
+          "required": true,
+          "label": "Need By Date"
+        },
+        {
+          "name": "allPaperworkReceivedDate",
+          "type": "Date",
+          "required": true,
+          "label": "All Paperwork Received Date"
+        },
+        {
+          "name": "negotiatedNeedDate",
+          "type": "Date",
+          "required": true,
+          "label": "Negotiated Need Date"
+        },
+        {
+          "name": "allPaperworkCompleteDate",
+          "type": "Date",
+          "required": true,
+          "label": "All Paperwork Complete Date"
+        },
+        {
+          "name": "ppacaGrandfathered",
+          "type": "Boolean",
+          "required": true,
+          "control": "Radio",
+          "label": "PPACA Grandfathered"
+        },
+        {
+          "name": "priorCoverage",
+          "type": "Boolean",
+          "required": true,
+          "control": "Radio",
+          "label": "Prior coverage"
+        },
+        {
+          "name": "multiOption",
+          "type": "Boolean",
+          "required": true,
+          "control": "Radio",
+          "label": "Multi Option"
+        }
+      ]
+    },
+    {
+      "name": "BenefitsDetails CV",
+      "businessObject": "BenefitsBO",
+      "fields": [
+        {
+          "name": "proposedRatingMethod",
+          "type": "String",
+          "required": true,
+          "label": "Proposed Rating Method"
+        },
+        {
+          "name": "medicalBenefits",
+          "type": "String",
+          "required": true,
+          "label": "Medical Benefits"
+        },
+        {
+          "name": "drugBenefits",
+          "type": "String",
+          "required": true,
+          "label": "Drug Benefits"
+        },
+        {
+          "name": "behavioralHealth",
+          "type": "String",
+          "required": true,
+          "label": "Behavioral Health"
+        },
+        {
+          "name": "wellCare",
+          "type": "String",
+          "required": true,
+          "label": "Well Care"
+        },
+        {
+          "name": "vision",
+          "type": "String",
+          "required": true,
+          "label": "Vision"
+        },
+        {
+          "name": "eligibilityClass",
+          "type": "String",
+          "required": true,
+          "label": "Eligibility Class"
+        },
+        {
+          "name": "enrollmentType",
+          "type": "String",
+          "required": true,
+          "label": "Enrollment Type"
+        },
+        {
+          "name": "eligibilityContractLanguage",
+          "type": "String",
+          "required": true,
+          "label": "Eligibility Contract Language"
+        },
+        {
+          "name": "eligibilityPeriodForNewHires",
+          "type": "String",
+          "required": true,
+          "label": "Eligibility Period For New Hires"
+        },
+        {
+          "name": "preExistingWaitingPeriod",
+          "type": "String",
+          "required": true,
+          "label": "Pre Existing Waiting Period"
+        },
+        {
+          "name": "unionGroup",
+          "type": "String",
+          "required": true,
+          "label": "Union Group"
+        },
+        {
+          "name": "hsaEmployerFunded",
+          "type": "String",
+          "required": true,
+          "label": "HSA Employer Funded"
+        },
+        {
+          "name": "hsaVendorIntegration",
+          "type": "String",
+          "required": true,
+          "label": "HSA Vendor Integration"
+        },
+        {
+          "name": "hraPlan",
+          "type": "String",
+          "required": true,
+          "label": "HRA Plan"
+        },
+        {
+          "name": "hraVendorIntegration",
+          "type": "String",
+          "required": true,
+          "label": "HRA Vendor Integration"
+        },
+        {
+          "name": "brokerCommission",
+          "type": "Decimal",
+          "required": true,
+          "label": "Broker Commission"
+        },
+        {
+          "name": "hsaEmployerAmount",
+          "type": "Decimal",
+          "required": true,
+          "label": "HSA Employer Amount"
+        },
+        {
+          "name": "selfOnly",
+          "type": "Decimal",
+          "required": true,
+          "label": "Self Only"
+        },
+        {
+          "name": "family",
+          "type": "Decimal",
+          "required": true,
+          "label": "Family"
+        },
+        {
+          "name": "dependentAgeLimit",
+          "type": "Integer",
+          "required": true,
+          "control": "Select",
+          "options": [
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26
+          ],
+          "label": "Dependent Age Limit"
+        },
+        {
+          "name": "age",
+          "type": "Integer",
+          "required": true,
+          "label": "Age"
+        },
+        {
+          "name": "separateSubGroupsCount",
+          "type": "Integer",
+          "required": true,
+          "label": "Separate Sub Groups Count"
+        },
+        {
+          "name": "fullTimeStudent",
+          "type": "Boolean",
+          "required": true,
+          "label": "Full Time Student"
+        },
+        {
+          "name": "reinsuranceDeclined",
+          "type": "Boolean",
+          "required": true,
+          "label": "Reinsurance Declined"
+        },
+        {
+          "name": "erisaGroup",
+          "type": "Boolean",
+          "required": true,
+          "label": "ERISA Group"
+        }
+      ]
+    }
+  ]
+}

@@ -74,6 +74,52 @@ view._groupVisibility = function () {
   });
 };
 view._groupVisibility();"""
+# BAW turns an unset number into 0 and an unset Yes/No into false while a control loads, which would pass a required
+# check. A group with required fields puts those back to null shortly after load, unless it is read only (a stored 0 stays).
+# Read only, it instead ticks the stored answer of each Yes/No radio group, which the control does not show on load.
+# The same applies when the freshForm option is false: the form is a reopened draft, whose stored answers are real.
+# It is appended only for groups with required fields or Yes/No radio groups, so the other groups' View stays as it was.
+GROUP_DRAFT_JS = """function isDraft() {
+  var o = view.context.options.freshForm;
+  return !!o && (o.get ? o.get("value") : o) === false;
+}
+"""
+GROUP_BLANK_JS = """
+function shownAs() {
+  var own = view.context.options._metadata.visibility, mine = own ? own.get("value") : "";
+  return !mine || mine === "DEFAULT" ? (view.context.getInheritedVisibility ? view.context.getInheritedVisibility() : "EDITABLE") : mine;
+}
+function kindOf(sub) {
+  var el = sub.context.element, box = el && el.closest ? el.closest(".CoachView") : el;
+  var text = box ? (box.className || "") + " " + (box.getAttribute("data-type") || "") : "";
+  if (/(^|[\\s.])(Integer|Decimal|Single_Select)(\\s|$)/.test(text)) return "number";  // a whole-number dropdown also loads as 0
+  return el && el.querySelector && el.querySelector("input[type=radio]") ? "radio" : "";
+}
+@DRAFT@function blankRequired() {
+  var seen = 0, readonly = shownAs() === "READONLY" || isDraft();
+  each(view, function (sub) {
+    var kind = kindOf(sub), value = sub.getData();
+    if (!sub._groupRequired && kind !== "radio") return;
+    seen++;
+    var checked = kind === "radio" && sub.context.element.querySelector("input:checked");
+    if (readonly) {
+      // A Yes/No radio group shows no choice for a stored answer when it loads: tick the one that matches.
+      var match = kind === "radio" && typeof value === "boolean" && !checked && sub.context.element.querySelector('input[value="' + value + '"]');
+      if (match) match.checked = true;
+      return;
+    }
+    if (sub._groupRequired && ((kind === "number" && value === 0) || (kind === "radio" && value === false && !checked))) {
+      sub.context.binding.set("value", null);
+    }
+  });
+  return seen;
+}
+// The children finish loading after this script runs, so wait for them.
+var tries = 0;
+(function wait() {
+  if (!blankRequired() && ++tries < 20) setTimeout(wait, 50);
+  else setTimeout(blankRequired, 300);  // a last pass for controls that finished loading after the first
+})();"""
 GROUP_CHANGE_JS = 'if (event.type === "config" && this._groupVisibility) this._groupVisibility();'
 
 SELECTION_TYPE = """<?xml version="1.0" encoding="UTF-8"?>
@@ -278,28 +324,35 @@ def top_level(items, prefix="ns2"):
     return "".join(out)
 
 
-def group_view(acronym, name, variable, bo_ref, visibility_ref, fields, items, author="group_views"):
+def group_view(acronym, name, variable, bo_ref, visibility_ref, fields, items, author="group_views", blank_required=False, fresh_ref=None):
     """A group View: (view id, version, xml).
 
     fields: (path, kind, label, hideable) per field, in layout order. items: the View's layout items (ns2 prefix), built
     by the caller; each field view must bind to tw.businessData.<variable>.<path>, and the caller has already
-    passed each hideable field's item through bind_visibility."""
+    passed each hideable field's item through bind_visibility. blank_required adds the script that puts a blank required
+    number or Yes/No back to null after load. fresh_ref (the Boolean type's reference) adds the freshForm option, which turns that
+    off for a reopened draft."""
     group_id, version = view_id(acronym, name), uid()
     new_id = stable_ids(acronym, f"group/{name}")
     new_id()  # the sequence's first ID is the View's own, so the IDs view_xml draws next stay what they were
     options = [(option_name(path), option_label(label), visibility_ref) for path, _, label, hideable in fields if hideable]
+    if fresh_ref and blank_required:
+        options.append(("freshForm", "Fresh form", fresh_ref))
     description = (f"Reusable group of {len(fields)} fields. Place it on a coach bound to the {variable} variable; "
                    "each field's visibility option hides it there. Built by baw-dev-tools, fingerprint @FINGERPRINT@")
-    xml = view_xml(group_id, version, escape(name, {'"': "&quot;"}), binding_ref=bo_ref, binding_name=variable, options=options, load=GROUP_JS,
+    blank = GROUP_BLANK_JS.replace("@DRAFT@", GROUP_DRAFT_JS) if fresh_ref else GROUP_BLANK_JS.replace("@DRAFT@", "").replace(" || isDraft()", "")
+    xml = view_xml(group_id, version, escape(name, {'"': "&quot;"}), binding_ref=bo_ref, binding_name=variable, options=options, load=GROUP_JS + blank if blank_required else GROUP_JS,
                    change=GROUP_CHANGE_JS, emit_boundary=False, description=description, new_id=new_id, layout=top_level(items))
     xml = xml.replace("@FINGERPRINT@", fields_fingerprint(layout_fields(xml)), 1)
     return group_id, version, xml.replace("<lastModifiedBy>coach_views</lastModifiedBy>", f"<lastModifiedBy>{author}</lastModifiedBy>", 1)
 
 
-def placement_options(fields, hide=(), readonly=False):
+def placement_options(fields, hide=(), readonly=False, fresh=False):
     """The config of a coach's ViewRef that places a group: hidden fields' options set to NONE, and READONLY as the
-    placement's own visibility (the fields follow it)."""
+    placement's own visibility (the fields follow it). fresh binds the freshForm option to the service's variable."""
     options = [(option_name(path), "NONE") for path, _, _, hideable in fields if hideable and path in hide]
+    if fresh:
+        options.append(("freshForm", "tw.local.freshForm", "dynamic"))
     if readonly:
         options.append(("@visibility", '{"isResponsiveData":true,"values":[{"deviceConfigID":"LargeID","value":"READONLY"}]}'))
     return options

@@ -15,6 +15,16 @@
 // BAW_* keys of the repository's .env (other keys are never read; token kept in memory, never printed), opens the service's run URL,
 // then on every coach takes a screenshot and presses the forward button: the primary React
 // button, or the native primary / last non-Back button. It stops when no coach is left.
+//
+// --tabs visits every tab of a Tab Section on each coach before the forward button is pressed: it opens the
+// tab, waits for its content, fills its fields (with --fill; a Yes option is chosen for Boolean radios, and a
+// date field that refuses typed text is set directly) and takes a screenshot named <step>-<screen>-<tab>.png.
+// --expect-blocked presses the forward button once on the first coach with nothing filled and passes only if
+// the coach stays, visible error indicators appear and the first tab with an error is the one on screen; then
+// the run goes on as usual. When every tab has its own button bar, the forward button is the one on the last
+// tab (the others only switch tabs): the run opens that tab to press it, and goes back to it after --tabs. --draft "Save as Draft" types the --value fields, presses that button on the first
+// coach that shows it and passes when the coach closes. --check "Label=text" (repeatable) reads the field with
+// that label on the first coach that has it and fails when it does not hold the text (a resumed draft).
 // Fails (exit 1) on page errors, a screen that does not change after a press, duplicate
 // screenshots, or not reaching the end within --max-steps.
 import crypto from 'node:crypto';
@@ -29,7 +39,8 @@ const { values: args } = parseArgs({
     app: { type: 'string' }, service: { type: 'string' }, snapshot: { type: 'string' },
     out: { type: 'string', default: 'verify-shots' }, 'max-steps': { type: 'string', default: '12' },
     fill: { type: 'boolean', default: false }, url: { type: 'string' }, press: { type: 'string', multiple: true, default: [] },
-    value: { type: 'string', multiple: true, default: [] },
+    value: { type: 'string', multiple: true, default: [] }, check: { type: 'string', multiple: true, default: [] },
+    tabs: { type: 'boolean', default: false }, 'expect-blocked': { type: 'boolean', default: false }, draft: { type: 'string' },
   },
 });
 if (!args.url && (!args.app || !args.service)) {
@@ -89,11 +100,23 @@ if (!args.url) {
   if (!item) throw new Error(`No exposed service "${args.service}" in ${args.app} ${args.snapshot || '(tip)'}`);
 }
 const presses = [...args.press];
-const typing = args.value.map((v) => {
+const labelled = (flag, list) => list.map((v) => {
   const at = v.indexOf('=');
-  if (at < 1) { console.error(`--value needs "Label=text", got "${v}"`); process.exit(2); }
+  if (at < 1) { console.error(`--${flag} needs "Label=text", got "${v}"`); process.exit(2); }
   return { label: v.slice(0, at).trim(), text: v.slice(at + 1) };
 });
+const typing = labelled('value', args.value);
+const checking = labelled('check', args.check);
+// Tab walking and its fill refinements apply only when asked for, so other runs behave as they always did.
+const deep = args.tabs || args['expect-blocked'];
+const showTab = deep || !!args.draft || checking.length > 0;
+
+// Every selector the tab, error and draft detection depends on, in one place: tune them here against the live coach.
+const SELECTORS = {
+  tab: '.nav-tabs a, [role=tab]',
+  activeTab: '.nav-tabs li.active, [role=tab][aria-selected=true]',
+  error: '.has-error, [aria-invalid=true]',
+};
 
 // Runs inside each frame: describe the coach and pick the forward button.
 function inspectCoach() {
@@ -118,12 +141,34 @@ function inspectCoach() {
   }
 }
 
+// Run inside each frame (selectors passed in): the visible tab names, the active one, and the visible
+// error indicators (innermost only, so a wrapper and the field in it count once) with their text.
+function listTabs(sel) {
+  const names = [];
+  for (const a of document.querySelectorAll(sel.tab)) {
+    const name = a.textContent.trim();
+    if (a.offsetParent && name && !names.includes(name)) names.push(name);
+  }
+  return names;
+}
+function activeTabName(sel) {
+  return [...document.querySelectorAll(sel.activeTab)].find((el) => el.offsetParent)?.textContent.trim();
+}
+// The active tab with the size of the page text, to see when a tab's content has stopped changing.
+function tabState(sel) {
+  return { active: [...document.querySelectorAll(sel.activeTab)].find((el) => el.offsetParent)?.textContent.trim(), size: document.body.innerText.length };
+}
+function visibleErrors(sel) {
+  return [...document.querySelectorAll(sel.error)].filter((el) => el.offsetParent && !el.querySelector(sel.error))
+    .map((el) => el.textContent.replace(/\s+/g, ' ').trim().slice(0, 120));
+}
+
 // Runs inside each frame: the visible field whose label reads `label` (UI Toolkit labels are not always
 // tied to the input, so fall back to the nearest label around a field that has no sibling field).
 function findField(label) {
   const norm = (s) => (s || '').replace(/\s+/g, ' ').replace(/[\s*:]+$/, '').trim().toLowerCase();
-  const fields = [...document.querySelectorAll('input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio]), textarea, select')]
-    .filter((el) => !!el.offsetParent);
+  const all = [...document.querySelectorAll('input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio]), textarea, select')];
+  const fields = all.filter((el) => !!el.offsetParent);
   const labelsOf = (el) => {
     const found = [el.getAttribute('aria-label')];
     for (const id of (el.getAttribute('aria-labelledby') || '').split(/\s+/)) found.push(document.getElementById(id)?.textContent);
@@ -135,13 +180,42 @@ function findField(label) {
     return found.map(norm).filter(Boolean);
   };
   const want = norm(label);
-  return fields.find((el) => labelsOf(el).includes(want)) || fields.find((el) => labelsOf(el).some((t) => t.includes(want))) || null;
+  const exact = fields.find((el) => labelsOf(el).includes(want));
+  // A field with exactly this label on another tab is the one meant: "Broker" must not fall back to "Broker Commission".
+  if (exact || all.some((el) => !el.offsetParent && labelsOf(el).includes(want))) return exact || null;
+  return fields.find((el) => labelsOf(el).some((t) => t.includes(want))) || null;
 }
 
-// Type text into the field labelled `label`, replacing what is there. Returns false when the coach has no such field.
+// Runs inside each frame: the visible radio group whose label reads `label`, as its options
+// [{text, checked}], and when `pick` names an option, that option is clicked. null when there is no such group.
+function radioGroup(label, pick) {
+  const norm = (s) => (s || '').replace(/\s+/g, ' ').replace(/[\s*:?]+$/, '').trim().toLowerCase();
+  const want = norm(label);
+  const groups = (inputs) => [...new Set(inputs.map((el) => el.closest('.CoachView') || el.parentElement))];
+  const radios = [...document.querySelectorAll('input[type=radio]')];
+  const views = groups(radios.filter((el) => el.offsetParent));
+  const caption = (view) => norm(view.querySelector('.control-label, legend, label:not(:has(input))')?.textContent);
+  const exact = views.find((v) => caption(v) === want);
+  const elsewhere = !exact && groups(radios.filter((el) => !el.offsetParent)).some((v) => caption(v) === want);
+  const view = exact || (elsewhere ? null : views.find((v) => caption(v).includes(want)));
+  if (!view) return null;
+  const options = [...view.querySelectorAll('input[type=radio]')].map((input) => ({
+    input, text: (input.closest('label')?.textContent || input.nextElementSibling?.textContent || input.value || '').trim() }));
+  const chosen = pick === undefined ? null : options.find((o) => norm(o.text) === norm(pick));
+  if (pick !== undefined && !chosen) return { missing: options.map((o) => o.text) };
+  if (chosen) chosen.input.click();
+  return options.map((o) => ({ text: o.text, checked: o.input.checked }));
+}
+
+// Type text into the field labelled `label`, replacing what is there (a radio group picks the option with that
+// text, e.g. Yes or No). Returns false when the coach has no such field.
 async function typeInto(frame, label, text) {
   const field = (await frame.evaluateHandle(findField, label)).asElement();
-  if (!field) return false;
+  if (!field) {
+    const radios = await frame.evaluate(radioGroup, label, text);
+    if (radios && radios.missing) throw new Error(`"${label}" has no option "${text}" (it has ${radios.missing.join(', ')})`);
+    return !!radios;
+  }
   if (await field.evaluate((el) => el.tagName === 'SELECT')) {
     const choice = await field.evaluate((el, want) => [...el.options].find((o) => o.value === want || o.textContent.trim() === want)?.value, text);
     if (choice === undefined) throw new Error(`"${label}" has no option "${text}"`);
@@ -155,22 +229,50 @@ async function typeInto(frame, label, text) {
   return true;
 }
 
+// Read the value of the field labelled `label` (the chosen option's text for a dropdown or a radio group, "" when no radio is chosen); undefined when there is no such field.
+async function readField(frame, label) {
+  const field = (await frame.evaluateHandle(findField, label)).asElement();
+  if (field) return field.evaluate((el) => (el.tagName === 'SELECT' ? el.selectedOptions[0]?.textContent.trim() : el.value));
+  const radios = await frame.evaluate(radioGroup, label);
+  return radios ? radios.find((o) => o.checked)?.text ?? '' : undefined;
+}
+
+// Press the visible button with exactly this text.
+const pressButton = (frame, label) => frame.evaluate((text) => {
+  const react = document.querySelector('.pp-app');
+  [...document.querySelectorAll(react ? '.pp-app .pp-actions button' : 'button')]
+    .find((b) => b.offsetParent && b.textContent.trim() === text).click();
+}, label);
+
 // --fill: type into the coach's empty editable fields (the field's example placeholder, today's date for date
 // pickers, 1 for number inputs, or "Test"), tick unticked checkboxes, turn on switches that are off (a Toggle
 // widget), pick the first option of empty dropdowns and of radio groups with nothing chosen. Works in React
 // coaches (inside .pp-app) and in classic UI Toolkit ones (the whole frame). Returns the count.
-async function fill(frame, react) {
+async function fill(frame, react, refine = false) {
   const at = react ? '.pp-app ' : '';
   let count = 0;
   const typable = 'input:not([readonly]):not([disabled]):not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=button]):not([type=submit])';
   for (const input of await frame.$$(`${at}${typable}, ${at}textarea:not([readonly]):not([disabled])`)) {
-    const { empty, placeholder, visible, type } = await input.evaluate((el) => ({ empty: !el.value, placeholder: el.placeholder, visible: !!el.offsetParent, type: el.type }));
+    // A classic UI Toolkit control is a text input inside a CoachView whose class names the control.
+    const { empty, placeholder, visible, type, control } = await input.evaluate((el) => {
+      const view = el.closest('.CoachView');
+      const is = (name) => !!view && (view.classList.contains(name) || (view.getAttribute('data-type') || '').endsWith(`.${name}`));
+      return { empty: !el.value, placeholder: el.placeholder, visible: !!el.offsetParent, type: el.type, control: is('Integer') || is('Decimal') ? 'number' : is('Date_Picker') || is('Date_Time_Picker') ? 'date' : '' };
+    });
     if (!empty || !visible) continue;
     const now = new Date();
     const today = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
     const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    await input.type(type === 'number' ? '1' : type === 'date' ? iso : placeholder === 'mm/dd/yyyy' ? today : placeholder || 'Test');
+    const text = type === 'number' || control === 'number' ? '1' : type === 'date' ? iso : placeholder === 'mm/dd/yyyy' || control === 'date' ? today : placeholder || 'Test';
+    await input.type(text);
     await input.press('Tab');
+    // A classic date picker can drop typed text: set the value and tell the widget it changed.
+    if (refine && !react && await input.evaluate((el) => !el.value && el.tagName === 'INPUT').catch(() => false)) {
+      await input.evaluate((el, value) => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value);
+        for (const name of ['input', 'change', 'blur']) el.dispatchEvent(new Event(name, { bubbles: true }));
+      }, text);
+    }
     if (await input.evaluate((el) => !!el.value).catch(() => true)) count++; // a field that refused the text (a classic date picker) stays empty
   }
   for (const box of await frame.$$(`${at}input[type=checkbox]:not(:checked):not([readonly]):not([disabled])`)) {
@@ -194,18 +296,21 @@ async function fill(frame, react) {
   }
   if (!react) {
     // Classic radio groups are not wrapped in a fieldset: group the radios by name.
-    return count + await frame.evaluate(() => {
+    return count + await frame.evaluate((refine) => {
       const seen = new Set();
       let picked = 0;
       for (const radio of document.querySelectorAll('input[type=radio]:not([readonly]):not([disabled])')) {
         if (!radio.offsetParent || !radio.name || seen.has(radio.name)) continue;
         seen.add(radio.name);
         if ([...document.querySelectorAll(`input[type=radio][name="${CSS.escape(radio.name)}"]`)].some((r) => r.checked)) continue;
-        radio.click();
+        // A Boolean radio gets its Yes option; any other group its first.
+        const labelOf = (r) => (document.querySelector(`label[for="${CSS.escape(r.id)}"]`) || r.closest('label') || r.parentElement)?.textContent.trim();
+        const group = [...document.querySelectorAll(`input[type=radio][name="${CSS.escape(radio.name)}"]`)];
+        (refine && group.find((r) => /^yes$/i.test(labelOf(r))) || radio).click();
         picked++;
       }
       return picked;
-    });
+    }, refine);
   }
   for (const group of await frame.$$('.pp-app fieldset')) {
     const picked = await group.evaluate((el) => {
@@ -248,6 +353,8 @@ try {
     // A request the page already abandoned (navigation, close) rejects here: that must not take the run down.
     req.continue({ headers }).catch((e) => report.notes.push(`request not continued: ${String(e).slice(0, 120)}`));
   });
+  let posts = 0;
+  page.on('request', (req) => { if (req.method() === 'POST') posts++; });
   page.on('pageerror', (e) => report.errors.push(String(e).slice(0, 300)));
   page.on('console', (m) => { if (m.type() === 'error') report.errors.push(`console: ${m.text().slice(0, 300)}`); });
   page.on('response', (r) => { // a server error says why in its body (for example a service call from the coach that BAW rejects)
@@ -264,7 +371,101 @@ try {
     }
     return null;
   };
+  // The coach scrolls inside a frame as tall as the window, so grow the window to the whole coach first.
+  const shoot = async (frame, file) => {
+    const top = (await (await frame.frameElement())?.boundingBox())?.y || 0;
+    const height = await frame.evaluate(() => document.documentElement.scrollHeight).catch(() => 0);
+    await page.setViewport({ width: 1400, height: Math.min(Math.max(1000, Math.ceil(top + height)), 8000) });
+    await sleep(300);
+    const shot = await page.screenshot({ path: file, fullPage: true });
+    await page.setViewport({ width: 1400, height: 1000 });
+    return shot;
+  };
+  const slug = (text) => text.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40);
+  // Open a tab and wait until it is the active one and its content has stopped changing.
+  const openTab = async (frame, name) => {
+    await frame.evaluate((sel, want) => {
+      [...document.querySelectorAll(sel.tab)].find((a) => a.offsetParent && a.textContent.trim() === want)?.click();
+    }, SELECTORS, name);
+    let size = -1;
+    for (const end = Date.now() + 8000; Date.now() < end; await sleep(200)) {
+      const now = await frame.evaluate(tabState, SELECTORS).catch(() => null);
+      if (now && now.active === name && now.size === size) return true;
+      size = now ? now.size : -1;
+    }
+    return false;
+  };
+  // Which button moves the task on when every tab has its own button bar. The buttons that switch tabs differ
+  // from the one that finishes, so a coach whose first and last tabs pick different forward buttons has
+  // per-tab bars and the forward button is the last tab's pick; a shared bar gives the same pick on both and
+  // needs no tab. Leaves the tab that was open when called open again.
+  const forwardRoute = async (frame) => {
+    const names = await frame.evaluate(listTabs, SELECTORS).catch(() => []);
+    if (names.length < 2) return {};
+    const home = await frame.evaluate(activeTabName, SELECTORS).catch(() => undefined);
+    const pick = async (name) => {
+      await openTab(frame, name);
+      return (await frame.evaluate(inspectCoach).catch(() => null))?.button;
+    };
+    const first = await pick(names[0]);
+    const last = await pick(names[names.length - 1]);
+    if (home && home !== names[names.length - 1]) await openTab(frame, home);
+    return first && last && first !== last ? { button: last, tab: names[names.length - 1] } : {};
+  };
+  // Open the tab that holds the forward button, unless it is open already.
+  const showForwardTab = async (frame, tab) => {
+    if (tab && (await frame.evaluate(activeTabName, SELECTORS).catch(() => undefined)) !== tab) await openTab(frame, tab);
+  };
+  // Visit every tab: open it, fill its fields (with --fill), screenshot it; then go back to the tab with the
+  // forward button (the first tab when the buttons are shared).
+  const walkTabs = async (frame, react, stem, home) => {
+    const names = await frame.evaluate(listTabs, SELECTORS).catch(() => []);
+    if (names.length < 2) return undefined;
+    const visits = [];
+    for (const name of names) {
+      const opened = await openTab(frame, name);
+      const visit = { tab: name, opened };
+      if (args.fill) visit.filled = await fill(frame, react, true);
+      visit.screenshot = path.join(args.out, `${stem}-${slug(name)}.png`);
+      await shoot(frame, visit.screenshot);
+      visits.push(visit);
+    }
+    await openTab(frame, home || names[0]);
+    return visits;
+  };
+  // Press the forward button with nothing filled: the coach must stay, show error indicators and have the first tab with an error open.
+  const checkBlocked = async (frame, label, title, stem, tab) => {
+    const result = { button: label, stayed: false, errors: [] };
+    const names = await frame.evaluate(listTabs, SELECTORS).catch(() => []);
+    const postsBefore = posts;
+    await showForwardTab(frame, tab);
+    await pressButton(frame, label);
+    for (const end = Date.now() + 10000; Date.now() < end && !result.errors.length; await sleep(300)) {
+      result.errors = await frame.evaluate(visibleErrors, SELECTORS).catch(() => []);
+    }
+    const after = await coach(3000);
+    // With a bar per tab the check opens the first tab with an error, which shows Next, not the pressed button.
+    result.stayed = !!after && (tab || after.info.buttons.includes(label)) && after.info.title === title;
+    result.requestsSent = posts - postsBefore;
+    if (!after) return { ...result, failure: `"${label}" moved on with nothing filled: the required check did not block` };
+    result.screenshot = path.join(args.out, `${stem}-blocked.png`);
+    await shoot(after.frame, result.screenshot);
+    result.tab = await after.frame.evaluate(activeTabName, SELECTORS).catch(() => undefined);
+    if (names.length > 1) {
+      for (const name of names) { // the first tab, in tab order, that holds an error indicator
+        await openTab(after.frame, name);
+        if ((await after.frame.evaluate(visibleErrors, SELECTORS).catch(() => [])).length) { result.firstErrorTab = name; break; }
+      }
+      if (result.tab) await openTab(after.frame, result.tab);
+    }
+    if (!result.stayed) result.failure = `"${label}" moved on with nothing filled: the required check did not block`;
+    else if (!result.errors.length) result.failure = `the coach stayed after "${label}" but shows no error indicator (${SELECTORS.error})`;
+    else if (result.firstErrorTab && result.tab !== result.firstErrorTab) result.failure = `tab "${result.tab}" is open but the first tab with an error is "${result.firstErrorTab}"`;
+    result.ok = !result.failure;
+    return result;
+  };
   const hashes = new Set();
+  let blockedChecked = false, draftDone = false;
   let current = await coach();
   if (!current) {
     await page.screenshot({ path: path.join(args.out, '00-no-coach.png'), fullPage: true });
@@ -272,35 +473,96 @@ try {
   }
   for (let step = 1; current && step <= Number(args['max-steps']); step++) {
     await sleep(1500); // let React and BAW finish rendering
-    current = (await coach()) || current;
+    // A frame that closed with no coach left means the service ended after the last press.
+    current = (await coach()) || (current.frame.detached ? null : current);
+    if (!current) break;
     const typed = [];
-    for (const field of typing.filter((t) => !t.done)) {
-      if (await typeInto(current.frame, field.label, field.text)) { field.done = true; typed.push(field.label); }
+    const typePending = async () => {
+      for (const field of typing.filter((t) => !t.done)) {
+        if (await typeInto(current.frame, field.label, field.text)) { field.done = true; typed.push(field.label); }
+      }
+    };
+    await typePending();
+    // A draft run types the fields of every tab and stays on the last tab it typed on, so the tab the draft is
+    // saved from (and the one the task reopens on) is not the first.
+    if (args.draft && typing.some((t) => !t.done)) {
+      for (const name of await current.frame.evaluate(listTabs, SELECTORS).catch(() => [])) {
+        if (!typing.some((t) => !t.done)) break;
+        await openTab(current.frame, name);
+        await typePending();
+      }
     }
     if (typed.length) await sleep(500);
-    const file = path.join(args.out, `${String(step).padStart(2, '0')}-${current.info.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40)}.png`);
-    // The coach scrolls inside a frame as tall as the window, so grow the window to the whole coach first.
-    const top = (await (await current.frame.frameElement())?.boundingBox())?.y || 0;
-    const height = await current.frame.evaluate(() => document.documentElement.scrollHeight).catch(() => 0);
-    await page.setViewport({ width: 1400, height: Math.min(Math.max(1000, Math.ceil(top + height)), 8000) });
-    await sleep(300);
-    const shot = await page.screenshot({ path: file, fullPage: true });
-    await page.setViewport({ width: 1400, height: 1000 });
+    const stem = `${String(step).padStart(2, '0')}-${slug(current.info.title)}`;
+    const file = path.join(args.out, `${stem}.png`);
+    const shot = await shoot(current.frame, file);
     const hash = crypto.createHash('md5').update(shot).digest('hex');
     const { signature, buttons, ...info } = current.info;
-    if (presses.length && buttons.includes(presses[0])) info.button = presses.shift();
-    report.steps.push({ step, ...info, typed: typed.length ? typed : undefined, screenshot: file, duplicate: hashes.has(hash) || undefined });
+    const tab = showTab ? await current.frame.evaluate(activeTabName, SELECTORS).catch(() => undefined) : undefined;
+    // The pick above is the one on the open tab; with a bar per tab that can be a Next that only switches tabs.
+    const route = await forwardRoute(current.frame);
+    if (route.button) info.button = route.button;
+    const forward = info.button;
+    if (presses.length && (buttons.includes(presses[0]) || presses[0] === route.button)) info.button = presses.shift();
+    const forwardTab = info.button === route.button ? route.tab : undefined;
+    report.steps.push({ step, ...info, tab, typed: typed.length ? typed : undefined, screenshot: file, duplicate: hashes.has(hash) || undefined });
     hashes.add(hash);
-    if (!info.button) { report.failure = 'no forward button'; break; }
-    if (args.fill) report.steps.at(-1).filled = await fill(current.frame, info.react);
+    // A number control shows its value formatted, so 12.5 reads back as "12.50" and 1234.56 as "1,234.56".
+    const number = (s) => (/^-?[\d,]*\.?\d+$/.test(s) ? Number(s.replaceAll(',', '')) : NaN);
+    const same = (actual, expected) => actual === expected || number(actual) === number(expected);
+    const readChecks = async () => {
+      for (const check of checking.filter((c) => !c.done)) {
+        let actual;
+        for (const end = Date.now() + 5000; Date.now() < end; await sleep(500)) {
+          actual = await readField(current.frame, check.label).catch(() => undefined);
+          if (actual === undefined || same(actual, check.text)) break;
+        }
+        if (actual === undefined) continue;
+        check.done = true;
+        const ok = same(actual, check.text);
+        (report.checked ||= []).push({ label: check.label, expected: check.text, actual, ok });
+        if (!ok) report.failure ||= `"${check.label}" holds "${actual}", expected "${check.text}"`;
+      }
+    };
+    await readChecks();
+    // Fields on the other tabs are read by opening those tabs; the tab the task opened on is already in the report.
+    if (checking.some((c) => !c.done)) {
+      for (const name of await current.frame.evaluate(listTabs, SELECTORS).catch(() => [])) {
+        if (!checking.some((c) => !c.done) || name === tab) continue;
+        await openTab(current.frame, name);
+        await readChecks();
+      }
+    }
+    if (report.failure) break;
+    if (args.draft && !draftDone && buttons.includes(args.draft)) {
+      draftDone = true;
+      await pressButton(current.frame, args.draft);
+      let left = current;
+      for (const end = Date.now() + 30000; left && Date.now() < end; await sleep(1000)) left = await coach(3000);
+      report.draft = { button: args.draft, tab, closed: !left };
+      if (left) report.failure = `"${args.draft}" did not close the coach${left.info.alert ? `: ${left.info.alert}` : ''}`;
+      current = null;
+      break;
+    }
+    if (!forward) { report.failure = 'no forward button'; break; }
+    if (args['expect-blocked'] && !blockedChecked) {
+      blockedChecked = true;
+      const blocked = await checkBlocked(current.frame, forward, info.title, stem, forwardTab);
+      report.steps.at(-1).blocked = blocked;
+      if (!blocked.ok) { report.failure = blocked.failure; break; }
+    }
+    // A bar per tab means the finishing button sits on the last tab and checks every tab, so a filled run
+    // fills them all, not only the tab it presses on.
+    if (args.tabs || args['expect-blocked'] || (args.fill && forwardTab)) {
+      const visits = await walkTabs(current.frame, info.react, stem, forwardTab);
+      if (visits) report.steps.at(-1).tabs = visits;
+    }
+    await showForwardTab(current.frame, forwardTab);
+    if (args.fill) report.steps.at(-1).filled = await fill(current.frame, info.react, deep);
     // Compare against the screen as it is now (typed and filled), not as it was when first inspected.
     const now = await current.frame.evaluate(inspectCoach).catch(() => null);
     const before = now ? now.signature : signature;
-    await current.frame.evaluate((label) => {
-      const react = document.querySelector('.pp-app');
-      [...document.querySelectorAll(react ? '.pp-app .pp-actions button' : 'button')]
-        .find((b) => b.offsetParent && b.textContent.trim() === label).click();
-    }, info.button);
+    await pressButton(current.frame, info.button);
     let next = null;
     for (const end = Date.now() + 30000; Date.now() < end; await sleep(1000)) {
       next = await coach(3000);
@@ -310,11 +572,20 @@ try {
       report.failure = `stuck on "${info.title}" after pressing "${info.button}"${next.info.alert ? `: ${next.info.alert}` : ''}`;
       break;
     }
+    // The same coach, now showing error indicators: a required check cancelled the press.
+    const errorsLeft = next && next.info.title === info.title ? await next.frame.evaluate(visibleErrors, SELECTORS).catch(() => []) : [];
+    if (errorsLeft.length) {
+      report.failure = `blocked on "${info.title}" after pressing "${info.button}": ${errorsLeft.length} field(s) still show an error`;
+      break;
+    }
     current = next;
   }
   const unpressed = presses, untyped = typing.filter((t) => !t.done).map((t) => t.label);
   if (unpressed.length) report.unpressed = unpressed;
   if (untyped.length) report.untyped = untyped;
+  const unchecked = checking.filter((c) => !c.done).map((c) => c.label);
+  if (unchecked.length) report.failure ||= `fields never found to check: ${unchecked.join(', ')}`;
+  if (args.draft && !draftDone) report.failure ||= `no coach showed a "${args.draft}" button`;
   if (!report.failure && current) report.failure = `still on a coach after ${args['max-steps']} steps`;
   if (!report.failure && report.steps.some((s) => s.duplicate)) report.failure = 'duplicate screenshots';
   report.ok = !report.failure && report.errors.length === 0;

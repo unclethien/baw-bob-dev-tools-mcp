@@ -34,7 +34,9 @@
       "binding": null,
       "label": true,
       "options": [
-        {"name": "intro", "label": "Intro text", "type": "String"}
+        {"name": "intro", "label": "Intro text", "type": "String"},
+        {"name": "editLabel", "label": "Edit button label", "type": "String"},
+        {"name": "editTarget", "label": "Edit target path", "type": "String"}
       ],
       "boundary": false,
       "preview": {"value": null},
