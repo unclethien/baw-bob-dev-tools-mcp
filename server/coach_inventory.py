@@ -75,7 +75,7 @@ SUFFIX = " (Modernized)"
 MIN_CANDIDATE_FIELDS = 3
 # Keys that identify or hold parts of a coach spec, or that the inventory derives: never carried as an edit.
 NOT_EDITS = {"id", "name", "path", "viewId", "to", "fields", "sections", "coaches", "services", "buttons", "native", "dropped",
-             "groups", "groupViews", "groupCandidates", "source", "app", "acronym", "snapshot", "variable", "classRef", "reason"}
+             "groups", "groupViews", "groupCandidates", "source", "app", "acronym", "snapshot", "variable", "classRef", "reason", "objects", "tabBinding", "edit", "role", "blankRequired", "fresh", "tab"}
 GONE = object()  # a key the edit removed
 
 
@@ -150,7 +150,8 @@ class CoachReader:
     def read(self, layout):
         self.sections = [{"title": "", "fields": []}]
         self.buttons, self.native, self.dropped, self.leaves = [], [], [], []
-        self.tabs, self.header, self.widgets = False, {}, False
+        self.tabs, self.header, self.widgets, self.tab_binding, self.tab = False, {}, False, "", 0
+        self.edit = ""  # label of the Edit button of the Section that wraps what is being read
         self.hint = None  # title of the Panel or Section that wraps what is being read, for a group placed in it
         for el in [c for c in layout if local(c.tag) == "layoutItem"]:
             self.walk(el, top=True)
@@ -185,14 +186,16 @@ class CoachReader:
             section = self.sections[-1]
         else:  # the title of its own Section or Panel, not of a tab or Review panel around several groups
             section["title"] = title
-        section["group"] = g["base"]
+        section["group"], section["variable"] = g["base"], variable
         if "READONLY" in it["visibility"]:
             section["readonly"] = True
+            if self.edit:
+                section["edit"] = {"label": self.edit}
         hide = [g["optionPaths"][k] for k, v in it["config"].items() if v == "NONE" and k in g["optionPaths"]]
         if hide:
             section["hide"] = hide
         for f in g["items"]:
-            leaf = dict(f, binding=f"tw.local.{variable}.{f['path']}")
+            leaf = dict(f, binding=f"tw.local.{variable}.{f['path']}", group=g["base"])
             self.leaves.append(leaf)
             section["fields"].append(leaf)
         self.sections.append({"title": "", "fields": []})  # what follows the group is not part of it
@@ -210,18 +213,21 @@ class CoachReader:
         elif it["builder"] == "header":
             self.header = {"intro": it["config"].get("intro")}
         elif view == "Button" or (it["widget"] in CONTRACT and CONTRACT[it["widget"]]["boundary"]):
-            self.buttons.append(it)
+            self.buttons.append(dict(it, tab=self.tab) if in_tabs else it)
         elif view == "Custom HTML":
             self.dropped.append(f'{it["viewId"]} (Custom HTML)')
         elif view in CONTAINERS or it["children"]:
-            outer = self.hint
+            outer, outer_edit = self.hint, self.edit
+            if it["builder"] == "section":
+                self.edit = it["config"].get("editLabel") or ""
             if (view in ("Panel", "Collapsible Panel", "Well") or it["builder"] == "section") and it["label"]:
                 self.hint = it["label"]
             elif view == "Tab Section" or it["builder"] == "review":
-                self.hint = None
+                # A review panel around one group names it (the step's title); around several, each keeps its own.
+                self.hint = it["label"] if it["builder"] == "review" and it["label"] and len(it["children"]) == 1 else None
             if view == "Tab Section":
-                self.tabs = True
-                for kid in it["children"]:
+                self.tabs, self.tab_binding = True, it["binding"] or self.tab_binding
+                for self.tab, kid in enumerate(it["children"]):
                     self.section(self.item(kid)["label"])
                     self.walk(kid, in_tabs=True)
                 self.section("")
@@ -237,7 +243,7 @@ class CoachReader:
             else:
                 for kid in it["children"]:
                     self.walk(kid, in_tabs=in_tabs)
-            self.hint = outer
+            self.hint, self.edit = outer, outer_edit
         elif it["binding"].startswith("tw.local."):
             self.leaves.append(it)
             self.sections[-1]["fields"].append(it)
@@ -338,6 +344,23 @@ def flow_order(task):
     return order
 
 
+def flow_target(nodes, flows, start):
+    """Where the flow from a node goes before it comes back to a coach: ("draft", None) when it reaches the Postpone Task event,
+    ("coach", id) for the first coach it reaches, or ("end", None)."""
+    seen, queue = set(), [start]
+    while queue:
+        node = queue.pop(0)
+        if node in seen or node not in nodes:
+            continue
+        seen.add(node)
+        if any(local(c.tag) == "postponeTaskEventDefinition" for c in nodes[node]):
+            return "draft", None
+        if local(nodes[node].tag) == "formTask":
+            return "coach", node
+        queue += [f.get("targetRef") for f in flows if f.get("sourceRef") == node]
+    return "end", None
+
+
 def inventory_service(root, names, groups=None):
     process = root.find("process")
     task = first(process, "userTaskImplementation")
@@ -347,7 +370,7 @@ def inventory_service(root, names, groups=None):
     forms = [nodes[i] for i in flow_order(task) if i in nodes and local(nodes[i].tag) == "formTask"]
     if not forms:
         return None
-    variables = {v.get("name"): v.findtext("classId") for v in process.findall("processVariable")}
+    variables = {v.get("name"): v.findtext("classId") for v in process.findall("processVariable") + process.findall("processParameter")}
     flows = [f for f in task if local(f.tag) == "sequenceFlow"]
     service = {"id": process.get("id"), "name": process.get("name"), "modernize": True, "coaches": []}
 
@@ -357,20 +380,24 @@ def inventory_service(root, names, groups=None):
         readers.append((form, reader))
     react = [r for _, r in readers for leaf in r.leaves + r.native if leaf["view"].startswith(SCREEN_VIEWS)]
     react += [b for _, r in readers for b in r.dropped if any(name in b for name in SCREEN_VIEWS)]
-    counts = Counter(leaf["binding"].split(".")[2] for _, r in readers for leaf in r.leaves
-                     if (leaf["view"] in FIELD_TYPES or leaf["widget"]) and leaf["binding"].count(".") >= 3)
+    bound = [leaf for _, r in readers for leaf in r.leaves
+             if (leaf["view"] in FIELD_TYPES or leaf["widget"]) and leaf["binding"].count(".") >= 3]
+    counts = Counter(leaf["binding"].split(".")[2] for leaf in bound)
+    own_counts = Counter(leaf["binding"].split(".")[2] for leaf in bound if "group" not in leaf)  # fields a group does not place
     built = any(r.widgets for _, r in readers)
     if react or built or not counts:
         service["modernize"] = False
         service["reason"] = ("already uses React screens" if react else "already built from Modernizer Widgets" if built
                              else "no fields bound to a business object")
-    variable = counts.most_common(1)[0][0] if counts else ""
+    variable = (own_counts or counts).most_common(1)[0][0] if counts else ""
     service["variable"], service["classRef"] = variable, variables.get(variable, "")
-    if len(counts) > 1 and service["modernize"]:
-        names = ", ".join(f"tw.local.{name}" for name in sorted(counts))
+    service["objects"] = [variable, *sorted(set(counts) - {variable})] if variable else []
+    if len(own_counts) > 1 and service["modernize"]:
+        names = ", ".join(f"tw.local.{name}" for name in sorted(own_counts))
         service["modernize"], service["reason"] = False, f"binds fields to several business objects ({names})"
-    if variable and not service["classRef"] and service["modernize"]:
-        service["modernize"], service["reason"] = False, f"no declared type for tw.local.{variable}"
+    untyped = next((name for name in service["objects"] if not variables.get(name)), "")
+    if untyped and service["modernize"]:
+        service["modernize"], service["reason"] = False, f"no declared type for tw.local.{untyped}"
     previews = {f"{g['base']} Preview" for g in (groups or {}).values()} | {f"{g['base']}{SUFFIX} Preview" for g in (groups or {}).values()}
     if service["name"] in previews:
         service["modernize"], service["reason"] = False, "the Preview service of a reusable group"
@@ -387,6 +414,8 @@ def inventory_service(root, names, groups=None):
                 else:
                     native.append({"viewId": it["viewId"], "view": it["view"], "label": it["label"], "binding": it["binding"]})
             section["fields"] = kept
+            if section.get("group"):
+                section["classRef"] = variables.get(section["variable"], "")
         buttons = []
         for b in reader.buttons:
             target = next((nodes[f.get("targetRef")].get("name") for f in flows
@@ -396,7 +425,14 @@ def inventory_service(root, names, groups=None):
                 primary = (b["config"].get("kind") or "").lower() in ("", "primary", "danger")
             else:
                 primary = b["colorStyle"] == "P" or (b["colorStyle"] != "D" and not BACKWARD.search(b["label"]))
-            button = {"label": b["label"] or b["viewId"], "viewId": b["viewId"], "primary": primary, "to": target or "(no flow: stays on the coach)"}
+            button = {"label": b["label"] or b["viewId"], "viewId": b["viewId"], "primary": primary, "to": target or "(no flow: stays on the coach)",
+                      **({"tab": b["tab"]} if "tab" in b else {})}  # the tab it sits in, on a coach with tabs
+            ahead = next((f.get("targetRef") for f in flows if f.get("sourceRef") == form.get("id") and first(f, "coachEventPath") is not None
+                          and first(f, "coachEventPath").text == b["viewId"]), "")
+            where, coach = flow_target(nodes, flows, ahead) if ahead else ("coach", form.get("id"))
+            order = [f.get("id") for f in forms]
+            button["role"] = ("draft" if where == "draft" else "stay" if coach == form.get("id")
+                              else "back" if coach in order and order.index(coach) < order.index(form.get("id")) else "finish")
             kind = b["widget"] if b["widget"] in CONTRACT else "button"
             if kind != "button":  # another boundary widget of the toolkit
                 button["type"] = kind
@@ -416,6 +452,7 @@ def inventory_service(root, names, groups=None):
             "sectionStyle": "tabs" if reader.tabs else "stack",
             "sections": [s for s in reader.sections if s["fields"]],
             "buttons": buttons, "native": native, "dropped": reader.dropped,
+            **({"tabBinding": reader.tab_binding} if reader.tab_binding else {}),
         })
     return service
 
@@ -436,7 +473,8 @@ def read_groups(twx, package, names):
         items = [dict(it, path=it["binding"][len(f"tw.local.{binding}."):]) for s in reader.sections for it in s["fields"]]
         option_paths = {it["visibility"][len("tw.options."):]: it["path"] for it in items if it["visibility"].startswith("tw.options.")}
         groups[oid] = {"name": html.unescape(name), "base": html.unescape(name).removesuffix(SUFFIX), "items": items,
-                       "optionPaths": option_paths, "changedInBaw": group_views.changed_in_baw(text)}
+                       "optionPaths": option_paths, "changedInBaw": group_views.changed_in_baw(text), "variable": binding,
+                       "blankRequired": "function blankRequired" in text, "fresh": "freshForm" in text}
     return groups
 
 
@@ -471,14 +509,20 @@ def inventory(twx_path: Path):
                 service = inventory_service(root, names, groups)
                 if service:
                     services.append(service)
-    placed = {sec["group"]: sec["fields"] for s in services if s["modernize"] for c in s["coaches"] for sec in c["sections"] if sec.get("group")}
+    placed = {}
+    for s in (s for s in services if s["modernize"]):
+        for sec in (sec for c in s["coaches"] for sec in c["sections"] if sec.get("group")):
+            placed.setdefault(sec["group"], dict(sec))
+    bases = {g["base"]: g for g in groups.values()}
     candidates = group_candidates(services)
     for sec in (sec for s in services for c in s["coaches"] for sec in c["sections"] if sec.get("group")):
         del sec["fields"]  # listed once, under "groups"; modernize_coaches gives every placement the group's fields
     return {
         "source": twx_path.name, "app": project.group(1), "acronym": project.group(2), "snapshot": snapshot.group(1),
         "theme": None, "services": services,
-        "groups": [{"name": name, "fields": fields} for name, fields in placed.items()],
+        "groups": [{"name": name, "variable": sec["variable"], "classRef": sec["classRef"],
+                    "blankRequired": bases.get(name, {}).get("blankRequired", False), "fresh": bases.get(name, {}).get("fresh", False),
+                    "fields": sec["fields"]} for name, sec in placed.items()],
         "groupViews": [{"name": g["name"], "fieldCount": len(g["items"]), "changedInBaw": g["changedInBaw"]} for g in groups.values()],
         "groupCandidates": candidates,
     }
@@ -561,7 +605,8 @@ def summary(spec):
     sizes.update({g["name"]: len(g["fields"]) for g in spec.get("groups") or []})
     for s in spec["services"]:
         state = "modernize" if s["modernize"] else f'skip: {s["reason"]}'
-        lines.append(f'  {s["name"]} [{state}] variable tw.local.{s["variable"]}')
+        objects = ", ".join(f"tw.local.{o}" for o in s.get("objects") or [s["variable"]])
+        lines.append(f'  {s["name"]} [{state}] binds {objects}')
         for c in s["coaches"]:
             fields = sum(len(sec["fields"]) if "fields" in sec else sizes.get(sec.get("group"), 0) for sec in c["sections"])
             buttons = ", ".join(f'{b["label"]} -> {b["to"]}' for b in c["buttons"])

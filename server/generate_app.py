@@ -771,7 +771,7 @@ def form_coach(spec):
     lay = Layout()
     tabs_id = lay._item_id("Tab Section")
     per_tab, draft = bool(form.get("tabNextLabel")), form.get("draftLabel")
-    lay.fresh = bool(draft)  # editable group placements get the freshForm option
+    lay.fresh = fresh_form(spec)  # editable group placements get the freshForm option
     last = len(spec["steps"]) - 1
     tabs, contents, drafts = [], [], {}
     for n, s in enumerate(spec["steps"]):
@@ -858,6 +858,12 @@ def draft_label(spec):
     return (spec.get("form") or {}).get("draftLabel") if spec.get("layout") == "tabs" else None
 
 
+def fresh_form(spec):
+    """Whether the tabbed form tracks that it was already shown (tw.local.freshForm), so its groups clear BAW's load
+    defaults (0, false) only the first time: a reopened draft and a return from the review page keep the answers."""
+    return bool(draft_label(spec)) or (spec.get("layout") == "tabs" and bool(spec.get("review", True)))
+
+
 def init_script(spec, only=None):
     """Creates every business object, or only the one with variable `only` (a process task gets them from the process;
     start fresh only the first time). A Boolean checkbox starts false; a Boolean Radio starts null, so the user has to answer."""
@@ -874,7 +880,7 @@ def init_script(spec, only=None):
         if var == first and spec.get("_database"):
             lines.append(f'tw.local.{var}.{MESSAGE} = "";')
         blocks.append(f"if (!tw.local.{var}) {{\n  " + "\n  ".join(lines) + "\n}" if spec.get("process") else "\n".join(lines))
-    if draft_label(spec) and not only:  # a task resumed from a draft keeps freshForm false, so its answers stay as typed
+    if fresh_form(spec) and not only:  # a resumed draft or a return from review keeps freshForm false, so its answers stay
         blocks.append("if (tw.local.freshForm !== false) {\n  tw.local.freshForm = true;\n}")
     return "\n".join(blocks)
 
@@ -915,7 +921,13 @@ def flow(spec, run_sql=None):
     flows += [(f"s{i}", "end", f"cancel{i}", "bottomCenter", "bottomCenter") for i in cancels]
     if review:
         steps.append(("review", (review if isinstance(review, dict) else {}).get("title", "Review and Submit"), review_coach(spec)))
-        flows += [("review", f"s{count - 1}", "backReview", "topCenter", "topCenter"), ("review", submit, "submit", "rightCenter", "leftCenter")]
+        back = f"s{count - 1}"
+        if fresh_form(spec):  # the form comes back already filled: its groups must not clear the 0 and No answers again
+            steps.append(("seen", "Keep answers", "tw.local.freshForm = false;"))
+            flows += [("review", "seen", "backReview", "topCenter", "topCenter"), ("seen", back, None, "leftCenter", "rightCenter")]
+        else:
+            flows.append(("review", back, "backReview", "topCenter", "topCenter"))
+        flows.append(("review", submit, "submit", "rightCenter", "leftCenter"))
     if plan:
         steps += save_check_steps(spec)
         flows += save_check_flows(spec, "assign" if confirm else "save")
@@ -1152,7 +1164,7 @@ def group_objects(spec, bo_id, base=None, replace=()):
         view_id, version, xml = group_views.group_view(acronym, g["name"], var, f"/{bo_id[var]}", f"/{type_id}", group_fields(g), items, "generate_app",
                                                          blank_required=any(f.get("control") == "Radio" or (f.get("required") and f.get("type") in NUMBER_TYPES)
                                                                             for f in g["fields"]),
-                                                         fresh_ref=f"{TWSYS}/{SYSTEM_TYPES['Boolean']}" if draft_label(spec) else None)
+                                                         fresh_ref=f"{TWSYS}/{SYSTEM_TYPES['Boolean']}" if fresh_form(spec) else None)
         GROUPS[g["name"]] = (view_id, group_fields(g))
         kept = None if g["name"] in replace else kept_view(base, view_id, bo_id[var], {f["name"] for f in fields(spec)})
         if kept:
@@ -1193,8 +1205,11 @@ def generate(spec: dict, dest: Path, toolkit: Path, base: Path | None = None, re
     run_sql = sql_service.database_services(spec["_database"], bo["name"], target["sql"]) if spec.get("_database") else None
     steps, flows = flow(spec, run_sql)
     service = {"name": svc["name"], "description": svc.get("description", svc["name"])}
-    if draft_label(spec):  # local variables a postponed task keeps: whether the form is new, and the tab the user left
-        service["variables"] = [("freshForm", "Boolean", "2056." + uid()), ("currentTab", "Integer", "2056." + uid())]
+    # Local variables: whether the form is new, and (for a postponed task) the tab the user left.
+    variables = [("freshForm", "Boolean", "2056." + uid())] if fresh_form(spec) else []
+    variables += [("currentTab", "Integer", "2056." + uid())] if draft_label(spec) else []
+    if variables:
+        service["variables"] = variables
     pair = lambda: ("2055." + uid(), "2055." + uid())
     io = lambda: ([pair() for _ in objects] if several else pair()) if proc else None
     variables = [o["variable"] for o in objects]

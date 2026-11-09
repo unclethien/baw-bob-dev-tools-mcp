@@ -9,7 +9,8 @@
 // buttons in order, each on the first coach that shows it, instead of the forward button.
 // --value "Label=text" (repeatable) types the text into the field with that label, on the first coach
 // that has such a field, before any button of that coach is pressed. It works in classic UI Toolkit
-// coaches and in React ones. Buttons never pressed and values never typed are listed in the report.
+// coaches and in React ones, for text, number, radio, checkbox and switch fields (a checkbox or switch
+// takes yes or no). Buttons never pressed and values never typed are listed in the report.
 //
 // Logs in with BAW_URL, BAW_USER and BAW_PASSWORD or BAW_APIKEY from the environment, else from the
 // BAW_* keys of the repository's .env (other keys are never read; token kept in memory, never printed), opens the service's run URL,
@@ -20,10 +21,11 @@
 // tab, waits for its content, fills its fields (with --fill; a Yes option is chosen for Boolean radios, and a
 // date field that refuses typed text is set directly) and takes a screenshot named <step>-<screen>-<tab>.png.
 // --expect-blocked presses the forward button once on the first coach with nothing filled and passes only if
-// the coach stays, visible error indicators appear and the first tab with an error is the one on screen; then
-// the run goes on as usual. When every tab has its own button bar, the forward button is the one on the last
+// the coach stays, visible error indicators appear and the first tab with an error is the one on screen. On a React coach with tabs it
+// then fills the first tab only and presses forward again: the coach must stay and show the first tab that
+// still has an error (reported as blocked.partial). Then the run goes on as usual. When every tab has its own button bar, the forward button is the one on the last
 // tab (the others only switch tabs): the run opens that tab to press it, and goes back to it after --tabs. --draft "Save as Draft" types the --value fields, presses that button on the first
-// coach that shows it and passes when the coach closes. --check "Label=text" (repeatable) reads the field with
+// coach that shows it and passes when the coach closes; the report names the tab that was open (the resumed draft has to reopen on it). --check "Label=text" (repeatable) reads the field with
 // that label on the first coach that has it and fails when it does not hold the text (a resumed draft).
 // Fails (exit 1) on page errors, a screen that does not change after a press, duplicate
 // screenshots, or not reaching the end within --max-steps.
@@ -159,8 +161,12 @@ function tabState(sel) {
   return { active: [...document.querySelectorAll(sel.activeTab)].find((el) => el.offsetParent)?.textContent.trim(), size: document.body.innerText.length };
 }
 function visibleErrors(sel) {
+  const clean = (s) => (s || '').replace(/\s+/g, ' ').trim();
+  // A flagged input has no text of its own: report the message it points to, else its label.
+  const linked = (el) => ['aria-errormessage', 'aria-describedby'].flatMap((a) => (el.getAttribute(a) || '').split(/\s+/))
+    .map((id) => id && clean(document.getElementById(id)?.textContent)).find(Boolean);
   return [...document.querySelectorAll(sel.error)].filter((el) => el.offsetParent && !el.querySelector(sel.error))
-    .map((el) => el.textContent.replace(/\s+/g, ' ').trim().slice(0, 120));
+    .map((el) => (clean(el.textContent) || linked(el) || clean(el.labels?.[0]?.textContent) || clean(el.getAttribute('aria-label'))).slice(0, 120));
 }
 
 // Runs inside each frame: the visible field whose label reads `label` (UI Toolkit labels are not always
@@ -191,7 +197,8 @@ function findField(label) {
 function radioGroup(label, pick) {
   const norm = (s) => (s || '').replace(/\s+/g, ' ').replace(/[\s*:?]+$/, '').trim().toLowerCase();
   const want = norm(label);
-  const groups = (inputs) => [...new Set(inputs.map((el) => el.closest('.CoachView') || el.parentElement))];
+  // A React radio group is a fieldset with a legend; a classic one is its CoachView.
+  const groups = (inputs) => [...new Set(inputs.map((el) => el.closest('.pp-app fieldset') || el.closest('.CoachView') || el.parentElement))];
   const radios = [...document.querySelectorAll('input[type=radio]')];
   const views = groups(radios.filter((el) => el.offsetParent));
   const caption = (view) => norm(view.querySelector('.control-label, legend, label:not(:has(input))')?.textContent);
@@ -199,22 +206,54 @@ function radioGroup(label, pick) {
   const elsewhere = !exact && groups(radios.filter((el) => !el.offsetParent)).some((v) => caption(v) === want);
   const view = exact || (elsewhere ? null : views.find((v) => caption(v).includes(want)));
   if (!view) return null;
+  // React hides the input behind its label, so the label (found by `for`) carries the text and takes the click.
+  const labelFor = (input) => (input.id ? [...document.querySelectorAll('label')].find((l) => l.htmlFor === input.id) : null);
   const options = [...view.querySelectorAll('input[type=radio]')].map((input) => ({
-    input, text: (input.closest('label')?.textContent || input.nextElementSibling?.textContent || input.value || '').trim() }));
+    input, label: labelFor(input), text: (input.closest('label')?.textContent || labelFor(input)?.textContent || input.nextElementSibling?.textContent || input.value || '').trim() }));
   const chosen = pick === undefined ? null : options.find((o) => norm(o.text) === norm(pick));
   if (pick !== undefined && !chosen) return { missing: options.map((o) => o.text) };
-  if (chosen) chosen.input.click();
+  if (chosen) (view.closest('.pp-app') && chosen.label || chosen.input).click();
   return options.map((o) => ({ text: o.text, checked: o.input.checked }));
 }
 
+// Runs inside each frame: the visible checkbox or switch (a Toggle widget) whose label reads `label`, as
+// {on}; when `set` is true or false it is clicked until it matches. null when there is no such control.
+function toggleOf(label, set) {
+  const norm = (s) => (s || '').replace(/\s+/g, ' ').replace(/[\s*:?]+$/, '').trim().toLowerCase();
+  const labelFor = (el) => (el.id ? [...document.querySelectorAll('label')].filter((l) => l.htmlFor === el.id) : []);
+  const labelsOf = (el) => {
+    const found = [el.getAttribute('aria-label'), ...labelFor(el).map((l) => l.textContent), el.closest('label')?.textContent];
+    for (const id of (el.getAttribute('aria-labelledby') || '').split(/\s+/)) found.push(document.getElementById(id)?.textContent);
+    return found.map(norm).filter(Boolean);
+  };
+  // React hides a checkbox's input behind its label, so the label is what is visible.
+  const shown = (el) => !!el.offsetParent || labelFor(el).some((l) => !!l.offsetParent) || !!el.closest('label')?.offsetParent;
+  const all = [...document.querySelectorAll('input[type=checkbox], button[role=switch]')];
+  const want = norm(label);
+  const exact = all.filter(shown).find((el) => labelsOf(el).includes(want));
+  // A control with exactly this label on another tab is the one meant.
+  if (!exact && all.some((el) => !shown(el) && labelsOf(el).includes(want))) return null;
+  const el = exact || all.filter(shown).find((e) => labelsOf(e).some((t) => t.includes(want)));
+  if (!el) return null;
+  const isSwitch = el.getAttribute('role') === 'switch';
+  const isOn = () => (isSwitch ? el.getAttribute('aria-checked') === 'true' : el.checked);
+  if (set !== undefined && set !== isOn()) (isSwitch ? el : labelFor(el)[0] || el.closest('label') || el).click();
+  return { on: isOn() };
+}
+
 // Type text into the field labelled `label`, replacing what is there (a radio group picks the option with that
-// text, e.g. Yes or No). Returns false when the coach has no such field.
+// text, e.g. Yes or No; a checkbox or switch is turned on by yes/true/on/checked/1 and off by no/false/off/unchecked/0).
+// Returns false when the coach has no such field.
 async function typeInto(frame, label, text) {
   const field = (await frame.evaluateHandle(findField, label)).asElement();
   if (!field) {
     const radios = await frame.evaluate(radioGroup, label, text);
     if (radios && radios.missing) throw new Error(`"${label}" has no option "${text}" (it has ${radios.missing.join(', ')})`);
-    return !!radios;
+    if (radios) return true;
+    const word = text.trim().toLowerCase();
+    const set = /^(yes|true|on|checked|1)$/.test(word) ? true : /^(no|false|off|unchecked|0)$/.test(word) ? false : undefined;
+    if (set === undefined && await frame.evaluate(toggleOf, label)) throw new Error(`"${label}" is a checkbox or switch: give it yes or no, not "${text}"`);
+    return set !== undefined && !!(await frame.evaluate(toggleOf, label, set));
   }
   if (await field.evaluate((el) => el.tagName === 'SELECT')) {
     const choice = await field.evaluate((el, want) => [...el.options].find((o) => o.value === want || o.textContent.trim() === want)?.value, text);
@@ -234,7 +273,9 @@ async function readField(frame, label) {
   const field = (await frame.evaluateHandle(findField, label)).asElement();
   if (field) return field.evaluate((el) => (el.tagName === 'SELECT' ? el.selectedOptions[0]?.textContent.trim() : el.value));
   const radios = await frame.evaluate(radioGroup, label);
-  return radios ? radios.find((o) => o.checked)?.text ?? '' : undefined;
+  if (radios) return radios.find((o) => o.checked)?.text ?? '';
+  const toggle = await frame.evaluate(toggleOf, label);
+  return toggle ? (toggle.on ? 'Yes' : 'No') : undefined;
 }
 
 // Press the visible button with exactly this text.
@@ -254,16 +295,20 @@ async function fill(frame, react, refine = false) {
   const typable = 'input:not([readonly]):not([disabled]):not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=button]):not([type=submit])';
   for (const input of await frame.$$(`${at}${typable}, ${at}textarea:not([readonly]):not([disabled])`)) {
     // A classic UI Toolkit control is a text input inside a CoachView whose class names the control.
+    // A Carbon number input is a text input inside the number widget (inputmode decimal).
     const { empty, placeholder, visible, type, control } = await input.evaluate((el) => {
       const view = el.closest('.CoachView');
       const is = (name) => !!view && (view.classList.contains(name) || (view.getAttribute('data-type') || '').endsWith(`.${name}`));
-      return { empty: !el.value, placeholder: el.placeholder, visible: !!el.offsetParent, type: el.type, control: is('Integer') || is('Decimal') ? 'number' : is('Date_Picker') || is('Date_Time_Picker') ? 'date' : '' };
+      const number = is('Integer') || is('Decimal') || !!el.closest('.cds--number') || el.inputMode === 'decimal' || el.inputMode === 'numeric';
+      // A shown 0 is an answer (a resumed draft's 0 must survive); a new form's required numbers start blank.
+      return { empty: !el.value, placeholder: el.placeholder, visible: !!el.offsetParent, type: el.type, control: number ? 'number' : is('Date_Picker') || is('Date_Time_Picker') ? 'date' : '' };
     });
     if (!empty || !visible) continue;
     const now = new Date();
     const today = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
     const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const text = type === 'number' || control === 'number' ? '1' : type === 'date' ? iso : placeholder === 'mm/dd/yyyy' || control === 'date' ? today : placeholder || 'Test';
+    await input.evaluate((el) => { if (el.value) { el.focus(); try { el.select(); } catch { /* types without a selection */ } } }); // replaces a shown 0
     await input.type(text);
     await input.press('Tab');
     // A classic date picker can drop typed text: set the value and tell the widget it changed.
@@ -313,12 +358,15 @@ async function fill(frame, react, refine = false) {
     }, refine);
   }
   for (const group of await frame.$$('.pp-app fieldset')) {
-    const picked = await group.evaluate((el) => {
+    const picked = await group.evaluate((el, refine) => {
       const radios = [...el.querySelectorAll('input[type=radio]:not([readonly]):not([disabled])')];
       if (!radios.length || radios.some((r) => r.checked) || !el.offsetParent) return false;
-      el.querySelector(`label[for="${radios[0].id}"]`)?.click();
+      // A Boolean radio gets its Yes option; any other group its first.
+      const labelOf = (r) => el.querySelector(`label[for="${CSS.escape(r.id)}"]`);
+      const radio = refine && radios.find((r) => /^yes$/i.test(labelOf(r)?.textContent.trim())) || radios[0];
+      labelOf(radio)?.click();
       return true;
-    });
+    }, refine);
     if (picked) count++;
   }
   return count;
@@ -434,7 +482,9 @@ try {
     return visits;
   };
   // Press the forward button with nothing filled: the coach must stay, show error indicators and have the first tab with an error open.
-  const checkBlocked = async (frame, label, title, stem, tab) => {
+  // On a React screen it then fills the first tab only and presses forward again: that must block too, with the first
+  // tab that still has an error open (reported as `partial`).
+  const checkBlocked = async (frame, label, title, stem, tab, react) => {
     const result = { button: label, stayed: false, errors: [] };
     const names = await frame.evaluate(listTabs, SELECTORS).catch(() => []);
     const postsBefore = posts;
@@ -452,17 +502,62 @@ try {
     await shoot(after.frame, result.screenshot);
     result.tab = await after.frame.evaluate(activeTabName, SELECTORS).catch(() => undefined);
     if (names.length > 1) {
+      const errorTabs = [];
       for (const name of names) { // the first tab, in tab order, that holds an error indicator
         await openTab(after.frame, name);
-        if ((await after.frame.evaluate(visibleErrors, SELECTORS).catch(() => [])).length) { result.firstErrorTab = name; break; }
+        if ((await after.frame.evaluate(visibleErrors, SELECTORS).catch(() => [])).length) {
+          errorTabs.push(name);
+          if (!result.firstErrorTab) result.firstErrorTab = name;
+          if (!react) break;
+        }
       }
+      if (react) result.errorTabs = errorTabs;
       if (result.tab) await openTab(after.frame, result.tab);
     }
     if (!result.stayed) result.failure = `"${label}" moved on with nothing filled: the required check did not block`;
     else if (!result.errors.length) result.failure = `the coach stayed after "${label}" but shows no error indicator (${SELECTORS.error})`;
     else if (result.firstErrorTab && result.tab !== result.firstErrorTab) result.failure = `tab "${result.tab}" is open but the first tab with an error is "${result.firstErrorTab}"`;
     result.ok = !result.failure;
+    if (result.ok && react && names.length > 1) {
+      if (!result.errorTabs.some((name) => name !== names[0])) {
+        result.partial = { skipped: 'only the first tab has errors, so filling it would let the coach move on' };
+      } else {
+        result.partial = await checkPartial(after.frame, label, title, stem, tab, names);
+        result.ok = result.partial.ok;
+        result.failure = result.partial.failure;
+      }
+    }
     return result;
+  };
+  // Fill the first tab only, press forward and expect to be blocked on the first tab that is still incomplete.
+  const checkPartial = async (frame, label, title, stem, tab, names) => {
+    const partial = { filledTab: names[0], button: label, stayed: false, errors: [] };
+    await openTab(frame, names[0]);
+    partial.filled = await fill(frame, true, true);
+    const postsBefore = posts;
+    await showForwardTab(frame, tab);
+    await pressButton(frame, label);
+    for (const end = Date.now() + 10000; Date.now() < end && !partial.errors.length; await sleep(300)) {
+      partial.errors = await frame.evaluate(visibleErrors, SELECTORS).catch(() => []);
+    }
+    const after = await coach(3000);
+    partial.stayed = !!after && (tab || after.info.buttons.includes(label)) && after.info.title === title;
+    partial.requestsSent = posts - postsBefore;
+    if (!after) return { ...partial, ok: false, failure: `"${label}" moved on with only the first tab ("${names[0]}") filled: the other tabs' required checks did not block` };
+    partial.screenshot = path.join(args.out, `${stem}-blocked-partial.png`);
+    await shoot(after.frame, partial.screenshot);
+    partial.tab = await after.frame.evaluate(activeTabName, SELECTORS).catch(() => undefined);
+    for (const name of names) { // the first tab, in tab order, that still holds an error indicator
+      await openTab(after.frame, name);
+      if ((await after.frame.evaluate(visibleErrors, SELECTORS).catch(() => [])).length) { partial.firstErrorTab = name; break; }
+    }
+    if (partial.tab) await openTab(after.frame, partial.tab);
+    if (!partial.stayed) partial.failure = `"${label}" moved on with only the first tab ("${names[0]}") filled: the other tabs' required checks did not block`;
+    else if (!partial.errors.length) partial.failure = `the coach stayed after "${label}" with only the first tab filled but shows no error indicator (${SELECTORS.error})`;
+    else if (partial.firstErrorTab && partial.tab !== partial.firstErrorTab) partial.failure = `with the first tab filled, tab "${partial.tab}" is open but the first tab with an error is "${partial.firstErrorTab}"`;
+    else if (partial.tab === names[0]) partial.failure = `with the first tab filled, the first tab ("${names[0]}") is still the one with errors: the filled values were not accepted`;
+    partial.ok = !partial.failure;
+    return partial;
   };
   const hashes = new Set();
   let blockedChecked = false, draftDone = false;
@@ -482,7 +577,9 @@ try {
         if (await typeInto(current.frame, field.label, field.text)) { field.done = true; typed.push(field.label); }
       }
     };
-    await typePending();
+    // The blocked check presses forward on the empty screen, so values wait until it has run.
+    const blockFirst = args['expect-blocked'] && !blockedChecked;
+    if (!blockFirst) await typePending();
     // A draft run types the fields of every tab and stays on the last tab it typed on, so the tab the draft is
     // saved from (and the one the task reopens on) is not the first.
     if (args.draft && typing.some((t) => !t.done)) {
@@ -547,9 +644,13 @@ try {
     if (!forward) { report.failure = 'no forward button'; break; }
     if (args['expect-blocked'] && !blockedChecked) {
       blockedChecked = true;
-      const blocked = await checkBlocked(current.frame, forward, info.title, stem, forwardTab);
+      const blocked = await checkBlocked(current.frame, forward, info.title, stem, forwardTab, info.react);
       report.steps.at(-1).blocked = blocked;
       if (!blocked.ok) { report.failure = blocked.failure; break; }
+    }
+    if (blockFirst) {
+      await typePending();
+      if (typed.length) report.steps.at(-1).typed = typed;
     }
     // A bar per tab means the finishing button sits on the last tab and checks every tab, so a filled run
     // fills them all, not only the tab it presses on.

@@ -11,7 +11,20 @@ export function fieldKind(field) {
   }[field.type] || 'text';
 }
 
-const optionLabel = (field, value) => (field.options || []).find((o) => o.value === value)?.label ?? value;
+// Option values may be booleans or numbers while the browser hands back text, so options compare as strings.
+export const optionKey = (value) => (value === null || value === undefined ? '' : String(value));
+
+const optionLabel = (field, value) => (field.options || []).find((o) => optionKey(o.value) === optionKey(value))?.label ?? value;
+
+// What a picked option writes to the binding: true/false when the options are exactly those two, numbers when every
+// option is a number, otherwise the text. Nothing picked (the blank item) writes null.
+export function optionValue(field, picked) {
+  if (picked === '' || picked === null || picked === undefined) return null;
+  const keys = (field.options || []).map((o) => optionKey(o.value));
+  if (keys.length === 2 && keys.includes('true') && keys.includes('false')) return picked === 'true';
+  if (keys.length && keys.every((key) => key.trim() !== '' && Number.isFinite(Number(key)))) return Number(picked);
+  return picked;
+}
 
 // A field may carry its own display(field, value) and isEmpty(field, value) (a widget of its own kind); they win.
 export function formatValue(field, value) {
@@ -19,7 +32,7 @@ export function formatValue(field, value) {
   const kind = fieldKind(field);
   if (kind === 'checkbox') return value ? 'Yes' : 'No';
   if (kind === 'date') return toDate(value)?.toLocaleDateString() || '—';
-  if (kind === 'select' || kind === 'radio') return optionLabel(field, value) || '—';
+  if (kind === 'select' || kind === 'radio') return value === null || value === undefined || value === '' ? '—' : String(optionLabel(field, value));
   return value === 0 ? '0' : value || '—';
 }
 
