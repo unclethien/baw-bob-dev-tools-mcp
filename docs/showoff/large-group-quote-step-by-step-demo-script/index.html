@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo script · Bob builds the Large Group Quote app step by step</title>
+  <meta name="description" content="A demo script for a client team: IBM Bob builds the Large Group Fully Insured Sales app in BAW from the client's Word document, one heading at a time, checking with the presenter after each step.">
+  <script>
+    // Apply the saved theme before first paint.
+    try {
+      const t = localStorage.getItem('demo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/sections.css">
+  <noscript><style>[data-cues] > [role="tabpanel"] { grid-area: auto !important; visibility: visible !important; }</style></noscript>
+</head>
+<body>
+  <a class="skip" href="#hero">Skip to the script</a>
+
+  <header class="masthead">
+    <a class="wordmark" href="#hero"><span class="wordmark-ibm">IBM</span><span>Demo script</span><span class="wordmark-sub">Large Group quote, step by step</span></a>
+    <div class="controls">
+      <button class="ctl timer" type="button" data-timer aria-pressed="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+        <span>Timer</span>
+        <output class="timer-read" aria-live="off">00:00</output>
+      </button>
+      <button class="ctl theme" type="button" data-theme-toggle aria-label="Theme: system">
+        <svg class="ico ico-system" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12"/><path d="M8 20h8M12 16v4"/></svg>
+        <svg class="ico ico-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="ico ico-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        <span class="theme-label" data-theme-label>System</span>
+      </button>
+    </div>
+  </header>
+
+
+  <!-- Run of show -->
+  <nav class="rail" aria-label="Run of show">
+    <ol>
+      <li><a href="#hero"><time>Demo</time><span>Overview</span></a></li>
+      <li><a href="#prep"><time>T&minus;30</time><span>Before</span></a></li>
+      <li><a href="#input"><time>Part 1</time><span>The input</span></a></li>
+      <li><a href="#design"><time>Part 2</time><span>Steps 1&ndash;5</span></a></li>
+      <li><a href="#build"><time>Part 3</time><span>Steps 6&ndash;8</span></a></li>
+      <li><a href="#check"><time>Part 4</time><span>Ten checks</span></a></li>
+      <li><a href="#live"><time>Part 5</time><span>Live moment</span></a></li>
+      <li><a href="#close"><time>Part 6</time><span>Close</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <!-- HERO ------------------------------------------------------------ -->
+    <section id="hero" class="section hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="kicker">IBM Bob × BAW Dev Tools MCP · demo script</p>
+        <h1 id="hero-title" class="display">From the client's Word document to a BAW app, one heading at a time.</h1>
+        <p class="lead">The client wants to see how much of the BAW work <b>IBM Bob generates</b>, so their developers do not have to build all the BAW artifacts by hand. Bob reads the client's Word document and screenshots, turns the document's headings into a <b>to-do list</b>, and builds the <b>Large Group Fully Insured Sales</b> app one step at a time. After every step it shows what it made and <b>waits for you</b>.</p>
+        <dl class="figures" aria-label="At a glance">
+          <div><dt>8</dt><dd>steps, one per heading</dd></div>
+          <div><dt>45</dt><dd>required fields</dd></div>
+          <div><dt>2</dt><dd>tasks: Generate and Review Quote</dd></div>
+          <div><dt>9</dt><dd>answers from you</dd></div>
+          <div class="is-new"><dt>0</dt><dd>developer edits in BAW</dd></div>
+        </dl>
+        <p class="fine">The app was checked on the test server on 6 November 2026. The step-by-step stops are new: after the Bob rehearsal, fill in the timings and fix any wording that does not match what Bob shows. It replaces the <a href="../large-group-quote-demo-script/index.html">earlier script</a>, where Bob built everything after a single design stop.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#prep">Start with the prep</a>
+          <a class="btn btn-quiet" href="#design">Jump to the steps</a>
+        </div>
+      </div>
+      <div class="sheets" aria-label="The blocked empty form, a reopened draft, the Benefits tab, and the Review Quote task">
+        <figure class="sheet sheet-1">
+          <img src="media/01-blocked-empty-form.webp" width="1400" height="1000" alt="The General Information tab with every field empty and every required field outlined in red after Review was pressed">
+          <figcaption><b>1</b> <span>The empty form is blocked</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-2">
+          <img src="media/02-draft-reopened.webp" width="1400" height="1000" alt="The task reopened after Save as Draft, on the Benefits Information tab, with Broker Commission 12.50">
+          <figcaption><b>2</b> <span>The draft comes back</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-3">
+          <img src="media/03-benefits-filled.webp" width="1400" height="1000" alt="The Benefits Information tab filled in: 26 fields in four columns">
+          <figcaption><b>3</b> <span>The Benefits tab</span></figcaption>
+        </figure>
+        <figure class="sheet sheet-new">
+          <img src="media/04-review-quote.webp" width="1400" height="1321" alt="The Review Quote task: both sections read-only, an Edit button on each section header and Submit at the bottom">
+          <figcaption><b>4</b> <span>Review Quote</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- PREP ------------------------------------------------------------ -->
+    <section id="prep" class="section prep" aria-labelledby="prep-title">
+      <header class="sec-head">
+        <p class="timecode">T&minus;30 <span aria-hidden="true">/</span> before the meeting</p>
+        <h2 id="prep-title" class="h2">Prepare, then run six parts.</h2>
+      </header>
+
+      <div class="prep-run">
+        <h3 class="h3">Run of show</h3>
+        <ol class="timeline">
+          <li><time>Part 1</time><b>The input</b><span>The client's document, screenshots and logo, and the prompt that asks for a step-by-step build.</span></li>
+          <li class="is-new"><time>Part 2</time><b>Steps 1 to 5</b><span>The process, the two business objects and the two Coach Views, shown in the chat. You check each one.</span></li>
+          <li class="is-new"><time>Part 3</time><b>Steps 6 to 8</b><span>The human service is built and installed, the validations are tested, and the whole workflow runs.</span></li>
+          <li><time>Part 4</time><b>Ten checks in BAW</b><span>Each check with the place to click in Workflow Center.</span></li>
+          <li><time>Part 5</time><b>The live moment</b><span>You use the app in Workplace, both tasks.</span></li>
+          <li><time>Part 6</time><b>Generated, and still open</b><span>What Bob generated, what is still open, and what to do if it breaks.</span></li>
+        </ol>
+        <p class="fine">Earlier one-stop rehearsals took about 8 to 12 minutes. The step-by-step run adds a short check per step and has not been timed with Bob yet.</p>
+      </div>
+
+      <div class="prep-before">
+        <h3 class="h3">Before the meeting <span>Thirty minutes before</span></h3>
+        <ol class="checklist">
+          <li><b>Restart Bob IDE</b> so it runs the current <code>baw-dev-tools</code> MCP server and the current App Builder rules. Check that the server is connected.</li>
+          <li><b>Check the App Builder Widgets toolkit (ABW).</b> Its snapshot must be installed on the BAW server, with its <code>.twx</code> file in <code>work/</code>. If it is missing, Bob builds and installs it with <code>build_widget_toolkit</code> and <code>install_app</code>. That adds a few minutes.</li>
+          <li><b>Pick an acronym that nobody has used.</b> It must start with ZZ. This script uses <code>ZZLGE</code>. If an app with that acronym already exists on the server, pick another one and change the prompt.</li>
+          <li><b>Put the client's files in <code>screenshots/Quote/</code>.</b> This folder stays out of the repository. It holds the Word document, the screenshots and the logo.</li>
+          <li><b>Know your answers.</b> Bob stops at the end of each of the eight steps, and once more in step 6 to ask before it imports the app into BAW.</li>
+          <li><b>Open Workflow Center and Workplace</b> in two browser tabs, signed in, so you can switch quickly later. Workplace is at <code>/bas/Workplace</code> on the server.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- PART 1: THE INPUT ---------------------------------------------- -->
+    <section id="input" class="section act" aria-labelledby="input-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">Part 1 <span aria-hidden="true">/</span> the input</p>
+          <h2 id="input-title" class="h2">What the client gave Bob.</h2>
+          <p class="lead">A Word document with eight headings, two screenshots, and a logo. The prompt adds one line that asks for the step-by-step build, and five lines to the document.</p>
+        </header>
+        <figure class="prompt">
+          <figcaption>Paste in Bob, <span class="emoji">🏗️</span> BAW App Builder mode</figcaption>
+          <pre style="overflow-wrap: anywhere"><code>Build the BAW app described in `screenshots/Quote/Customer workflow requirement/IBM_Bob_BAW_Workflow_Requirements (1).docx`. Use the acronym ZZLGE.
+The General Information UI screenshot is `screenshots/Quote/generate-quote.png`. The Benefits and Eligibility UI screenshot is `screenshots/Quote/image (1).png` to `image (3).png` (one screen, scrolled). Use `screenshots/Quote/&lt;client logo&gt;.png` as the logo.
+
+Build it step by step: make a to-do list with one item per heading of the document, do one item at a time, and check with me at the end of each item before you go on.
+
+In addition to the document:
+- The screenshots show the look and the control style only. Build only the fields the document lists, with the document's data types.
+- Every field in the document is required.
+- Each tab has a Save as Draft button. Each tab has a Next button; the last tab's button is Review, which goes on to Review Quote.
+- Review Quote shows both views read-only, with an Edit button on each section, and the final Submit.
+- There is no approve or send-back step.</code></pre>
+          <button class="copy" type="button" data-copy>Copy</button>
+        </figure>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="The input">
+          <button role="tab" id="i-t1" aria-controls="i-p1" aria-selected="true"><i>1</i><span>The files</span></button>
+          <button role="tab" id="i-t2" aria-controls="i-p2" aria-selected="false" tabindex="-1"><i>2</i><span>The added lines</span></button>
+          <button role="tab" id="i-t3" aria-controls="i-p3" aria-selected="false" tabindex="-1"><i>3</i><span>Bob's plan</span></button>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="i-p1" aria-labelledby="i-t1">
+          <h3 class="step-title">Show the client's files.</h3>
+          <div class="cue-do"><b>Do</b>
+            <ol class="num">
+              <li>The client's document <code>IBM_Bob_BAW_Workflow_Requirements (1).docx</code>. Its headings are: 1. Process, 2. General Information Business Object, 3. General Information Coach View, 4. Benefits Business Object, 5. Benefits Coach View, 6. Client-Side Human Service, 7. UI Validations, 8. Expected Outcome. (It is not in this repository.)</li>
+              <li>The screenshot of the <b>General Information</b> screen.</li>
+              <li>The screenshot of the <b>Benefits and Eligibility</b> screen. It is one screen saved as three scrolled images.</li>
+              <li>The client's logo file.</li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“This is what the client gave us: a Word document with eight headings, from the process to the expected outcome, and screenshots of two screens. Bob has to turn this into a BAW app, one heading at a time.”</li></ul></blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="i-p2" aria-labelledby="i-t2" hidden>
+          <h3 class="step-title">Show the added lines.</h3>
+          <p class="cue-do"><b>Do</b> <span>Point at the “Build it step by step” line, then scroll to the five lines below “In addition to the document”.</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“These lines are everything we added to the client's document. The screenshots give the look. The document gives the steps and the fields. Everything else is Bob's work.”</li></ul></blockquote>
+          <p class="cue-do"><b>Do</b> <span>Paste the prompt into Bob and send it.</span></p>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="i-p3" aria-labelledby="i-t3" hidden>
+          <h3 class="step-title">Bob reads, then shows its plan.</h3>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li>Reads the Word document with <code>office_read</code>. The field tables are read from a document dump.</li>
+              <li>Looks at the screenshots with <code>view_image</code>, and samples their colours with <code>image_colors</code>.</li>
+              <li>Checks that the acronym is free with <code>list_apps</code>.</li>
+              <li>Shows a to-do list with eight items, named after the document's headings, and says it will stop after each one.</li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Bob turned the document's headings into its plan. It will do one item at a time and show us the result before it goes on, the way a developer walks a reviewer through the work.”</li></ul></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- PART 2: STEPS 1 TO 5 ------------------------------------------- -->
+    <section id="design" class="section act" aria-labelledby="design-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">Part 2 <span aria-hidden="true">/</span> steps 1 to 5</p>
+          <h2 id="design-title" class="h2">The process, the data and the Views, one at a time.</h2>
+          <p class="lead">Bob writes the app spec part by part and shows each part in the chat. You check it and say “go on”. Nothing goes to BAW yet: Bob builds in step 6, when every part is agreed.</p>
+        </header>
+        <ol class="seq" aria-label="The to-do list, in order">
+          <li class="seq-ask"><span>Process</span></li>
+          <li class="seq-ask"><span>General Information Business Object</span></li>
+          <li class="seq-ask"><span>General Information Coach View</span></li>
+          <li class="seq-ask"><span>Benefits Business Object</span></li>
+          <li class="seq-ask"><span>Benefits Coach View</span></li>
+          <li class="seq-ask"><span>Client-Side Human Service</span></li>
+          <li class="seq-ask"><span>UI Validations</span></li>
+          <li class="seq-new"><span>Validate the workflow</span></li>
+        </ol>
+        <p class="seq-legend"><i class="dot dot-ask"></i> Bob stops and asks you <i class="dot dot-new"></i> Bob tests on its own</p>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="Steps 1 to 5">
+          <button role="tab" id="d-t1" aria-controls="d-p1" aria-selected="true"><i>1</i><span>Process</span></button>
+          <button role="tab" id="d-t2" aria-controls="d-p2" aria-selected="false" tabindex="-1"><i>2</i><span>GenInfoBO</span></button>
+          <button role="tab" id="d-t3" aria-controls="d-p3" aria-selected="false" tabindex="-1"><i>3</i><span>Quote CV</span></button>
+          <button role="tab" id="d-t4" aria-controls="d-p4" aria-selected="false" tabindex="-1"><i>4</i><span>BenefitsBO</span></button>
+          <button role="tab" id="d-t5" aria-controls="d-p5" aria-selected="false" tabindex="-1"><i>5</i><span>Benefits CV</span></button>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="d-p1" aria-labelledby="d-t1">
+          <h3 class="step-title">Step 1. Process.</h3>
+          <div class="cue-bob"><b>Bob shows</b>
+            <ol class="num">
+              <li>The process <b>Large Group Fully Insured Sales</b>.</li>
+              <li>Two human activities in sequence: <b>Generate Quote</b>, then <b>Review Quote</b>.</li>
+              <li>The flow: Start → Generate Quote → Review Quote → End. There is no approve or send-back step.</li>
+            </ol>
+          </div>
+          <p class="cue-do"><b>Point out</b> <span>The names and the flow are the document's heading 1, word for word.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, go on.”</span></p>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="d-p2" aria-labelledby="d-t2" hidden>
+          <h3 class="step-title">Step 2. General Information Business Object.</h3>
+          <p class="cue-bob"><b>Bob shows</b> <span><b>GenInfoBO</b>, with a table of its 19 fields: 11 String, 5 Date and 3 Boolean. Every field is required.</span></p>
+          <p class="cue-do"><b>Point out</b> <span>The field names and types are the document's table. Bob did not invent any field.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, go on.”</span></p>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="d-p3" aria-labelledby="d-t3" hidden>
+          <h3 class="step-title">Step 3. General Information Coach View.</h3>
+          <div class="cue-bob"><b>Bob shows</b>
+            <ol class="num">
+              <li>The reusable View <b>QuoteDetails CV</b>, bound to GenInfoBO.</li>
+              <li>Its sections and columns, taken from the General Information screenshot.</li>
+              <li>The control for each field: text boxes, date pickers, dropdowns and Yes/No radio buttons, all native BAW controls.</li>
+            </ol>
+          </div>
+          <p class="cue-do"><b>Point out</b> <span>The dropdown options are placeholders, because the document lists no options.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, go on.”</span></p>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="d-p4" aria-labelledby="d-t4" hidden>
+          <h3 class="step-title">Step 4. Benefits Business Object.</h3>
+          <p class="cue-bob"><b>Bob shows</b> <span><b>BenefitsBO</b>, with a table of its 26 fields: 16 String, 4 Decimal, 3 Boolean and 3 Integer. Every field is required.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, go on.”</span></p>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="d-p5" aria-labelledby="d-t5" hidden>
+          <h3 class="step-title">Step 5. Benefits Coach View.</h3>
+          <div class="cue-bob"><b>Bob shows</b>
+            <ol class="num">
+              <li>The reusable View <b>BenefitsDetails CV</b>, bound to BenefitsBO.</li>
+              <li>Its four columns, taken from the Benefits and Eligibility screenshot, with the $ icon on the money fields.</li>
+            </ol>
+          </div>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, go on.”</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Every step is a small piece you can check in a minute. If something is wrong, you say so here, and Bob changes only that piece.”</li></ul></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- PART 3: STEPS 6 TO 8 ------------------------------------------- -->
+    <section id="build" class="section act" aria-labelledby="build-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">Part 3 <span aria-hidden="true">/</span> steps 6 to 8</p>
+          <h2 id="build-title" class="h2">The human service, the validations, and the whole workflow.</h2>
+          <p class="lead">In step 6 the app goes to BAW for the first time, after Bob asks. Steps 7 and 8 are Bob's own tests, in a browser.</p>
+        </header>
+        <ol class="seq" aria-label="Bob's tools in steps 6 to 8, in order">
+          <li class="seq-ask"><span>Step 6 check: you approve the service</span></li>
+          <li><code>create_app</code> <span>writes the .twx</span></li>
+          <li><code>inspect_coaches</code> <span>checks its screens</span></li>
+          <li class="seq-ask"><span>Import stop: you approve the import</span></li>
+          <li><code>install_app</code> <span>installs the app</span></li>
+          <li class="seq-new"><code>test_service</code> <span>blocked Review; both tabs fill</span></li>
+          <li class="seq-new"><code>test_process</code> <span>two tasks, completes</span></li>
+          <li class="seq-new"><code>test_process</code> <span>with <code>draft_then_resume</code></span></li>
+        </ol>
+        <p class="seq-legend"><i class="dot dot-new"></i> Bob tests on its own <i class="dot dot-ask"></i> Bob asks you</p>
+        <div class="pair" aria-label="The blocked empty form, and the reopened draft">
+          <figure>
+            <img src="media/01-blocked-empty-form.webp" width="1400" height="1000" alt="The General Information tab with every field empty and every required field outlined in red after Review was pressed">
+            <figcaption>Image 01. Review on the empty form is blocked, every required field in red.</figcaption>
+          </figure>
+          <figure>
+            <img src="media/02-draft-reopened.webp" width="1400" height="1000" alt="The task reopened after Save as Draft, on the Benefits Information tab, with Broker Commission 12.50, Age 0 and ERISA group set to No">
+            <figcaption>Image 02. The reopened draft: the Benefits tab, Broker Commission 12.50, Age 0, ERISA group? No.</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="Steps 6 to 8">
+          <button role="tab" id="b-t1" aria-controls="b-p1" aria-selected="true"><i>6</i><span>Human service</span></button>
+          <button role="tab" id="b-t2" aria-controls="b-p2" aria-selected="false" tabindex="-1"><i>7</i><span>Validations</span></button>
+          <button role="tab" id="b-t3" aria-controls="b-p3" aria-selected="false" tabindex="-1"><i>8</i><span>Validate</span></button>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="b-p1" aria-labelledby="b-t1">
+          <h3 class="step-title">Step 6. Client-Side Human Service.</h3>
+          <div class="cue-bob"><b>Bob shows</b>
+            <ol class="num">
+              <li>The client-side human service <b>Generate Quote</b> for the Generate Quote activity.</li>
+              <li>Tab 1 <b>General Information</b> with QuoteDetails CV, and tab 2 <b>Benefits Information</b> with BenefitsDetails CV.</li>
+              <li>The buttons: Save as Draft and Next on tab 1, Save as Draft and Review on tab 2.</li>
+              <li>The variables <code>genInfo</code> and <code>benefits</code>, mapped to the process.</li>
+              <li>The <b>Review Quote</b> service for the second activity: both Views read-only, an Edit button on each section, and Submit.</li>
+            </ol>
+          </div>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Use the built-in template, and I approve.”</span></p>
+          <div class="ledger">
+            <table class="order">
+              <caption>Bob does</caption>
+              <thead><tr><th scope="col">Order</th><th scope="col">Bob's step</th><th scope="col">Tool</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Writes the app as a .twx file</td><td><code>create_app</code></td></tr>
+                <tr><td>2</td><td>Checks the screens in that file</td><td><code>inspect_coaches</code></td></tr>
+                <tr class="is-ask"><td>3</td><td>Asks you to approve the import</td><td>You answer</td></tr>
+                <tr><td>4</td><td>Installs the app in BAW, shows the run link and asks whether to go on</td><td><code>install_app</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="cue-do"><b>Do</b> <span>Approve the import. When Bob asks, answer: “Go on.”</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“This is the first time anything goes to the server, and Bob asked before it did.”</li></ul></blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="b-p2" aria-labelledby="b-t2" hidden>
+          <h3 class="step-title">Step 7. UI Validations.</h3>
+          <p class="cue-bob"><b>Bob shows</b> <span>The rules: every field is required, the message for a missing field, Review stays blocked while a field is empty, and the user is kept on the tab with errors.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, test it.”</span></p>
+          <p class="cue-bob"><b>Bob does</b> <span><code>test_service</code> presses Review on the empty form. Review is blocked, no request is sent, and the first tab shows its errors (image 01). Both tabs then fill: 19 fields and 26 fields. Bob shows the screenshots.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Go on.”</span></p>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="b-p3" aria-labelledby="b-t3" hidden>
+          <h3 class="step-title">Step 8. Validate the workflow.</h3>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li><code>test_process</code>: the process runs Start, Generate Quote, Review Quote, End, and completes.</li>
+              <li><code>test_process</code> with <code>draft_then_resume</code>: Save as Draft works with required fields still empty. The task stays in the inbox. Reopening it brings back the values on the tab the user left: 0, No and 12.50 (image 02).</li>
+              <li>Compares its screenshots with the client's screenshots.</li>
+              <li>Shows its final report: the app, the acronym, the snapshot, the run links, the field counts, the test results and the screenshot folders, then the Workplace steps for you.</li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Bob tested the app itself, in a browser, before it told us it was done. We will look at the same things by hand in a moment.”</li></ul></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- PART 4: TEN CHECKS --------------------------------------------- -->
+    <section id="check" class="section act" aria-labelledby="check-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">Part 4 <span aria-hidden="true">/</span> ten checks</p>
+          <h2 id="check-title" class="h2">Open the app in Designer and go through the list.</h2>
+          <p class="lead">Open <b>Workflow Center</b>, find the app, and open it in <b>Designer</b>. The checks follow the same headings as Bob's steps.</p>
+        </header>
+        <div class="pair" aria-label="The Benefits tab, and the Review Quote task">
+          <figure>
+            <img src="media/03-benefits-filled.webp" width="1400" height="1000" alt="The Benefits Information tab filled in: 26 fields in four columns, dropdowns, Yes and No radio buttons, boxes with a dollar icon, and the Save as Draft and Review buttons">
+            <figcaption>Image 03. The Benefits tab: 26 fields, 4 columns, dropdowns, Yes/No radio buttons and $ boxes.</figcaption>
+          </figure>
+          <figure>
+            <img src="media/04-review-quote.webp" width="1400" height="1321" alt="The Review Quote task: both sections read-only, an Edit button on each section header and Submit at the bottom">
+            <figcaption>Image 04. Review Quote: both sections read-only, Edit on each section, Submit at the bottom.</figcaption>
+          </figure>
+        </div>
+        <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Everything on this list is a normal BAW artifact. Your developers can open each one, change it and extend it.”</li></ul></blockquote>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="The ten checks, in three groups">
+          <button role="tab" id="k-t1" aria-controls="k-p1" aria-selected="true"><i>1</i><span>Process and data</span></button>
+          <button role="tab" id="k-t2" aria-controls="k-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Screens</span></button>
+          <button role="tab" id="k-t3" aria-controls="k-p3" aria-selected="false" tabindex="-1"><i>3</i><span>Behaviour</span></button>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="k-p1" aria-labelledby="k-t1">
+          <h3 class="step-title">Checks 1 to 5. The process, the data and the Views.</h3>
+          <div class="ledger">
+            <table class="order">
+              <caption>Show in Designer</caption>
+              <thead><tr><th scope="col">#</th><th scope="col">What to see</th><th scope="col">Where to click</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>The process diagram: Start, Generate Quote, Review Quote, End. There is no approve or send-back step.</td><td>Processes, open the process</td></tr>
+                <tr><td>2</td><td><b>GenInfoBO</b> has 19 properties: 11 String, 5 Date and 3 Boolean.</td><td>Data, open GenInfoBO</td></tr>
+                <tr><td>3</td><td>The View <b>QuoteDetails CV</b> is bound to GenInfoBO.</td><td>User Interface, open QuoteDetails CV</td></tr>
+                <tr><td>4</td><td><b>BenefitsBO</b> has 26 properties: 16 String, 4 Decimal, 3 Boolean and 3 Integer.</td><td>Data, open BenefitsBO</td></tr>
+                <tr><td>5</td><td>The View <b>BenefitsDetails CV</b> is bound to BenefitsBO.</td><td>User Interface, open BenefitsDetails CV</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="k-p2" aria-labelledby="k-t2" hidden>
+          <h3 class="step-title">Checks 6 and 7. The human service and its validation.</h3>
+          <div class="ledger">
+            <table class="order">
+              <caption>Show in Designer</caption>
+              <thead><tr><th scope="col">#</th><th scope="col">What to see</th><th scope="col">Where to click</th></tr></thead>
+              <tbody>
+                <tr><td>6</td><td>The client-side human service <b>Generate Quote</b> has two tabs, the variables <code>genInfo</code> and <code>benefits</code>, and the task data mapping (image 03).</td><td>User Interface, open Generate Quote, look at the diagram and the variables</td></tr>
+                <tr><td>7</td><td>Required-field validation blocks Review while a required field is empty, and shows the first tab with errors (image 01).</td><td>Preview Generate Quote, or Workplace. Press Review on the empty form.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="k-p3" aria-labelledby="k-t3" hidden>
+          <h3 class="step-title">Checks 8 to 10. What the workflow does.</h3>
+          <div class="ledger">
+            <table class="order">
+              <caption>Show in Workplace</caption>
+              <thead><tr><th scope="col">#</th><th scope="col">What to see</th><th scope="col">Where to click</th></tr></thead>
+              <tbody>
+                <tr><td>8</td><td>The whole process runs to completion.</td><td>Part 5, or Bob's <code>test_process</code> result</td></tr>
+                <tr><td>9</td><td>Save as Draft and resume work (image 02).</td><td>Part 5</td></tr>
+                <tr><td>10</td><td>Review Quote is read-only, with an Edit button on each section and a Submit button (image 04).</td><td>Part 5</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PART 5: LIVE MOMENT -------------------------------------------- -->
+    <section id="live" class="section act" aria-labelledby="live-title">
+      <div class="act-side">
+        <header class="sec-head">
+          <p class="timecode">Part 5 <span aria-hidden="true">/</span> live moment</p>
+          <h2 id="live-title" class="h2">You use the app in Workplace.</h2>
+          <p class="lead">Start the workflow, and show that the form blocks you, remembers a draft, and hands the quote to Review Quote, where Submit checks the fields again.</p>
+        </header>
+        <figure>
+          <img src="media/04-review-quote.webp" width="1400" height="1321" alt="The Review Quote task: both sections read-only, an Edit button on each section header and Submit at the bottom">
+          <figcaption>Image 04. Review Quote, opened from the task list after Generate Quote.</figcaption>
+        </figure>
+      </div>
+
+      <div class="cues" data-cues>
+        <div class="cue-tabs" role="tablist" aria-label="The live moment, in two steps">
+          <button role="tab" id="l-t1" aria-controls="l-p1" aria-selected="true"><i>1</i><span>Generate Quote</span></button>
+          <button role="tab" id="l-t2" aria-controls="l-p2" aria-selected="false" tabindex="-1"><i>2</i><span>Review Quote</span></button>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="l-p1" aria-labelledby="l-t1">
+          <h3 class="step-title">Generate Quote blocks you, and remembers.</h3>
+          <div class="cue-do"><b>Do</b>
+            <ol class="num">
+              <li>In Workplace, click <b>Start workflow</b> and pick <b>Large Group Fully Insured Sales</b>. Generate Quote opens.</li>
+              <li>Open the Benefits Information tab and press <b>Review</b> on the empty form. It is blocked, and the first tab shows its errors (image 01).</li>
+              <li>Fill in part of the form, including one Yes/No answered No and one number set to 0.</li>
+              <li>Press <b>Save as Draft</b>.</li>
+              <li>Reopen the task from the task list. The values and the tab come back (image 02).</li>
+              <li>Finish filling in the form, and press <b>Review</b>. The Generate Quote task closes.</li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“The form will not let you go on while a required field is empty. But you can always save what you have and come back to it later.”</li></ul></blockquote>
+        </div>
+
+        <div class="cue-panel" role="tabpanel" id="l-p2" aria-labelledby="l-t2" hidden>
+          <h3 class="step-title">Review Quote checks again before Submit.</h3>
+          <div class="cue-do"><b>Do</b>
+            <ol class="num">
+              <li>Open <b>Review Quote</b> from the task list (image 04).</li>
+              <li>Press <b>Edit</b> on Benefits. Clear a required field. Press <b>Submit</b>. Submit refuses.</li>
+              <li>Fill the field again. Press <b>Submit</b>. The process completes.</li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Review Quote is read-only until you press Edit, and Submit checks the fields again.”</li></ul></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- PART 6: CLOSE -------------------------------------------------- -->
+    <section id="close" class="section guard" aria-labelledby="close-title">
+      <header class="sec-head">
+        <p class="timecode">Part 6 <span aria-hidden="true">/</span> close</p>
+        <h2 id="close-title" class="h2">What Bob generated, and what is still open.</h2>
+        <p class="lead">Tick each rehearsal check as it passes. The page remembers them; copy the results when you are done.</p>
+        <div class="meter" data-meter>
+          <div class="meter-bar"><span data-meter-fill></span></div>
+          <p><output data-meter-read>0 of 10</output> checks passed</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn btn-primary" type="button" data-checks-copy>Copy results</button>
+          <button class="btn btn-quiet" type="button" data-checks-clear>Clear ticks</button>
+        </div>
+      </header>
+
+      <div class="ledger" data-cues>
+        <div class="ledger-tabs" role="tablist" aria-label="What Bob generated, open items, troubleshooting and the rehearsal checklist">
+          <button role="tab" id="c-t1" aria-controls="c-p1" aria-selected="true">Generated by Bob</button>
+          <button role="tab" id="c-t2" aria-controls="c-p2" aria-selected="false" tabindex="-1">Still open</button>
+          <button role="tab" id="c-t3" aria-controls="c-p3" aria-selected="false" tabindex="-1">If it breaks</button>
+          <button role="tab" id="c-t4" aria-controls="c-p4" aria-selected="false" tabindex="-1">Rehearsal checklist</button>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p1" aria-labelledby="c-t1">
+          <p class="lead">The document's last heading asks which artifacts Bob can generate, and where manual BAW work is still needed.</p>
+          <blockquote class="cue-say"><b class="say-label">Say plainly</b><ul><li>“In the rehearsal, Bob generated every artifact on the list. No developer edits in BAW were needed.”</li></ul></blockquote>
+          <table>
+            <thead><tr><th scope="col">Document heading</th><th scope="col">Artifact</th><th scope="col">Who made it</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">1. Process</th><td>Large Group Fully Insured Sales, with Generate Quote and Review Quote</td><td>Bob</td></tr>
+              <tr><th scope="row">2. General Information Business Object</th><td>GenInfoBO, 19 fields</td><td>Bob</td></tr>
+              <tr><th scope="row">3. General Information Coach View</th><td>QuoteDetails CV</td><td>Bob</td></tr>
+              <tr><th scope="row">4. Benefits Business Object</th><td>BenefitsBO, 26 fields</td><td>Bob</td></tr>
+              <tr><th scope="row">5. Benefits Coach View</th><td>BenefitsDetails CV</td><td>Bob</td></tr>
+              <tr><th scope="row">6. Client-Side Human Service</th><td>Generate Quote with two tabs, Review Quote, Save as Draft, the data mapping</td><td>Bob</td></tr>
+              <tr><th scope="row">7. UI Validations</th><td>Required fields, messages, the blocked Review, staying on the tab</td><td>Bob</td></tr>
+              <tr><th scope="row">8. Expected Outcome</th><td>The tested workflow</td><td>Bob tested it; you ran it in Workplace</td></tr>
+              <tr><th scope="row">Not in the document</th><td>The real dropdown option lists</td><td>Still to do, once the client supplies them</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p2" aria-labelledby="c-t2" hidden>
+          <h3 class="h3">One-time engineering work (not demo work)</h3>
+          <ul class="bullets">
+            <li>A reference Save as Draft sample was built once in Designer, so that the generator could reproduce BAW's Postpone pattern.</li>
+            <li>The generator and test fixes made during the rehearsals.</li>
+          </ul>
+          <h3 class="h3">Known items to mention honestly</h3>
+          <dl class="qa" aria-label="Known items">
+            <div><dt>The dropdown options</dt><dd>They are placeholders until the client supplies the real lists.</dd></div>
+            <div><dt>“Union group?”</dt><dd>It follows the document's String type, not the screenshot's checkbox.</dd></div>
+            <div><dt>A reopened draft</dt><dd>Yes/No and number fields the user never touched show No and 0, and the required check counts them as answered.</dd></div>
+            <div><dt>Review Quote in Workplace</dt><dd>The window closes after Review on Generate Quote, and Review Quote is opened from the task list.</dd></div>
+            <div><dt>Lanes</dt><dd>The document names no lanes, so Bob may place both tasks in one lane or use two.</dd></div>
+            <div><dt>Layout</dt><dd>Bob's layout can vary slightly between runs. The names, types, flow and behaviour stay the same.</dd></div>
+          </dl>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p3" aria-labelledby="c-t3" hidden>
+          <table>
+            <thead><tr><th scope="col">Problem</th><th scope="col">What to do</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Bob does several steps without stopping</th><td>Say: “Stop. Go back to the to-do list and check with me after each item.” If it keeps going, restart Bob IDE so it loads the current App Builder rules.</td></tr>
+              <tr><th scope="row">One of Bob's BAW tools fails</th><td>The tool error states the reason, either an HTTP code or “Cannot reach BAW”. Fix that, then ask Bob to continue.</td></tr>
+              <tr><th scope="row">The login to BAW has expired</th><td>It is renewed automatically.</td></tr>
+              <tr><th scope="row">Bob still behaves as before a fix</th><td>Restart Bob IDE.</td></tr>
+              <tr><th scope="row">Bob refuses to repeat a call after three identical failures</th><td>Start a fresh Bob task.</td></tr>
+              <tr><th scope="row">The toolkit install fails</th><td>Import the .twx by hand in Workflow Center (Process Apps, Import).</td></tr>
+              <tr><th scope="row">A browser test fails</th><td>Look at the screenshots it saved in <code>work/</code>, and run it again.</td></tr>
+              <tr><th scope="row">Workplace shows “Authorization Error” on a task</th><td>Sign out and in again, then open the task from the task list.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ledger-panel" role="tabpanel" id="c-p4" aria-labelledby="c-t4" hidden>
+          <fieldset class="scorecard" data-checks>
+            <legend>Rehearsal checklist</legend>
+            <label><input type="checkbox" value="1"><span>Bob IDE was restarted, the <code>baw-dev-tools</code> server is connected, and the ABW snapshot is installed on the server.</span></label>
+            <label><input type="checkbox" value="2"><span>The ZZ acronym is unused, and the Word document, the screenshots and the logo are in <code>screenshots/Quote/</code>.</span></label>
+            <label><input type="checkbox" value="3"><span>Bob shows a to-do list with one item per heading of the document.</span></label>
+            <label><input type="checkbox" value="4"><span>Bob stopped at the end of every step and waited for your answer.</span></label>
+            <label><input type="checkbox" value="5"><span>Steps 2 and 4 show GenInfoBO (19 fields) and BenefitsBO (26 fields).</span></label>
+            <label><input type="checkbox" value="6"><span>In step 6 Bob asked before the import, and the app installed.</span></label>
+            <label><input type="checkbox" value="7"><span>Bob's tests pass: the blocked Review, both tabs filled, the process completed, Save as Draft and resume.</span></label>
+            <label><input type="checkbox" value="8"><span>The ten checks match what Designer shows.</span></label>
+            <label><input type="checkbox" value="9"><span>In Workplace, the empty form is blocked, the draft comes back on the right tab, and Review Quote opens from the task list.</span></label>
+            <label><input type="checkbox" value="10"><span>Submit refuses a cleared required field, and after a refill Submit completes the process.</span></label>
+          </fieldset>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="refs page-refs">
+    <p class="fine">The client's Word document, screenshots and logo stay on the presenter's laptop and are not part of this repository. The pictures on this page were taken during a rehearsal; the client's logo is hidden in them.</p>
+    <p class="fine">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps.</p>
+  </footer>
+
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+  <script src="js/main.js"></script>
+</body>
+</html>

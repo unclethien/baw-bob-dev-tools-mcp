@@ -23,8 +23,8 @@
 | `coach_builder.py` | Shared building blocks: `Layout`, `coachflow`, service and business-object XML, `write_twx` |
 | `coach_views.py` | Coach View and managed file XML; the generic "Coach Screen" view that mounts React screens |
 | `coach_theme.py` | Theme file loading, validation, CSS and icon helpers |
-| `coach_inventory.py` | Reads a `.twx` into an editable coach spec (`CoachReader`, `inventory`, `carry_over`) |
-| `modernize_coaches.py` | Adds "(Modernized)" copies of services, rebuilt from Modernizer Widgets or React screens |
+| `coach_inventory.py` | Reads a `.twx` into an editable coach spec (`CoachReader`, `inventory`, `carry_over`), including each group's business object, tab binding, Edit links and button roles |
+| `modernize_coaches.py` | Adds "(Modernized)" copies of services, rebuilt from Modernizer Widgets or React screens; binds groups to their own objects and rewires processes to the copies |
 | `widget_toolkit.py` | Builds the ABW and MDW toolkit `.twx` files and links apps to them |
 | `group_views.py` | Reusable field groups as Coach Views, with a Preview service each |
 | `process_builder.py` | BPD (workflow diagram) XML: lanes, user tasks, gateways, flows |
@@ -40,7 +40,7 @@
 - `src/screens/`: hand-written per-coach screens (gitignored).
 - `widgets/*-widgets.json`: widget contract (view name, options, icon) for MDW and ABW; `widgets/builder/*.js`: ABW markup and scripts; `widgets/icons/`: palette icons.
 - `build.mjs`: esbuild + sass bundling into `bundle/mdw.js` and `bundle/coach-screens.js`.
-- `scripts/check-widgets.mjs`, `scripts/verify-service.mjs`: puppeteer-core checks used by `build_widget_toolkit` and `test_service`.
+- `scripts/check-widgets.mjs`, `scripts/verify-service.mjs`: puppeteer-core checks used by `build_widget_toolkit`, `test_service` and `test_process` (they fill Carbon radios, numbers, checkboxes and toggles, and check blocked and resumed-draft tabs).
 
 ## Graph
 
