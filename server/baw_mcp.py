@@ -434,7 +434,13 @@ def inspect_coaches(twx: str, previous: str | None = None) -> dict:
     (work/<name>.coaches.json): sections, fields, buttons and where each button goes. Set its "theme"
     to the app's theme file before modernize_app.
     Reusable groups come back too: the spec's "groups" list each group's fields once (edit a group's field there, and
-    every placement follows), and a section {"group", "readonly", "hide"} is where a coach places one.
+    every placement follows), and a section {"group", "readonly", "hide"} is where a coach places one. A group's
+    "variable" and "classRef" name the business object it edits ("blankRequired" and "fresh" tell whether its view
+    already blanks a new record), so one service can bind several business objects, each placement carrying its
+    own "variable" and "classRef". A coach with a Tab Section has "tabBinding" (the variable holding the tab); a
+    read-only section can have "edit" {"label"} (an Edit link back to the step); each button has a "role":
+    "finish" (leaves the coach forward), "draft" (saves a draft), "back" (returns to an earlier coach) or "stay" (stays
+    on the coach, like Next between tabs); a modernized finishing button checks the required fields, the others do not.
     "groupCandidates" lists sections with at least three fields that appear again on another coach; propose them to
     the user as groups. "changedInBaw" lists the groups whose fields someone changed in BAW since Bob built them (pass
     these names to replace_groups to rebuild them).
@@ -574,7 +580,8 @@ def build_screens() -> str:
 
 
 @tool()
-def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: str | None = None, replace_groups: list[str] | None = None) -> dict:
+def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: str | None = None, replace_groups: list[str] | None = None,
+                 rewire: bool = True) -> dict:
     """Add a React + Carbon copy of each service, "<service> (Modernized)", driven by the coach spec and
     styled by its "theme" file. Each coach is rebuilt from Modernizer Widgets inside native Panels or a Tab
     Section, so it stays editable by drag and drop in Coach Designer; the app then depends on the toolkit
@@ -588,7 +595,11 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: st
     be placed in a coach that shows a hand-written screen. Users can change a group in Coach Designer; every coach
     that places it follows. A group whose fields someone changed in BAW stays as it is and is listed in "changedInBaw"
     (other edits to a group belong in the spec, since a rebuild replaces them); ask the
-    user whether to keep it, and for the ones to replace build again with replace_groups (before install_app)."""
+    user whether to keep it, and for the ones to replace build again with replace_groups (before install_app).
+    rewire (default true): the activities of the app's processes that run a modernized service now run its
+    "(Modernized)" copy, one "Rewired: <activity> now runs <copy>" line each in the summary; the classic services stay
+    in the app. False leaves the processes as they are.
+    A "warning" in the result means the toolkit snapshot predates the current widgets: build and install a new one."""
     source, spec = local(twx), local(coach_spec)
     acronym = target_of(source)["acronym"]
     require_new_snapshot(acronym, snapshot)
@@ -599,8 +610,13 @@ def modernize_app(twx: str, coach_spec: str, snapshot: str, toolkit_snapshot: st
     build = build_screens()
     dest = twx_path(acronym, snapshot)
     summary = python("modernize_coaches.py", source, spec, dest, "--snapshot", snapshot, *args,
-                     *[a for g in replace_groups or [] for a in ("--replace-group", g)])
+                     *[a for g in replace_groups or [] for a in ("--replace-group", g)],
+                     *([] if rewire else ["--no-rewire"]))
     result = {"twx": rel(dest), "summary": summary, "build": build[-500:]}
+    if args and not widget_toolkit.carries_bundle(args[1]):
+        result["warning"] = (f"The toolkit snapshot {toolkit_snapshot or rel(args[1])} was built before the current Modernizer Widgets, "
+                             "so its widgets lack recent fixes. Build a new snapshot with build_widget_toolkit(\"modernizer\", ...), "
+                             "install it, then modernize again with it.")
     kept = re.search(r"^Changed in BAW, kept: (.+)$", summary, re.M)
     if kept:
         result["changedInBaw"] = json.loads(kept.group(1))
@@ -672,7 +688,8 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
     values (fill), press the forward button, and report each step. "ok": true means every screen
     rendered and every button moved on. Look at the screenshots before calling the work done.
     values: field label -> text to type, on the first screen that has that field, before any button
-    of that screen is pressed (it replaces what the field holds and beats fill), e.g. {"Request ID": "R-1"}.
+    of that screen is pressed (it replaces what the field holds and beats fill), e.g. {"Request ID": "R-1"};
+    with expect_blocked they are typed after the blocked check, which needs the screen empty.
     press: button labels to press instead of the forward button, in order, each on the first screen
     that shows it, e.g. ["Load"]; the run then goes on with the forward button. A value never typed
     or a button never pressed makes "ok" false and is listed under "untyped" and "unpressed".
@@ -682,8 +699,11 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
     their own buttons (form.tabNextLabel) does this anyway, since its finishing button checks every tab.
     expect_blocked: before anything is filled, press the forward button once on the first screen and
     pass only if the screen stays, no request is sent, error indicators are visible and the first tab
-    with an error is selected; "blocked" under that step reports it. The run then goes on as usual.
-    Left out, it is on when work/<ACRONYM>.app.json names this service and marks a field required on its first screen."""
+    with an error is selected; "blocked" under that step reports it. On a tabbed React screen it then
+    fills the first tab only and presses forward again: the screen must stay on the first tab that
+    still has an error ("blocked.partial"). The run then goes on as usual.
+    Left out, it is on when work/<ACRONYM>.app.json names this service (or the classic service a
+    " (Modernized)" one is built from) and marks a field required on its first screen."""
     check_acronym(acronym)
     if not configured():
         raise offline()
@@ -705,7 +725,9 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
 def spec_requires(acronym: str, key: str, name: str) -> bool:
     """Whether Bob's spec of the app (work/<ACRONYM>.app.json) names this service or process and marks a field
     required on its first screen (every tab of a tabbed form, else the first step): that screen's forward button
-    then has to refuse while the field is empty, so the test checks that."""
+    then has to refuse while the field is empty, so the test checks that. A modernized service keeps the classic
+    service's name plus " (Modernized)", so that suffix is dropped before looking the service up."""
+    name = name.removesuffix(" (Modernized)").strip()
     try:
         spec = json.loads((WORK / f"{acronym}.app.json").read_text())
     except (OSError, ValueError):
@@ -718,7 +740,17 @@ def spec_requires(acronym: str, key: str, name: str) -> bool:
     fields = [f for s in first for f in s.get("fields") or []]
     fields += [f for s in first for sec in s.get("sections") or [] if isinstance(sec, dict) and not sec.get("readonly")
                for f in (groups.get(sec["group"], []) if sec.get("group") else sec.get("fields") or [])]
-    return any(isinstance(f, dict) and f.get("required") is True for f in fields)
+    # The generator makes the database key required whether or not the spec says so.
+    key = spec["database"].get("key") if isinstance(spec.get("database"), dict) else None
+    return any(isinstance(f, dict) and (f.get("required") is True or (key and f.get("name") == key)) for f in fields)
+
+
+def draft_tab_mismatch(saved, reopened) -> str | None:
+    """Why a resumed draft failed to reopen on the tab it was saved from, or None when it did (or has no tabs)."""
+    if saved and saved != reopened:
+        return f"the draft was saved on tab {saved!r} but reopened on {reopened!r}" if reopened else \
+            f"the draft was saved on tab {saved!r} but the reopened task shows no tab"
+    return None
 
 
 def run_browser(args: list, out: Path) -> dict:
@@ -744,7 +776,9 @@ def test_process(acronym: str, process: str, snapshot: str | None = None, press:
     ["Send Back"] sends the work back once before it is approved. Reports every task and the final state.
     fill: false leaves the fields empty (the forward button then stops at the required check).
     tabs: as in test_service, applied to every task. expect_blocked: as in test_service, applied to the first task only, the one that starts empty;
-    left out, it is on when work/<ACRONYM>.app.json names this process and marks a field required on its first screen.
+    left out, it is on when work/<ACRONYM>.app.json names this process and marks a field required (or uses it as the
+    database key) on its first screen.
+    values: label -> text typed on the first task (after the blocked check), for fields whose filler text would be refused.
     draft_then_resume: a draft button label, e.g. "Save as Draft". On the first task the fields in
     values (label -> text, required) are typed and that button is pressed; the coach must close and the
     task stay open in the inbox. The task is then reopened (polled for up to 60 seconds until it can be
@@ -792,6 +826,8 @@ def test_process(acronym: str, process: str, snapshot: str | None = None, press:
         args = ["--url", ops().task_url(task["tkiid"])] + flags + blocked_flag + [a for label in queue for a in ("--press", label)]
         if draft:
             args += [a for label, text in values.items() for a in ("--check", f"{label}={text}")]
+        elif not tasks:
+            args += [a for label, text in (values or {}).items() for a in ("--value", f"{label}={text}")]
         report = run_browser(args, stem)
         for step in report.get("steps", []):
             if queue and step.get("button") == queue[0]:
@@ -802,6 +838,10 @@ def test_process(acronym: str, process: str, snapshot: str | None = None, press:
             draft["resumed"] = report.get("checked", [])
             draft["reopenedTab"] = next((step.get("tab") for step in report.get("steps", []) if step.get("tab")), None)
             draft["ok"] = draft["ok"] and bool(draft["resumed"]) and all(c["ok"] for c in draft["resumed"])
+            mismatch = draft_tab_mismatch(draft.get("tab"), draft["reopenedTab"])
+            if mismatch:
+                draft["ok"] = False
+                draft["failure"] = draft["failure"] or mismatch
             entry["draft"] = draft
             entry["ok"] = entry["ok"] and draft["ok"]
         if "--tabs" in flags:

@@ -32,14 +32,15 @@ import re
 import uuid
 import zipfile
 from pathlib import Path
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, unescape
 
 from coach_inventory import view_names
 from coach_theme import load_theme
 from coach_builder import SYSTEM_TYPES, VIEWS, Layout
 from coach_views import screen_assets, screen_view
-from twx_clone import UUID_RE, foreign_uuids
+from twx_clone import UUID_RE
 import app_template
+import generate_app
 import group_views
 import widget_toolkit
 
@@ -50,8 +51,26 @@ XSI_NS = 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
 SCREEN_ITEM, ACTIONS_ITEM = "CoachScreen1", "PPNativeActions"
 SPEC_KEYS = ("path", "label", "type", "readonly", "required", "pattern", "message", "example", "options", "min", "max", "help", "events")
 TOOLKIT = "modernizer"
-GROUP_VIEWS = {}  # group name -> (View ID, group_views fields), from modernize()
+GROUP_VIEWS = {}  # group name -> (View ID, group_views fields, fresh), from modernize()
+ID_MAP = {}  # service id -> {old id: new id} for the ids its copy declares, from modernize()
+REWIRED = []  # one line per process activity that now runs a copy, from modernize()
 KEPT = []  # groups changed in BAW that the last modernize() kept as they are
+UNRECOGNISED = []  # button event code the last modernize() copied as it was, for review
+# The event code the generator writes for a Next button and for a finishing button's required-fields check.
+NEXT_PANE = re.compile(r'page\.ui\.get\("[^"]+"\)\.setCurrentPane\((\d+)\);\s*return false;')
+
+
+def generated_required_check():
+    """The generator's required-fields check (generate_app.required_check) as a pattern for its whole code, so only that
+    exact handler is dropped; code someone changed in BAW is copied and listed instead."""
+    parts = generate_app.REQUIRED_CHECK.split("%s")
+    switch = r'(?:  if \(first !== null\) page\.ui\.get\("[^"]+"\)\.setCurrentPane\(first\);\n)?'
+    return re.compile(re.escape(parts[0]) + r"\[.*?\]" + re.escape(parts[1]) + re.escape(generate_app.REQUIRED_MESSAGE)
+                      + re.escape(parts[2]) + re.escape(generate_app.REQUIRED_SUMMARY) + re.escape(parts[3]) + switch
+                      + re.escape(parts[4]), re.S)
+
+
+REQUIRED_CHECK = generated_required_check()
 
 
 def uid():
@@ -83,10 +102,12 @@ def retag(xml, p, tag):
 
 
 def config(p, options):
+    """configData for (name, value) options; a third item "dynamic" makes the value a JavaScript expression."""
     return "".join(
         f"<{p}:configData><{p}:id>{uid()}</{p}:id><{p}:optionName>{name}</{p}:optionName>"
-        + (f"<{p}:value>{escape(value)}</{p}:value>" if value else f"<{p}:value />") + f"</{p}:configData>"
-        for name, value in options)
+        + (f"<{p}:value>{escape(value)}</{p}:value>" if value else f"<{p}:value />")
+        + (f"<{p}:valueType>dynamic</{p}:valueType>" if dynamic else "") + f"</{p}:configData>"
+        for name, value, *dynamic in options)
 
 
 def view_item(p, item_id, view_id, options, binding=None, children=None, tag="layoutItem"):
@@ -117,6 +138,12 @@ def screen_spec(app, service, coach):
                       **{k: s[k] for k in ("group", "readonly", "hide") if k in s}} for s in coach["sections"]],
         "buttons": [{k: b[k] for k in ("label", "viewId", "primary", "validate") if k in b} for b in coach["buttons"]],
     }
+
+
+def section_variable(service, section):
+    """(variable, classRef) of the business object a section shows: its own when the section carries them (a group
+    placed by a service with several objects), else the service's."""
+    return section.get("variable", service["variable"]), section.get("classRef", service["classRef"])
 
 
 def screen_layout(old, p, coach, screen_view_id, actions_view_id, theme, variable, spec):
@@ -176,7 +203,24 @@ def widget_events(w, part):
     return [(name, events[name]) for name, *_ in w["events"] if (events.get(name) or "").strip()]
 
 
-def widget_layout(old, p, coach, views, theme, variable, spec):
+def button_events(w, b, tabs_id):
+    """The (event, code) options of a button. The generator's Next code moves to the next tab of the modernized Tab
+    Section, found with page.ui.get (bpmext.ui.getView does not see that control in the running coach); its
+    required-fields check is dropped from a finishing button. Any other code is copied as it is and listed for review."""
+    events = []
+    for name, code in widget_events(w, b):
+        pane = NEXT_PANE.fullmatch(code.strip())
+        if pane and tabs_id:
+            code = f'page.ui.get("{tabs_id}").setCurrentPane({pane.group(1)}); return false;'
+        elif REQUIRED_CHECK.fullmatch(code.strip()) and b.get("role") == "finish":
+            continue
+        else:
+            UNRECOGNISED.append(f"{b['label']}: {name}")
+        events.append((name, code))
+    return events
+
+
+def widget_layout(old, p, coach, views, theme, service, spec):
     """The coach as Modernizer Widgets inside UI Toolkit containers: Theme, Header and Error Summary, the sections,
     the coach's native items, then its own buttons as Button widgets with their layout item IDs, which the coach
     flow's wiring names."""
@@ -190,13 +234,15 @@ def widget_layout(old, p, coach, views, theme, variable, spec):
     # keeps each field's own ID.
     view_ids = {id(f): raw.get("viewId") for s, r in zip(spec["sections"], coach["sections"])
                 for f, raw in zip(s["fields"], r.get("fields", []))}
+    variables = {id(s): section_variable(service, r)[0] for s, r in zip(spec["sections"], coach["sections"])}
+    variables.update({id(f): variables[id(s)] for s in spec["sections"] for f in s["fields"]})
     used = {n["viewId"] for n in coach["native"]} | {b["viewId"] for b in coach["buttons"]}
 
     def field_id(f):
         vid = view_ids.get(id(f))
         own = by_id.get(vid, "").split(f"<{p}:contentBoxContrib>", 1)[0]
         bound = re.search(rf"<{p}:binding>([^<]*)</{p}:binding>", own)
-        if vid and vid not in used and bound and bound.group(1) == f"tw.local.{variable}.{f['path']}":
+        if vid and vid not in used and bound and bound.group(1) == f"tw.local.{variables[id(f)]}.{f['path']}":
             used.add(vid)
             return vid
         return None
@@ -210,19 +256,30 @@ def widget_layout(old, p, coach, views, theme, variable, spec):
         widget("errors", []),
     ]
     sections = [s for s in spec["sections"] if s["fields"]]
-    fields = lambda s: ([place_group(p, next_id, variable, s, "contributions")] if "group" in s  # noqa: E731
-                        else [field_widget(p, next_id, views, variable, f, item_id=field_id(f)) for f in s["fields"]])
+    edits = {id(s): r["edit"]["label"] for s, r in zip(spec["sections"], coach["sections"]) if r.get("edit") and "group" in s}
+
+    def fields(s):
+        """The section's controls: its group or its fields, then its Edit button when the spec gives it one. Edit
+        sets the group's visibility to editable, so it stays on the coach, validates nothing and has no boundary event."""
+        if "group" not in s:
+            return [field_widget(p, next_id, views, variables[id(s)], f, item_id=field_id(f)) for f in s["fields"]]
+        group_id = next_id("Group")
+        group = place_group(p, next_id, variables[id(s)], s, "contributions", item_id=group_id)
+        if id(s) not in edits:
+            return [group]
+        unlock = f'bpmext.ui.getView("{group_id}").context.options._metadata.visibility.set("value","EDITABLE"); return false;'
+        options = [("@label", edits[id(s)]), ("kind", "secondary"), ("validate", "false"), ("eventON_CLICK", unlock)]
+        edit = view_item(p, next_id("Button"), views["button"], options, tag="contributions")
+        row = view_item(p, next_id("Horizontal Layout"), VIEWS["Horizontal Layout"], [("@label", "Actions"), *hide], children=[edit], tag="contributions")
+        # Side by side in a Panel, the group shrank to a narrow column beside its Edit button: Edit gets its own row
+        # above the group, and a Vertical Layout gives the group the full width, as a tab does.
+        return [view_item(p, next_id("Vertical Layout"), VIEWS["Vertical Layout"], [("@label", s["title"]), *hide], children=[row, group], tag="contributions")]
+
     hide = [("@helpText", ""), ("@labelVisibility", "HIDE")]
-    if spec["sectionStyle"] == "tabs" and len(sections) > 1:
-        tabs = [view_item(p, next_id("Vertical Layout"), VIEWS["Vertical Layout"], [("@label", s["title"]), *hide], children=fields(s), tag="contributions")
-                for s in sections]
-        body = [view_item(p, next_id("Tab Section"), VIEWS["Tab Section"], [("@label", spec["title"]), *hide], children=tabs)]
-    else:
-        body = [view_item(p, next_id("Panel"), VIEWS["Panel"], [("@label", s["title"]), ("@helpText", ""), ("@labelVisibility", "SHOW")], children=fields(s))
-                if s["title"] else view_item(p, next_id("Vertical Layout"), VIEWS["Vertical Layout"], [("@label", ""), *hide], children=fields(s))
-                for s in sections]
+    tabbed = spec["sectionStyle"] == "tabs" and len(sections) > 1
+    tabs_id = next_id("Tab Section") if tabbed else None
     native = [retag(by_id[n["viewId"]], p, "layoutItem") for n in coach["native"] if n["viewId"] in by_id]
-    buttons = []
+    buttons = {}  # tab index (None: below the form) -> its buttons
     for b in coach["buttons"]:
         if b["viewId"] not in by_id:
             continue
@@ -230,16 +287,39 @@ def widget_layout(old, p, coach, views, theme, variable, spec):
         kind = b.get("type") or "button"
         w = widget_toolkit.widgets(TOOLKIT)[kind]
         names = {name for name, *_ in w["options"]}
-        options = {"kind": "primary" if b.get("primary") else "secondary", **({"validate": b["validate"]} if "validate" in b else {}),
+        # Only a finishing button validates the form (the widgets check their own required fields); the others save,
+        # go back or move between tabs without being blocked.
+        validate = b["role"] == "finish" if b.get("role") else b.get("validate")
+        options = {"kind": "primary" if b.get("primary") else "secondary", **({"validate": validate} if validate is not None else {}),
                    **({"tabIndex": b["tabIndex"]} if b.get("tabIndex") not in (None, "") else {})}
-        options = {**{k: v for k, v in options.items() if k in names}, **dict(widget_events(w, b))}
+        options = {**{k: v for k, v in options.items() if k in names}, **dict(button_events(w, b, tabs_id))}
         item = retag(by_id[b["viewId"]], p, "contributions")
-        buttons.append(widget_toolkit.swap_view(item, b["viewId"], views[kind], options))
-    actions = [view_item(p, next_id("Horizontal Layout"), VIEWS["Horizontal Layout"], [("@label", "Actions"), *hide], children=buttons)] if buttons else []
-    return "".join(head + body + native + actions)
+        # A button that sat in a tab stays in that tab, as on the classic coach; the others go below the form.
+        tab = b.get("tab") if tabbed and b.get("tab") is not None and b["tab"] < len(sections) else None
+        buttons.setdefault(tab, []).append(widget_toolkit.swap_view(item, b["viewId"], views[kind], options))
+
+    def actions(tab):
+        row = buttons.get(tab)
+        return [view_item(p, next_id("Horizontal Layout"), VIEWS["Horizontal Layout"], [("@label", "Actions"), *hide], children=row, tag="contributions")] if row else []
+
+    if tabbed:
+        tabs = [view_item(p, next_id("Vertical Layout"), VIEWS["Vertical Layout"], [("@label", s["title"]), *hide],
+                          children=fields(s) + actions(i), tag="contributions")
+                for i, s in enumerate(sections)]
+        body = [view_item(p, tabs_id, VIEWS["Tab Section"], [("@label", spec["title"]), *hide], children=tabs, binding=coach.get("tabBinding"))]
+    else:
+        body = [view_item(p, next_id("Panel"), VIEWS["Panel"], [("@label", s["title"]), ("@helpText", ""), ("@labelVisibility", "SHOW")], children=fields(s))
+                if s["title"] else view_item(p, next_id("Vertical Layout"), VIEWS["Vertical Layout"], [("@label", ""), *hide], children=fields(s))
+                for s in sections]
+    bottom = [view_item(p, next_id("Horizontal Layout"), VIEWS["Horizontal Layout"], [("@label", "Actions"), *hide], children=buttons[None])] if buttons.get(None) else []
+    return "".join(head + body + native + bottom)
 
 
 # ---------------------------------------------------------------- groups
+
+
+# Field kinds BAW loads as 0 or false when nothing was stored: a required one goes back to blank on a new form.
+BLANKED_KINDS = ("number", "select", "radio")
 
 
 def control_id(path):
@@ -252,13 +332,13 @@ def group_fields(g):
     return [(f["path"], f["type"], f["label"], not (f.get("required") or f.get("readonly") or f["type"] == "output")) for f in g["fields"]]
 
 
-def place_group(p, next_id, variable, s, tag):
+def place_group(p, next_id, variable, s, tag, item_id=None):
     """A coach's placement of a group View: bound to the coach's object, with the section's hidden fields and its
     read-only visibility, which every field in the group follows."""
-    view_id, gfields = GROUP_VIEWS[s["group"]]
+    view_id, gfields, fresh = GROUP_VIEWS[s["group"]]
     options = [("@label", s["title"]), ("@helpText", ""), ("@labelVisibility", "HIDE")]
-    options += group_views.placement_options(gfields, s.get("hide", []), s.get("readonly", False))
-    return view_item(p, next_id("Group"), view_id, options, binding=f"tw.local.{variable}", tag=tag)
+    options += group_views.placement_options(gfields, s.get("hide", []), s.get("readonly", False), fresh=fresh and not s.get("readonly", False))
+    return view_item(p, item_id or next_id("Group"), view_id, options, binding=f"tw.local.{variable}", tag=tag)
 
 
 def expand_groups(spec):
@@ -284,7 +364,7 @@ def expand_groups(spec):
                     errors.append(f"{where} shows the hand-written screen {coach['screen']!r}, so it cannot place group {sec['group']!r}")
                 optional = {path for path, _, _, hideable in group_fields(g) if hideable}
                 errors += [f"{where}: group {sec['group']!r} cannot hide {path!r} (only its editable, not required fields)" for path in sec.get("hide", []) if path not in optional]
-                users.setdefault(sec["group"], set()).add((service["variable"], service["classRef"]))
+                users.setdefault(sec["group"], set()).add(section_variable(service, sec))
                 sec.setdefault("title", sec["group"])
                 sec["fields"] = g["fields"]
     for name, used in users.items():
@@ -302,7 +382,7 @@ def preview_layout(name, g, variable, views, theme, app):
     """The Preview service's coach: Theme and Header widgets, the group in a Panel, an OK Button widget."""
     lay = Layout()
     widget = lambda kind, options, **kw: lay.view(kind.title(), "", view_uuid=views[kind], options=options, show_label=False, **kw)  # noqa: E731
-    view_id, gfields = GROUP_VIEWS[g["name"]]
+    view_id, gfields, _ = GROUP_VIEWS[g["name"]]
     group = lay.view("Group", g["name"], binding=f"tw.local.{variable}", view_uuid=view_id, show_label=False)
     ok = lay.view("Button", "OK", view_uuid=views["button"], options=[("kind", "primary")], item_id="OK_Button", show_label=False)
     return Layout.wrap([
@@ -334,8 +414,12 @@ def group_objects(spec, package, owners, views, theme, twx, replace=()):
         # One layout container holds the fields, so they lay out in the widgets' responsive columns, as in a section.
         items = [view_item("ns2", "Fields", VIEWS["Vertical Layout"], [("@label", ""), ("@helpText", ""), ("@labelVisibility", "HIDE")],
                            children=items, tag="contributions")]
-        view_id, version, xml = group_views.group_view(acronym, name, variable, class_ref, f"/{type_id}", group_fields(g), items, "modernize_coaches")
-        GROUP_VIEWS[g["name"]] = (view_id, group_fields(g))
+        view_id, version, xml = group_views.group_view(acronym, name, variable, class_ref, f"/{type_id}", group_fields(g), items, "modernize_coaches",
+                                                         blank_required=g.get("blankRequired", False),
+                                                         fresh_ref=f"{system_data_ref(package)}/{SYSTEM_TYPES['Boolean']}" if g.get("fresh") else None,
+                                                         blank_ids=[control_id(f["path"]) for f in g["fields"]
+                                                                    if f.get("required") and f["type"] in BLANKED_KINDS])
+        GROUP_VIEWS[g["name"]] = (view_id, group_fields(g), bool(g.get("fresh") and g.get("blankRequired")))
         current = f"objects/{view_id}.xml"
         if g["name"] not in replace and current in twx.namelist() and group_views.changed_in_baw(twx.read(current).decode("utf-8")):
             KEPT.append(g["name"])
@@ -345,8 +429,7 @@ def group_objects(spec, package, owners, views, theme, twx, replace=()):
         variable, class_ref = owners[g["name"]]
         name = f"{g['name']}{SUFFIX} Preview"
         layout, ok = preview_layout(name, g, variable, views, theme, spec.get("app", ""))
-        booleans = [f for f in g["fields"] if widget_toolkit.widgets(TOOLKIT).get(f["type"], {}).get("binding") == "Boolean"]
-        init = "\n".join([f"tw.local.{variable} = {{}};"] + [f"tw.local.{variable}.{f['path']} = false;" for f in booleans])
+        init = f"tw.local.{variable} = {{}};"
         objects.append(group_views.preview_service(acronym, name, variable, class_ref.lstrip("/"), layout, ok, init, "modernize_coaches"))
     return objects
 
@@ -366,7 +449,7 @@ def add_objects(package, objects, entries, files):
 # ---------------------------------------------------------------- service copies
 
 
-def copy_service(text, service, app, theme, screen_view_id, actions_view_id, widget_views, owned):
+def copy_service(text, service, app, theme, screen_view_id, actions_view_id, widget_views):
     p = re.search(rf'xmlns:(\w+)="{re.escape(DESIGNER_NS)}"', text).group(1)
     for coach in service["coaches"]:
         at = text.index(f'id="{coach["id"]}"')
@@ -374,17 +457,17 @@ def copy_service(text, service, app, theme, screen_view_id, actions_view_id, wid
         close = text.index(f"</{p}:layout>", open_tag.end())
         old, spec = text[open_tag.end():close], screen_spec(app, service, coach)
         layout = (screen_layout(old, p, coach, screen_view_id, actions_view_id, theme, service["variable"], spec) if coach.get("screen")
-                  else widget_layout(old, p, coach, widget_views, theme, service["variable"], spec))
+                  else widget_layout(old, p, coach, widget_views, theme, service, spec))
         text = text[:open_tag.end()] + layout + text[close:]
     name = escape(service["name"] + SUFFIX, {'"': "&quot;"})
     text = re.sub(r'(<process id="[^"]+" name=")[^"]*(")', rf"\g<1>{name}\g<2>", text, count=1)
     text = re.sub(r'(globalUserTask\b[^>]*?\bname=")[^"]*(")', rf"\g<1>{name}\g<2>", text, count=1)
-    mapping = {u: uid() for u in owned}
+    mapping = {u: uid() for u in declared_uuids(text)}
     text = UUID_RE.sub(lambda m: mapping.get(m.group(0), m.group(0)), text)
     text = re.sub(r"<guid>[^<]*</guid>", lambda m: f"<guid>guid:{uid()}</guid>", text)
     pid = re.search(r'<process id="([^"]+)"', text).group(1)
     version = re.search(r"<versionId>([^<]+)</versionId>", text).group(1)
-    return pid, version, name, text
+    return pid, version, name, text, mapping
 
 
 def system_data_ref(package):
@@ -395,15 +478,17 @@ def system_data_ref(package):
     return deps["TWSYS"]
 
 
-def owned_uuids(twx, package, service_id):
-    """UUIDs used only inside this service's file: the copy gets fresh ones; references to other objects stay."""
-    text = twx.read(f"objects/{service_id}.xml").decode("utf-8")
-    elsewhere = foreign_uuids(twx)
-    elsewhere.update(UUID_RE.findall("\n".join(l for l in package.splitlines() if service_id not in l)))
-    for name in twx.namelist():
-        if name.startswith("objects/") and name != f"objects/{service_id}.xml":
-            elsewhere.update(UUID_RE.findall(twx.read(name).decode("utf-8", "ignore")))
-    return set(UUID_RE.findall(text)) - elsewhere
+DECLARING_ELEMENTS = ("processId", "processParameterId", "processVariableId", "processItemId", "tWComponentId", "exitPointId",
+                      "processLinkId", "versionId", "id", "localizationId")
+
+
+def declared_uuids(text):
+    """UUIDs the service file declares as its own (the process, its parameters, variables, flow objects, coaches, layout
+    items, localization entries, versions): the copy gets fresh ones. Any other reference (business objects, Views,
+    toolkit and system objects) is never declared here and stays."""
+    declaring = rf'<(?:\w+:)?(?:{"|".join(DECLARING_ELEMENTS)})>(?:\d+\.)?({UUID_RE.pattern})<'
+    attribute = rf'\bid="(?:\d+\.)?({UUID_RE.pattern})"'
+    return set(re.findall(declaring, text)) | set(re.findall(attribute, text))
 
 
 def check_field_types(services):
@@ -417,9 +502,52 @@ def check_field_types(services):
         raise SystemExit("Unknown field types in the coach spec:\n" + "\n".join(bad) + f"\nAllowed types: {', '.join(allowed)}")
 
 
-def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, snapshot=None, toolkit: Path | None = None, replace_groups=()):
+def rewire_processes(twx: zipfile.ZipFile, package: str, files: dict, ids: dict, copies: dict):
+    """Point the process (BPD) activities that run a classic service at its copy. ids: classic service id -> {old id:
+    new id} (ID_MAP); copies: classic service id -> name of its copy. The whole map of each service a BPD mentions is
+    applied to the whole BPD text, so activity references, the escaped bpmn2 calledElement and the data-mapping
+    parameter ids all follow. The BPD keeps its id and gets a new version, in its xml and in package.xml, like any
+    edited object. Changed BPDs go into files; returns (package, one line per rewired activity).
+    Fails if an old id survives outside the classic services, or a BPD reference has no object in the package."""
+    lines, bpds = [], {}
+    for name in sorted(n for n in twx.namelist() if re.fullmatch(r"objects/25\.[^/]+\.xml", n)):
+        text = twx.read(name).decode("utf-8")
+        used = [sid for sid in ids if sid.split(".", 1)[1] in text]
+        if not used:
+            continue
+        mapping = {old: new for sid in used for old, new in ids[sid].items()}
+        version = uid()
+        rewired = UUID_RE.sub(lambda m: mapping.get(m.group(0), m.group(0)), text)
+        rewired = re.sub(r"<versionId>[^<]+</versionId>", f"<versionId>{version}</versionId>", rewired, count=1)
+        bpd = name[len("objects/"):-len(".xml")]
+        package = re.sub(rf'(<object id="{re.escape(bpd)}" versionId=")[^"]+', rf"\g<1>{version}", package)
+        bpds[name] = rewired
+        for activity, sid in re.findall(r"<name>([^<]*)</name>(?:(?!<name>).)*?<attachedActivityId>/([^<]+)</attachedActivityId>", text, re.S):
+            if sid in copies:
+                lines.append(f"{unescape(activity)} now runs {unescape(copies[sid])}")
+
+    classic = {f"objects/{sid}.xml" for sid in ids}
+    old = {u for name in classic for u in declared_uuids(twx.read(name).decode("utf-8"))}
+    texts = {n: twx.read(n).decode("utf-8") for n in twx.namelist() if n.startswith("objects/") and n.endswith(".xml")}
+    texts.update({n: d.decode("utf-8") for n, d in files.items() if n.startswith("objects/")})
+    texts.update(bpds)
+    for name, text in sorted(texts.items()):
+        left = old & set(UUID_RE.findall(text))
+        if left and name not in classic:
+            raise SystemExit(f"{name} still holds {len(left)} old service or parameter id(s) after rewiring, e.g. {sorted(left)[0]}")
+    for name, text in bpds.items():
+        for ref in sorted(set(re.findall(r"<attachedActivityId>/([^<]+)</attachedActivityId>", text)) | set(re.findall(r'calledElement="([^"]+)"', text))):
+            if f'<object id="{ref}"' not in package:
+                raise SystemExit(f"{name} refers to {ref}, which is not an object of the package")
+    files.update({n: t.encode("utf-8") for n, t in bpds.items()})
+    return package, lines
+
+
+def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, snapshot=None, toolkit: Path | None = None,
+              replace_groups=(), rewire=True):
     """theme: a theme file loaded by coach_theme.load_theme. toolkit: the Modernizer Widgets .twx (widget_toolkit.py
-    build) whose snapshot the app depends on; needed when a coach has no hand-written screen."""
+    build) whose snapshot the app depends on; needed when a coach has no hand-written screen. rewire: also point the
+    process activities that run a classic service at its copy (the classic services stay in the app)."""
     services = [s for s in spec["services"] if s["modernize"]]
     if not services:
         raise SystemExit("Nothing to modernize: no service in the spec has \"modernize\": true")
@@ -467,16 +595,23 @@ def modernize(source: Path, spec: dict, bundle: Path, dest: Path, theme: dict, s
         if spec.get("groups"):
             package = add_objects(package, group_objects(spec, package, owners, widget_views, theme, twx, replace_groups), objects, files)
 
-        created = []
+        created, copies = [], {}
+        ID_MAP.clear()
+        UNRECOGNISED.clear()
         for service in services:
             text = twx.read(f"objects/{service['id']}.xml").decode("utf-8")
-            owned = owned_uuids(twx, package, service["id"])
-            pid, version, name, xml = copy_service(text, service, spec["app"], theme, views.get(service["classRef"]), actions_view_id, widget_views, owned)
+            pid, version, name, xml, ids = copy_service(text, service, spec["app"], theme, views.get(service["classRef"]), actions_view_id, widget_views)
+            ID_MAP[service["id"]] = ids
             objects.append(f'<object id="{pid}" versionId="{version}" name="{name}" type="process"/>')
             files[f"objects/{pid}.xml"] = xml.encode("utf-8")
             created.append(name)
+            copies[service["id"]] = name
 
         package = package.replace("</objects>", "".join(f"\n        {o}" for o in objects) + "\n    </objects>", 1)
+        REWIRED.clear()
+        if rewire:
+            package, lines = rewire_processes(twx, package, files, ID_MAP, copies)
+            REWIRED.extend(lines)
         if file_entries:
             new_files = "".join(f"\n        {f}" for f in file_entries)
             package = (package.replace("</files>", new_files + "\n    </files>", 1) if "</files>" in package
@@ -512,15 +647,22 @@ def main():
     parser.add_argument("--toolkit", type=Path, help="Modernizer Widgets .twx (widget_toolkit.py build) for coaches built from widgets")
     parser.add_argument("--replace-group", action="append", default=[], metavar="NAME",
                         help="Rebuild this group from the spec even if it was changed in BAW (repeatable)")
+    parser.add_argument("--no-rewire", action="store_true",
+                        help="Leave the process activities on the classic services (default: point them at the copies)")
     args = parser.parse_args()
     spec = json.loads(args.spec.read_text())
     theme, errors = load_theme(args.theme or spec.get("theme"), PROJECT, "the coach spec's theme")
     if errors:
         raise SystemExit("Invalid theme:\n  " + "\n  ".join(errors))
-    for name in modernize(args.twx, spec, args.bundle, args.dest, theme, args.snapshot, args.toolkit, args.replace_group):
+    for name in modernize(args.twx, spec, args.bundle, args.dest, theme, args.snapshot, args.toolkit, args.replace_group,
+                         not args.no_rewire):
         print(f"Added service: {name}")
+    for line in REWIRED:
+        print(f"Rewired: {line}")
     if KEPT:
         print(f"Changed in BAW, kept: {json.dumps(KEPT)}")
+    for line in UNRECOGNISED:
+        print(f"Event code copied as it was: {line}")
     print(f"Wrote {args.dest}")
 
 

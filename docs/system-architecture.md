@@ -16,7 +16,7 @@ Agent (Bob) ── writes ──▶ work/*.theme.json, work/*.app.json, work/*.c
 
 - **MCP server** (`baw_mcp.py`): thin tool layer. It validates inputs, resolves paths, picks the right generator or CLI, and returns small JSON results. Long jobs run as subprocesses with a scrubbed environment.
 - **App generation** (`generate_app.py`, `coach_builder.py`, `process_builder.py`, `sql_service.py`, `group_views.py`, `app_template.py`): an app spec becomes one client-side human service exposed as a URL, one coach per step or tab (tabs get Next buttons, and required fields block the finishing button), plus an optional BPD (approval, or a plain review task with read-only views and per-section Edit) and Load/Save SQL services. Packaging uses BAW's `twxWithoutToolkits` format, so no server export is needed (a `base` app can match a server's build).
-- **Modernization** (`coach_inventory.py`, `modernize_coaches.py`, `twx_clone.py`): `inspect_coaches` produces a coach spec; `modernize_app` copies each service as "(Modernized)" and rebuilds coaches from Modernizer Widgets inside native Panels or a Tab Section, or shows a hand-written React screen. Coach flow, scripts and variables stay native.
+- **Modernization** (`coach_inventory.py`, `modernize_coaches.py`, `twx_clone.py`): `inspect_coaches` produces a coach spec; `modernize_app` copies each service as "(Modernized)" and rebuilds coaches from Modernizer Widgets inside native Panels or a Tab Section, or shows a hand-written React screen. Each group binds its own business object, so one service can edit several; drafts keep their tab, and by default the app's processes are rewired to the copies (the classic services stay). Coach flow, scripts and variables stay native.
 - **Widget toolkits** (`widget_toolkit.py`, `coach-ui/`): ABW (classic markup and JavaScript) and MDW (React + Carbon behind a framework-neutral contract). Toolkits have fixed project and branch IDs, so each build is a new snapshot of the same toolkit. An app keeps the snapshot it was built with.
 - **Theme** (`coach_theme.py`): one JSON file drives both the classic and React coaches.
 - **BAW client** (`baw_ops.py`): list, export and install over REST; tokens are kept in memory. Certificates are verified (`BAW_CA_FILE` adds that CA to the system roots, `BAW_TLS_INSECURE=true` opts out), and a redirect to another host or to `http` is refused even with the opt-out. The TLS settings are read on each call, so changing them needs no restart.
@@ -26,7 +26,7 @@ Agent (Bob) ── writes ──▶ work/*.theme.json, work/*.app.json, work/*.c
 ## Data flows
 
 1. **New app**: spec → `create_app` → `.twx` in `work/` → `install_app` (if a server is configured) → `test_service` or `test_process`.
-2. **Modernize**: `export_app` → `inspect_coaches` → agent edits coach spec → `modernize_app` (new snapshot) → `install_app` → `test_service`.
+2. **Modernize**: `export_app` → `inspect_coaches` → agent edits coach spec → `modernize_app` (new snapshot; a `warning` means the toolkit predates the widgets, so build and install a new one first) → `install_app` → `test_service` on each copy → `test_process` (with `draft_then_resume` when there is a draft button).
 3. **Toolkit**: `build_widget_toolkit` → `work/<ACR>-<snapshot>.twx` → `install_app` once per server → pass the snapshot as `toolkit_snapshot`.
 
 ## Database security model

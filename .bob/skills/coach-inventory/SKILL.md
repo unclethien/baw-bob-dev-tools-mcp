@@ -13,13 +13,14 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 
    When the app was rebuilt after you edited a coach spec of it (the App Builder added a button or a field), pass that spec as `previous`. Your edits are carried onto the new spec, matched by service, coach, field path, group and button, and `carriedOver` reports them: `values` moved, `appChangedSince` (the app changed that value too, so the app's value stays: check each one) and `notFound` (its field, coach or group is gone). Moving fields between sections is not carried. Then improve only what is new.
 
-2. **Read the spec.** Each service has a `variable` (the business object behind its fields) and its `coaches` in flow order. Each coach has:
+2. **Read the spec.** Each service has a `variable` and `classRef` (the business object behind its fields), an `objects` list when it binds more than one, and its `coaches` in flow order. Each coach has:
    - `sections`, each holding `fields` (`path`, `viewId`, `label`, `type`, `readonly`, `required`);
-   - `buttons` (`label`, `viewId`, `primary`, `to`, and `type` when the button is an action widget other than Button);
+   - `buttons` (`label`, `viewId`, `primary`, `to`, `role`, and `type` when the button is an action widget other than Button). `role` is `finish`, `draft`, `back` or `stay`, and decides whether pressing it validates: leave it as read;
+   - `tabBinding`, on a coach with a Tab Section, the variable that holds the open tab (read-only);
    - `native`, the items that stay as BAW views, below the widgets;
    - `dropped`, the items that will not appear at all.
 
-   A section with `"group"` is a placement of a reusable group (coach-groups skill): it has no `fields`, since the spec's `"groups"` list each group's fields once. Edit a group's field there, and every coach that places the group follows. `groupCandidates` lists sections whose fields (at least three) appear again on another coach, and `changedInBaw` the groups someone changed in BAW.
+   A section with `"group"` is a placement of a reusable group (coach-groups skill): it has no `fields`, since the spec's `"groups"` list each group's fields once. Edit a group's field there, and every coach that places the group follows. A group, or a placement, names its own business object (`variable`, `classRef`), so one service can edit several objects and needs no hand edit for it. `blankRequired` and `fresh` on a group show that it already starts a new record blank. A read-only section with `edit` gets an Edit button back to its step. These keys are read from the app; do not change them. `groupCandidates` lists sections whose fields (at least three) appear again on another coach, and `changedInBaw` the groups someone changed in BAW.
 
 3. **Improve the spec.** Edit only these keys:
 
@@ -53,4 +54,4 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 ## Rules
 
 - Never copy client or personal data into the spec. `example` values are obvious samples (`1234567890`, `name@example.com`, `(423) 555-0100`).
-- If a service shows `"modernize": false` with a `reason`, report the reason. Do not force it on.
+- If a service shows `"modernize": false` with a `reason`, report the reason. Do not force it on. A service is skipped when fields placed straight in its coaches bind more than one object; groups binding other objects are fine.

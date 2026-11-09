@@ -1,5 +1,7 @@
 # Demo script: IBM Bob builds the Large Group Fully Insured Sales app in BAW from the client's Word document
 
+> **Replaced.** The current script is `../large-group-quote-step-by-step-demo-script/`. It builds the same app, one heading of the document at a time, with a check after each step. This page is kept as a record of the earlier rehearsals.
+
 The client wants to see how much of the BAW work IBM Bob generates, so their developers do not have to build all the BAW artifacts by hand. In this demo, Bob reads the client's own Word document and screenshots, and builds the whole app in BAW. The script has five parts:
 
 1. **The input.** What the client gave Bob, and the prompt that starts the run.
