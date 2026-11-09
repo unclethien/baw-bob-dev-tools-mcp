@@ -29,6 +29,7 @@ the CoachDesignerNG prefix ns2 of a view's layout, and the coach-side items with
 
 import hashlib
 import html
+import json
 import re
 import uuid
 import zipfile
@@ -84,12 +85,19 @@ GROUP_DRAFT_JS = """function isDraft() {
   return !!o && (o.get ? o.get("value") : o) === false;
 }
 """
-GROUP_BLANK_JS = """
+SHOWN_AS_JS = """
 function shownAs() {
   var own = view.context.options._metadata.visibility, mine = own ? own.get("value") : "";
   return !mine || mine === "DEFAULT" ? (view.context.getInheritedVisibility ? view.context.getInheritedVisibility() : "EDITABLE") : mine;
 }
-function kindOf(sub) {
+"""
+WAIT_JS = """// The children finish loading after this script runs, so wait for them.
+var tries = 0;
+(function wait() {
+  if (!blankRequired() && ++tries < 20) setTimeout(wait, 50);
+  else setTimeout(blankRequired, 300);  // a last pass for controls that finished loading after the first
+})();"""
+GROUP_BLANK_JS = SHOWN_AS_JS + """function kindOf(sub) {
   var el = sub.context.element, box = el && el.closest ? el.closest(".CoachView") : el;
   var text = box ? (box.className || "") + " " + (box.getAttribute("data-type") || "") : "";
   if (/(^|[\\s.])(Integer|Decimal|Single_Select)(\\s|$)/.test(text)) return "number";  // a whole-number dropdown also loads as 0
@@ -114,12 +122,23 @@ function kindOf(sub) {
   });
   return seen;
 }
-// The children finish loading after this script runs, so wait for them.
-var tries = 0;
-(function wait() {
-  if (!blankRequired() && ++tries < 20) setTimeout(wait, 50);
-  else setTimeout(blankRequired, 300);  // a last pass for controls that finished loading after the first
-})();"""
+""" + WAIT_JS
+# The same for a group of Modernizer Widgets, which show a stored false as "No" and carry no classic control classes:
+# the required numbers, dropdowns and Yes/No radios are named by their layout item IDs, and each one's binding goes
+# back to null while it holds the 0 or false BAW gave it on load.
+GROUP_WIDGET_BLANK_JS = SHOWN_AS_JS + """@DRAFT@var blankIds = @IDS@;
+function blankRequired() {
+  if (shownAs() === "READONLY" || isDraft()) return true;
+  var seen = 0;
+  each(view, function (sub) {
+    if (blankIds.indexOf(sub.context.viewid) < 0 || !sub.context.binding) return;
+    seen++;
+    var value = sub.context.binding.get("value");
+    if (value === 0 || value === false) sub.context.binding.set("value", null);
+  });
+  return seen;
+}
+""" + WAIT_JS
 GROUP_CHANGE_JS = 'if (event.type === "config" && this._groupVisibility) this._groupVisibility();'
 
 SELECTION_TYPE = """<?xml version="1.0" encoding="UTF-8"?>
@@ -324,14 +343,15 @@ def top_level(items, prefix="ns2"):
     return "".join(out)
 
 
-def group_view(acronym, name, variable, bo_ref, visibility_ref, fields, items, author="group_views", blank_required=False, fresh_ref=None):
+def group_view(acronym, name, variable, bo_ref, visibility_ref, fields, items, author="group_views", blank_required=False, fresh_ref=None,
+               blank_ids=None):
     """A group View: (view id, version, xml).
 
     fields: (path, kind, label, hideable) per field, in layout order. items: the View's layout items (ns2 prefix), built
     by the caller; each field view must bind to tw.businessData.<variable>.<path>, and the caller has already
     passed each hideable field's item through bind_visibility. blank_required adds the script that puts a blank required
     number or Yes/No back to null after load. fresh_ref (the Boolean type's reference) adds the freshForm option, which turns that
-    off for a reopened draft."""
+    off for a reopened draft. blank_ids (layout item IDs) uses the Modernizer Widgets form of that script, for those items."""
     group_id, version = view_id(acronym, name), uid()
     new_id = stable_ids(acronym, f"group/{name}")
     new_id()  # the sequence's first ID is the View's own, so the IDs view_xml draws next stay what they were
@@ -340,7 +360,8 @@ def group_view(acronym, name, variable, bo_ref, visibility_ref, fields, items, a
         options.append(("freshForm", "Fresh form", fresh_ref))
     description = (f"Reusable group of {len(fields)} fields. Place it on a coach bound to the {variable} variable; "
                    "each field's visibility option hides it there. Built by baw-dev-tools, fingerprint @FINGERPRINT@")
-    blank = GROUP_BLANK_JS.replace("@DRAFT@", GROUP_DRAFT_JS) if fresh_ref else GROUP_BLANK_JS.replace("@DRAFT@", "").replace(" || isDraft()", "")
+    script = GROUP_BLANK_JS if blank_ids is None else GROUP_WIDGET_BLANK_JS.replace("@IDS@", json.dumps(sorted(blank_ids)))
+    blank = script.replace("@DRAFT@", GROUP_DRAFT_JS) if fresh_ref else script.replace("@DRAFT@", "").replace(" || isDraft()", "")
     xml = view_xml(group_id, version, escape(name, {'"': "&quot;"}), binding_ref=bo_ref, binding_name=variable, options=options, load=GROUP_JS + blank if blank_required else GROUP_JS,
                    change=GROUP_CHANGE_JS, emit_boundary=False, description=description, new_id=new_id, layout=top_level(items))
     xml = xml.replace("@FINGERPRINT@", fields_fingerprint(layout_fields(xml)), 1)
