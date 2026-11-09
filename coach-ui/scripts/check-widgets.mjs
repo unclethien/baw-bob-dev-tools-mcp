@@ -807,6 +807,79 @@ print(json.dumps(views))`, out], { encoding: 'utf8' }));
     }
     check('every boundary widget fires eventON_CLICK, its boundary event and eventON_BOUNDARYEVT', pressed.length === 0, pressed);
   }
+
+  // 13. Typed values: Yes/No and whole-number options read and write booleans and numbers, not text.
+  {
+    const { page, errors } = await fresh();
+    await page.evaluate(() => {
+      const nvp = (pairs) => ({ items: pairs.map(([name, value]) => ({ get: (key) => (key === 'name' ? name : value) })) });
+      const yesNo = nvp([['Yes', 'true'], ['No', 'false']]);
+      const ages = nvp([19, 20, 21, 22, 23, 24, 25, 26].map((n) => [`${n} years`, String(n)]));
+      window.cover = {};
+      for (const [name, value] of [['Null', null], ['True', true], ['False', false]]) {
+        window.cover[name] = harness.view({ kind: 'radio', id: `Cover${name}`, label: 'Prior coverage', value, options: { options: yesNo } });
+      }
+      window.ageNull = harness.view({ kind: 'select', id: 'AgeNull', label: 'Age', value: null, options: { options: ages } });
+      window.age19 = harness.view({ kind: 'select', id: 'Age19', label: 'Age', value: 19, options: { options: ages } });
+      window.age26 = harness.view({ kind: 'select', id: 'Age26', label: 'Age', value: 26, options: { options: ages } });
+      window.zero = harness.view({ kind: 'select', id: 'Zero', label: 'Count', value: 0, options: { options: nvp([['None', '0'], ['One', '1']]) } });
+      window.words = harness.view({ kind: 'select', id: 'Words', label: 'Word', value: null, options: { options: nvp([['A', 'a'], ['B', 'b']]) } });
+      window.cost = harness.view({ kind: 'number', id: 'Cost', label: 'Cost', value: 0, options: { decimalPlaces: 2 } });
+      window.price = harness.view({ kind: 'number', id: 'Price', label: 'Price', value: 12.5, options: { decimalPlaces: 2 } });
+      harness.view({ kind: 'text', id: 'Mark', label: 'Mark', value: '' });
+    });
+    await sleep(300);
+    const checked = (id) => page.$$eval(`input[type=radio][name=pp-${id}]`, (r) => r.filter((x) => x.checked).map((x) => x.value));
+    check('a null Yes/No shows nothing selected', (await checked('CoverNull')).length === 0, await checked('CoverNull'));
+    check('a true Yes/No shows Yes selected', JSON.stringify(await checked('CoverTrue')) === '["true"]', await checked('CoverTrue'));
+    check('a false Yes/No shows No selected', JSON.stringify(await checked('CoverFalse')) === '["false"]', await checked('CoverFalse'));
+    await page.click('input[name=pp-CoverNull][value=true] + label');
+    await sleep(50);
+    check('picking Yes stores the boolean true', await page.evaluate(() => cover.Null.value() === true), await page.evaluate(() => cover.Null.value()));
+    await page.click('input[name=pp-CoverNull][value=false] + label');
+    await sleep(50);
+    check('picking No stores the boolean false', await page.evaluate(() => cover.Null.value() === false), await page.evaluate(() => cover.Null.value()));
+    const selected = (id) => page.$eval(`#${id}`, (s) => s.value);
+    check('a null dropdown shows the blank item', (await selected('pp-AgeNull')) === '', await selected('pp-AgeNull'));
+    check('a 19 dropdown shows 19', (await selected('pp-Age19')) === '19', await selected('pp-Age19'));
+    check('a 26 dropdown shows 26', (await selected('pp-Age26')) === '26', await selected('pp-Age26'));
+    check('a 0 dropdown shows its 0 option', (await selected('pp-Zero')) === '0', await selected('pp-Zero'));
+    await page.select('#pp-AgeNull', '19');
+    await sleep(50);
+    check('picking 19 stores the number 19', await page.evaluate(() => ageNull.value() === 19), await page.evaluate(() => ageNull.value()));
+    await page.select('#pp-AgeNull', '26');
+    await sleep(50);
+    check('picking 26 stores the number 26', await page.evaluate(() => ageNull.value() === 26));
+    await page.select('#pp-AgeNull', '');
+    await sleep(50);
+    check('picking the blank item stores null', await page.evaluate(() => ageNull.value() === null), await page.evaluate(() => ageNull.value()));
+    await page.select('#pp-Zero', '1');
+    await page.select('#pp-Zero', '0');
+    await sleep(50);
+    check('picking 0 stores the number 0', await page.evaluate(() => zero.value() === 0), await page.evaluate(() => zero.value()));
+    await page.select('#pp-Words', 'b');
+    await sleep(50);
+    check('text options still store text', await page.evaluate(() => words.value() === 'b'), await page.evaluate(() => words.value()));
+    check('a 0 number shows 0.00', (await page.$eval('#pp-Cost', (i) => i.value)) === '0.00', await page.$eval('#pp-Cost', (i) => i.value));
+    check('12.5 with 2 decimals shows 12.50', (await page.$eval('#pp-Price', (i) => i.value)) === '12.50', await page.$eval('#pp-Price', (i) => i.value));
+    await page.click('#pp-Price', { clickCount: 3 });
+    await page.type('#pp-Price', '12.5');
+    await page.keyboard.press('Tab');
+    await sleep(100);
+    check('a typed 12.5 is stored as the number 12.5', await page.evaluate(() => price.value() === 12.5), await page.evaluate(() => price.value()));
+    await page.click('#pp-Price', { clickCount: 3 });
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Tab');
+    await sleep(100);
+    check('a cleared number stores null', await page.evaluate(() => price.value() === null), await page.evaluate(() => price.value()));
+    await page.click('#pp-Cost', { clickCount: 3 });
+    await page.type('#pp-Cost', '0');
+    await page.keyboard.press('Tab');
+    await sleep(100);
+    check('a typed 0 is stored as the number 0', await page.evaluate(() => cost.value() === 0), await page.evaluate(() => cost.value()));
+    check('no page errors (typed values)', errors.length === 0, errors);
+    await page.close();
+  }
 } catch (e) {
   check('harness ran', false, String(e).slice(0, 500));
 } finally {

@@ -22,6 +22,7 @@ does for UI Toolkit views; only type references (classId) carry a "<dependency u
 
 import argparse
 import functools
+import hashlib
 import json
 import re
 import sys
@@ -323,6 +324,13 @@ def build(toolkit: str, snapshot: str, dest: Path, bundle: Path = BUNDLE, author
         for name, data in files.items():
             out.writestr(name, data)
     return [w["view"] for w in widgets(toolkit).values()]
+
+
+def carries_bundle(toolkit_twx: Path, bundle: Path = BUNDLE) -> bool:
+    """Whether a built toolkit .twx embeds exactly the bundle files in `bundle` (so is not stale after a coach-ui rebuild)."""
+    with zipfile.ZipFile(toolkit_twx) as z:
+        embedded = {hashlib.sha256(z.read(n)).hexdigest() for n in z.namelist() if n.startswith("files/") and not n.endswith("/")}
+    return all(hashlib.sha256((bundle / name).read_bytes()).hexdigest() in embedded for name, _ in BUNDLE_FILES)
 
 
 def toolkit_dependency(toolkit_twx: Path, rank):

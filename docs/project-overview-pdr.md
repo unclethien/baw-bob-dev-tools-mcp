@@ -19,7 +19,7 @@ Building a BAW app (business object, coaches, flow, workflow, installable `.twx`
 |---|---|
 | Authoring split | The agent authors app specs, theme files, coach specs and React screens. The server only packages, installs, inspects and tests. |
 | App generation | `create_app` builds an installable `.twx` from an app spec: steps or tabs, sections, columns, fields, review and confirmation, optional workflow (BPD) with approval, optional `database` section, reusable groups. |
-| Modernization | `inspect_coaches` reads a legacy app into a coach spec; `modernize_app` adds a React + Carbon copy of each service, keeping flow, scripts and variables. |
+| Modernization | `inspect_coaches` reads a legacy app into a coach spec; `modernize_app` adds a React + Carbon copy of each service, keeping flow, scripts and variables; services whose groups edit different business objects are supported, and processes are rewired to the copies. |
 | Widget toolkits | Two generated toolkits: App Builder Widgets (ABW, classic) and Modernizer Widgets (MDW, React + Carbon). Coaches stay editable in Coach Designer. |
 | Look | One theme file styles both classic and modernized coaches. No default theme; the agent asks for a look. |
 | Verification | `test_service` and `test_process` run services and workflows in a real browser and screenshot each screen. |
