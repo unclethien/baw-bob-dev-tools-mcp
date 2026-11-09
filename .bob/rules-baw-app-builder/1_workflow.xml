@@ -52,6 +52,18 @@
   </initialization_steps>
 
   <main_workflow>
+    <phase name="step_by_step">
+      <description>When the requirement document's headings name the build steps (for example Process, a Business Object, a Coach View, a Client-Side Human Service, UI Validations, Expected Outcome), or the user asks to build step by step: build it one heading at a time and check with the user after each one</description>
+      <steps>
+        <step>After the initialization steps (requirement, screenshots, look, acronym), make a to-do list with one item per heading, in the document's order and with the document's names (e.g. "1. Process", "2. General Information Business Object"). When the last heading is an expected outcome, the last item is "Validate the workflow". Show the list and say that you stop after each item</step>
+        <step>Work on one item at a time: write that part of work/ACR.app.json and show only that part, short enough to read in a minute. Process: the process name, the lanes, the human activities in order and the flow (Start → ... → End); an activity that shows the form read-only before it is sent becomes process.review (read-only, Edit on each section, Submit) with "review": false on the spec, never the review page inside the form. Business Object: its name and variable, and a table of every field with the document's data type and whether it is required. Coach View: its name, the business object it binds to, its sections and columns, and the control and label of each field. Client-Side Human Service: its name, the tabs and the View on each, the buttons on each tab, the variables and the data mapping to the process, and the review task. UI Validations: the required fields, the message, the button that stays blocked, and the tab the user is kept on</step>
+        <step>STOP at the end of every item: mark it done in the to-do list, ask the user to check it and whether to go on to the next item (name it). Never start the next item before the user answers. When the user asks for a change, change the spec and show the changed part again</step>
+        <step>Nothing is built before the Client-Side Human Service item is approved, because create_app needs the business objects, the Views and the service together. That approval replaces the build phase's design stop: ask then which installed app to match, or the built-in template. Then follow the build phase from "Pick the toolkit" up to install_app, with its import question. End the item with the app installed, the run URL, and the services and Views it holds</step>
+        <step>UI Validations, after its check: test_service for the form service and show its blocked check (the finishing button blocked while required fields are empty, the messages, the tab shown) with the screenshots. When the user asks for a change, rebuild and install with a new snapshot</step>
+        <step>Validate the workflow: test_process with the process name (with a draft button, also draft_then_resume), compare the screenshots with the originals when built from screenshots, and report each task, the result and the screenshot folders. Then give the user the Workplace steps to try it, and say that the window closes after the form task and the next task opens from the task list</step>
+      </steps>
+    </phase>
+
     <phase name="build">
       <description>Design, build, install and test with the baw-app-builder skill</description>
       <steps>
@@ -59,7 +71,7 @@
         <step>Write work/ACR.app.json with "theme" set to the theme file</step>
         <step>Every section becomes a reusable View by default (coach-groups skill); never put fields directly on the coach unless the user asks (then "reusableViews": false). Find information that repeats: at least three fields on two or more screens, or groups the user named, become named groups placed on every screen that shows them</step>
         <step>When the app stores its form in a table: add a "database" section to the spec ({"table": "public.name", "key": "&lt;field&gt;", "columns": {"&lt;field&gt;": "&lt;column&gt;"}}, see the baw-app-builder skill). Call list_tables("bawexternal") and describe_table first to see which tables exist, and never use a table name that already holds data of another shape. The data source is always jdbc/bawexternal</step>
-        <step>STOP unless told to go ahead: show the theme, the screens with their sections, fields and buttons, the reusable Views (one per section, and the named groups and where each is placed), the database table, key and columns when there is one, and your assumptions (including anything left out or changed from a screenshot, and any required marker the requirement implies but does not show); ask which installed app to match for a new app; wait for approval before create_app</step>
+        <step>STOP unless told to go ahead: show the theme, the screens with their sections, fields and buttons, the reusable Views (one per section, and the named groups and where each is placed), the database table, key and columns when there is one, and your assumptions (including anything left out or changed from a screenshot, and any required marker the requirement implies but does not show); ask which installed app to match for a new app; wait for approval before create_app. In a step-by-step build, the stops at the end of each item replace this one</step>
         <step>Pick the toolkit: the newest snapshot list_snapshots("ABW") shows that has its work/ABW-SNAPSHOT.twx. When there is none, or the widgets changed since, build_widget_toolkit("builder") with a new snapshot and install_app it</step>
         <step>create_app with toolkit_snapshot, then inspect_coaches on the result and check every step</step>
         <step>When create_app returns changedInBaw: list the groups someone changed in BAW, ask per group whether to keep BAW's version or replace it with the spec's, and create_app again with replace_groups for the ones to replace (same snapshot)</step>
@@ -85,6 +97,7 @@
 
   <completion_criteria>
     <criterion>The user approved the design before create_app and was asked before install_app</criterion>
+    <criterion>In a step-by-step build, the to-do list has one item per heading, and the user answered at the end of every item before the next one started</criterion>
     <criterion>With a "database" section: the table exists with the shape of database.columns, test_service typed the key and pressed Load, and run_sql shows the saved row</criterion>
     <criterion>The app is installed and test_service reports "ok": true for its service, and test_process reports "ok": true for its workflow when the spec has one; when the user chose not to import it, or without a BAW server, the .twx is built, inspect_coaches shows every step, and the user has the import steps</criterion>
     <criterion>When built from screenshots, every section, field, control, required marker and button in them is built, or listed under assumptions or not built, and the theme file holds the screenshot's colours, header product name and the logo the user chose</criterion>
