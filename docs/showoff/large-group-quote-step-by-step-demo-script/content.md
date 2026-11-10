@@ -13,7 +13,7 @@ The script has six parts:
 
 This replaces the earlier scripts in `../large-group-quote-demo-script/`. The app is the same: Start, Generate Quote, Review Quote, End, with two tasks. The difference is that Bob now follows the document's headings and stops after each one.
 
-**Status.** The app this script builds was checked on the test server on 6 November 2026, with a test app of the same shape. The step-by-step stops are new. After the Bob rehearsal, fill in the timings and fix any wording that does not match what Bob shows.
+**Status.** The app this script builds was checked on the test server on 6 November 2026, with a test app of the same shape. In the first Bob rehearsal, Bob stopped after every step and the app installed and passed its tests. The import offers at steps 3, 5 and 6 were added after it and have not been rehearsed yet. The tab change at step 7 was checked on the test server with a small test app on 10 November 2026, but not yet with Bob. After the next rehearsal, fill in the timings and fix any wording that does not match what Bob shows.
 
 **How to read this script.** **Do** is what you click or type. **Paste** is text you paste into Bob. **Bob does** is what Bob does on its own. **Bob shows** is what Bob puts in the chat for you to check. **Say** is what you say aloud to the room. The pictures were taken during a rehearsal, with the client's logo hidden.
 
@@ -27,7 +27,7 @@ Thirty minutes before:
 2. **Check the App Builder Widgets toolkit (ABW).** Its snapshot must be installed on the BAW server, with its `.twx` file in `work/`. If it is missing, Bob builds and installs it with `build_widget_toolkit` and `install_app`. That adds a few minutes.
 3. **Pick an acronym that nobody has used.** It must start with ZZ. This script uses `ZZLGE`. If an app with that acronym already exists on the server, pick another one and change the prompt.
 4. **Put the client's files in `screenshots/Quote/`.** This folder stays out of the repository. It holds the Word document, the two screenshot references and the logo.
-5. **Know your answers.** Bob stops at the end of each of the eight steps, and once more in step 6 to ask before it imports the app into BAW.
+5. **Know your answers.** Bob stops at the end of each of the eight steps. At steps 3, 5 and 6 it also asks whether to import what it has built so far into BAW, so you can look at it there. At step 7 you ask for one change: General Information must be complete before Benefits Information opens.
 6. **Open Workflow Center and Workplace** in two browser tabs, signed in, so you can switch quickly later. Workplace is at `/bas/Workplace` on the server.
 
 ---
@@ -78,13 +78,13 @@ In addition to the document:
 - Looks at the screenshots with `view_image`, and samples their colours with `image_colors`.
 - Checks that the acronym is free with `list_apps`.
 
-**Bob shows.** A to-do list with eight items, named after the document's headings, and a note that it will stop after each item.
+**Bob shows.** A to-do list with eight items, named after the document's headings, and a note that it will stop after each item. Steps 3, 5 and 6 are marked: they end with an offer to import into BAW.
 
 **Say.**
 
 - "Bob turned the document's headings into its plan. It will do one item at a time and show us the result before it goes on, the same way a developer would walk a reviewer through it."
 
-In steps 1 to 5 Bob writes the app spec part by part and shows each part in the chat. Nothing is in BAW yet: Bob builds and installs the app in step 6, when the business objects, the Views and the service are all agreed.
+In steps 1 to 5 Bob writes the app spec part by part and shows each part in the chat. Steps 1, 2 and 4 are checked in the chat only: a process, or a business object without a screen, cannot be built on its own. From step 3 on, Bob offers to build and import what is agreed so far, one snapshot per import, so you can check it in BAW. The process goes in with the first import.
 
 ### Step 1. Process
 
@@ -116,7 +116,21 @@ In steps 1 to 5 Bob writes the app spec part by part and shows each part in the 
 
 **Point out.** The dropdown options are placeholders, because the document lists no options.
 
-**Do.** Answer: "Looks good, go on."
+**Bob asks** whether to import it into BAW so you can check it there.
+
+**Do.** Answer: "Looks good. Yes, import it, and use the built-in template."
+
+**Bob does.**
+
+- `create_app` writes snapshot 1.0.0: GenInfoBO, QuoteDetails CV, the Generate Quote service with its first tab, and the process with both tasks.
+- `inspect_coaches` checks the screens, and `install_app` installs the app.
+- `test_service` opens the "QuoteDetails CV Preview" service in a browser. Bob shows the screenshots and the run links, then asks whether to go on.
+
+**Say.**
+
+- "This is the first time anything goes to the server, and Bob asked before it did. The process is already there, with both tasks."
+
+**Do.** Answer: "Go on."
 
 ### Step 4. Benefits Business Object
 
@@ -131,7 +145,11 @@ In steps 1 to 5 Bob writes the app spec part by part and shows each part in the 
 - The reusable View **BenefitsDetails CV**, bound to BenefitsBO.
 - Its four columns, taken from the Benefits and Eligibility screenshot, with the $ icon on the money fields.
 
-**Do.** Answer: "Looks good, go on."
+**Do.** Answer: "Looks good. Yes, import it."
+
+**Bob does.** Snapshot 1.0.1 adds BenefitsBO, BenefitsDetails CV and the Benefits Information tab. `test_service` opens the "BenefitsDetails CV Preview" service. Bob shows the screenshots and asks whether to go on.
+
+**Do.** Answer: "Go on."
 
 ### Step 6. Client-Side Human Service
 
@@ -143,21 +161,17 @@ In steps 1 to 5 Bob writes the app spec part by part and shows each part in the 
 - The variables `genInfo` and `benefits`, mapped to the process.
 - The **Review Quote** service for the second activity: both Views read-only, an Edit button on each section, and Submit.
 
-**Do.** Answer: "Use the built-in template, and I approve."
+**Do.** Answer: "Looks good. Yes, import it."
 
 **Bob does.**
 
-- `create_app` writes the app as a .twx file.
-- `inspect_coaches` checks the screens in that file.
-- Bob asks you to approve the import.
-
-**Do.** Approve the import.
-
-**Bob does.** `install_app` installs the app in BAW. Bob shows the run link and what the app holds, and asks whether to go on.
+- `create_app` writes snapshot 1.0.2 with the buttons and the Review Quote service, and `inspect_coaches` checks the screens.
+- `install_app` installs it. Your yes was the import approval, so Bob does not ask again.
+- `test_service` opens the Generate Quote form with both tabs. Bob shows the screenshots, the run link and what the app holds, and asks whether to go on.
 
 **Say.**
 
-- "This is the first time anything goes to the server, and Bob asked before it did."
+- "Each import is a new snapshot, so we can see every step in BAW and go back to an earlier one."
 
 **Do.** Answer: "Go on."
 
@@ -165,9 +179,22 @@ In steps 1 to 5 Bob writes the app spec part by part and shows each part in the 
 
 **Bob shows.** The validation rules: every field is required, the message for a missing field, Review stays blocked while a field is empty, and the user is kept on the tab with errors.
 
-**Do.** Answer: "Looks good, test it."
+**Do.** Ask for a change, in plain words: "One change: the user must fill in the General Information tab before going to Benefits Information. Neither Next nor the tab header may skip ahead."
 
-**Bob does.** `test_service` presses Review on the empty form. Review is blocked, no request is sent, and the first tab shows its errors (image 01). Both tabs then fill: 19 fields and 26 fields. Bob shows the screenshots.
+**Bob shows.** The changed part of the spec: the form gets `"tabsInOrder": true`. Next, or a click on the Benefits Information tab, stays on General Information while one of its required fields is empty. Going back is always allowed. Bob asks whether to build and test it.
+
+**Do.** Answer: "Yes, build it and test it."
+
+**Bob does.**
+
+- `create_app` writes snapshot 1.0.3, and `install_app` installs it.
+- `test_service` presses Next on the empty form. The form stays on General Information, every empty field is marked, and the Benefits Information tab does not open (image 01).
+- It fills General Information. Now the Benefits Information tab opens. It presses Review with Benefits still empty: Review is blocked on Benefits Information.
+- It fills Benefits and presses Review. Bob shows the screenshots and asks whether to go on.
+
+**Say.**
+
+- "We changed a rule in plain words. Bob changed the app, rebuilt it and tested the change itself. Nobody opened Designer."
 
 **Do.** Answer: "Go on."
 
@@ -176,7 +203,7 @@ In steps 1 to 5 Bob writes the app spec part by part and shows each part in the 
 **Bob does.**
 
 - **`test_process`.** The process runs Start, Generate Quote, Review Quote, End, and completes.
-- **`test_process` with `draft_then_resume`.** Save as Draft works with required fields still empty. The task stays in the inbox. Reopening it brings back the values on the tab the user left: 0, No and 12.50 (image 02).
+- **`test_process` with `draft_then_resume`.** Save as Draft works with required fields still empty. Bob types a few General Information fields, because Benefits does not open until that tab is complete. The task stays in the inbox, and reopening it brings back the values on General Information.
 - Compares its screenshots with the client's screenshots.
 
 **Bob shows.** Its final report: the app, the acronym, the snapshot, the run links, the steps, the field counts, the test results and the screenshot folders. Then the Workplace steps for you to try it.
@@ -199,16 +226,16 @@ Open **Workflow Center**, find the app, and open it in **Designer**. The checks 
 | 4 | **BenefitsBO** has 26 properties: 16 String, 4 Decimal, 3 Boolean and 3 Integer. | Data, open BenefitsBO. |
 | 5 | The View **BenefitsDetails CV** is bound to BenefitsBO. | User Interface, open BenefitsDetails CV. |
 | 6 | The client-side human service **Generate Quote** has two tabs, the variables `genInfo` and `benefits`, and the task data mapping. | User Interface, open Generate Quote, look at the diagram, the variables and the Benefits tab (image 03). |
-| 7 | Required-field validation blocks Review while a required field is empty, and shows the first tab with errors (image 01). | Preview Generate Quote, or Workplace. Open the Benefits Information tab and press Review on the empty form. |
+| 7 | Next and the Benefits Information tab stay on General Information while one of its required fields is empty (image 01), and Review is blocked while a Benefits field is empty. | Preview Generate Quote, or Workplace. Press Next on the empty form, then click the Benefits Information tab. |
 | 8 | The whole process runs to completion. | Workplace, run it once, or show Bob's `test_process` result. |
 | 9 | Save as Draft and resume work (image 02). | Workplace, see part 5. |
 | 10 | Review Quote is read-only, with an Edit button on each section and a Submit button (image 04). | Workplace, see part 5. |
 
 ### What to point out in each picture
 
-**Image 01. The empty form is blocked.** All fields on the General Information tab are empty. Review was pressed on the last tab. Every required field is outlined in red, and the user stays on the form. The buttons are Save as Draft and Next.
+**Image 01. The empty form is blocked.** All fields on the General Information tab are empty. Next was pressed. Every required field is outlined in red, and the user stays on General Information. The buttons are Save as Draft and Next.
 
-**Image 02. The draft comes back.** The task was reopened after Save as Draft, and it opens on the Benefits Information tab, the tab the user left. Broker Commission shows 12.50, Age shows 0, and "ERISA group?" keeps its No.
+**Image 02. The draft comes back.** General Information was complete, so the user could go on to Benefits Information and save a draft there. The task was reopened, and it opens on the Benefits Information tab, the tab the user left. Broker Commission shows 12.50, Age shows 0, and "ERISA group?" keeps its No.
 
 **Image 03. The Benefits tab.** It has 26 fields in 4 columns: dropdowns, Yes/No radio buttons, and boxes with a $ icon. The buttons are Save as Draft and Review.
 
@@ -224,8 +251,8 @@ Open **Workflow Center**, find the app, and open it in **Designer**. The checks 
 
 **Do.** In Workplace, click **Start workflow** and pick **Large Group Fully Insured Sales**. Generate Quote opens. Then:
 
-1. Open the Benefits Information tab and press **Review** on the empty form. It is blocked, and the first tab shows its errors (image 01).
-2. Fill in part of the form, including one Yes/No answered No and one number set to 0.
+1. Press **Next** on the empty form. It is blocked, and the empty fields are marked (image 01). Click the Benefits Information tab: it does not open.
+2. Fill in all of General Information and press **Next**. Benefits Information opens. Fill in part of it, including one Yes/No answered No and one number set to 0.
 3. Press **Save as Draft**.
 4. Reopen the task from the task list. The values and the tab come back (image 02).
 5. Finish filling in the form, and press **Review**. The Generate Quote task closes.
@@ -252,7 +279,7 @@ The document's last heading asks which artifacts Bob can generate and where manu
 | 4. Benefits Business Object | BenefitsBO, 26 fields | Bob |
 | 5. Benefits Coach View | BenefitsDetails CV | Bob |
 | 6. Client-Side Human Service | Generate Quote with two tabs, Review Quote, Save as Draft, the data mapping | Bob |
-| 7. UI Validations | Required fields, messages, the blocked Review, staying on the tab | Bob |
+| 7. UI Validations | Required fields, messages, the blocked Review, and the tabs in order that you asked for at step 7 | Bob |
 | 8. Expected Outcome | The tested workflow | Bob tested it; you ran it in Workplace |
 | (not in the document) | The real dropdown option lists | Still to do, once the client supplies them |
 
@@ -284,6 +311,8 @@ Mention these honestly if they come up:
 
 | Problem | What to do |
 |---------|------------|
+| Bob does not offer the import at step 3, 5 or 6 | Say: "Build it and import it into BAW so I can check it there." |
+| Bob says it cannot keep the user on the first tab | Restart Bob IDE so it loads the current skill, which has the `tabsInOrder` option. |
 | Bob does several steps without stopping | Say: "Stop. Go back to the to-do list and check with me after each item." If it keeps going, restart Bob IDE so it loads the current App Builder rules. |
 | One of Bob's BAW tools fails | The tool error states the reason, either an HTTP code or "Cannot reach BAW". Fix that, then ask Bob to continue. |
 | The login to BAW has expired | It is renewed automatically. |
@@ -302,8 +331,9 @@ Mention these honestly if they come up:
 - [ ] Bob shows a to-do list with one item per heading of the document.
 - [ ] Bob stopped at the end of every step and waited for your answer.
 - [ ] Steps 2 and 4 show GenInfoBO (19 fields) and BenefitsBO (26 fields).
-- [ ] In step 6 Bob asked before the import, and the app installed.
-- [ ] Bob's tests pass: the blocked Review, both tabs filled, the process completed, Save as Draft and resume.
+- [ ] At steps 3, 5 and 6 Bob offered the import, asked the template question once, and snapshots 1.0.0, 1.0.1 and 1.0.2 installed.
+- [ ] At step 7 Bob made the tab change you asked for, installed snapshot 1.0.3, and its test shows Benefits Information locked until General Information is complete.
+- [ ] Bob's tests pass: the blocked Next, the blocked Review, both tabs filled, the process completed, Save as Draft and resume.
 - [ ] The ten checks match what Designer shows.
-- [ ] In Workplace, the empty form is blocked, the draft comes back on the right tab, and Review Quote opens from the task list.
+- [ ] In Workplace, the empty form is blocked, Benefits Information does not open before General Information is complete, the draft comes back on the right tab, and Review Quote opens from the task list.
 - [ ] Submit refuses a cleared required field, and after a refill Submit completes the process.

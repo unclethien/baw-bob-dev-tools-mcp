@@ -62,10 +62,10 @@
           <div><dt>8</dt><dd>steps, one per heading</dd></div>
           <div><dt>45</dt><dd>required fields</dd></div>
           <div><dt>2</dt><dd>tasks: Generate and Review Quote</dd></div>
-          <div><dt>9</dt><dd>answers from you</dd></div>
+          <div><dt>12</dt><dd>answers from you</dd></div>
           <div class="is-new"><dt>0</dt><dd>developer edits in BAW</dd></div>
         </dl>
-        <p class="fine">The app was checked on the test server on 6 November 2026. The step-by-step stops are new: after the Bob rehearsal, fill in the timings and fix any wording that does not match what Bob shows. It replaces the <a href="../large-group-quote-demo-script/index.html">earlier script</a>, where Bob built everything after a single design stop.</p>
+        <p class="fine">The app was checked on the test server on 6 November 2026. In the first Bob rehearsal, Bob stopped after every step. The import offers at steps 3, 5 and 6 came after it and are not rehearsed yet. The tab change at step 7 was checked on the test server with a small test app on 10 November 2026, not yet with Bob: after the next rehearsal, fill in the timings and fix any wording that does not match what Bob shows. It replaces the <a href="../large-group-quote-demo-script/index.html">earlier script</a>, where Bob built everything after a single design stop.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="#prep">Start with the prep</a>
           <a class="btn btn-quiet" href="#design">Jump to the steps</a>
@@ -118,7 +118,7 @@
           <li><b>Check the App Builder Widgets toolkit (ABW).</b> Its snapshot must be installed on the BAW server, with its <code>.twx</code> file in <code>work/</code>. If it is missing, Bob builds and installs it with <code>build_widget_toolkit</code> and <code>install_app</code>. That adds a few minutes.</li>
           <li><b>Pick an acronym that nobody has used.</b> It must start with ZZ. This script uses <code>ZZLGE</code>. If an app with that acronym already exists on the server, pick another one and change the prompt.</li>
           <li><b>Put the client's files in <code>screenshots/Quote/</code>.</b> This folder stays out of the repository. It holds the Word document, the screenshots and the logo.</li>
-          <li><b>Know your answers.</b> Bob stops at the end of each of the eight steps, and once more in step 6 to ask before it imports the app into BAW.</li>
+          <li><b>Know your answers.</b> Bob stops at the end of each of the eight steps. At steps 3, 5 and 6 it also asks whether to import what it has built so far into BAW, so you can look at it there. At step 7 you ask for one change: General Information must be complete before Benefits Information opens.</li>
           <li><b>Open Workflow Center and Workplace</b> in two browser tabs, signed in, so you can switch quickly later. Workplace is at <code>/bas/Workplace</code> on the server.</li>
         </ol>
       </div>
@@ -183,7 +183,7 @@ In addition to the document:
               <li>Reads the Word document with <code>office_read</code>. The field tables are read from a document dump.</li>
               <li>Looks at the screenshots with <code>view_image</code>, and samples their colours with <code>image_colors</code>.</li>
               <li>Checks that the acronym is free with <code>list_apps</code>.</li>
-              <li>Shows a to-do list with eight items, named after the document's headings, and says it will stop after each one.</li>
+              <li>Shows a to-do list with eight items, named after the document's headings, and says it will stop after each one. Steps 3, 5 and 6 are marked: they end with an offer to import into BAW.</li>
             </ol>
           </div>
           <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Bob turned the document's headings into its plan. It will do one item at a time and show us the result before it goes on, the way a developer walks a reviewer through the work.”</li></ul></blockquote>
@@ -197,15 +197,15 @@ In addition to the document:
         <header class="sec-head">
           <p class="timecode">Part 2 <span aria-hidden="true">/</span> steps 1 to 5</p>
           <h2 id="design-title" class="h2">The process, the data and the Views, one at a time.</h2>
-          <p class="lead">Bob writes the app spec part by part and shows each part in the chat. You check it and say “go on”. Nothing goes to BAW yet: Bob builds in step 6, when every part is agreed.</p>
+          <p class="lead">Bob writes the app spec part by part and shows each part in the chat. You check it and say “go on”. Steps 1, 2 and 4 stay in the chat. From step 3 on, Bob offers to import what is agreed so far, so you can check it in BAW.</p>
         </header>
         <ol class="seq" aria-label="The to-do list, in order">
           <li class="seq-ask"><span>Process</span></li>
           <li class="seq-ask"><span>General Information Business Object</span></li>
-          <li class="seq-ask"><span>General Information Coach View</span></li>
+          <li class="seq-ask"><span>General Information Coach View · import offer</span></li>
           <li class="seq-ask"><span>Benefits Business Object</span></li>
-          <li class="seq-ask"><span>Benefits Coach View</span></li>
-          <li class="seq-ask"><span>Client-Side Human Service</span></li>
+          <li class="seq-ask"><span>Benefits Coach View · import offer</span></li>
+          <li class="seq-ask"><span>Client-Side Human Service · import offer</span></li>
           <li class="seq-ask"><span>UI Validations</span></li>
           <li class="seq-new"><span>Validate the workflow</span></li>
         </ol>
@@ -251,7 +251,16 @@ In addition to the document:
             </ol>
           </div>
           <p class="cue-do"><b>Point out</b> <span>The dropdown options are placeholders, because the document lists no options.</span></p>
-          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, go on.”</span></p>
+          <p class="cue-do"><b>Do</b> <span>Bob asks whether to import it. Answer: “Looks good. Yes, import it, and use the built-in template.”</span></p>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li><code>create_app</code> writes snapshot 1.0.0: GenInfoBO, QuoteDetails CV, the Generate Quote service with its first tab, and the process with both tasks.</li>
+              <li><code>inspect_coaches</code> checks the screens, and <code>install_app</code> installs the app.</li>
+              <li><code>test_service</code> opens the “QuoteDetails CV Preview” service. Bob shows the screenshots and the run links, then asks whether to go on.</li>
+            </ol>
+          </div>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Go on.”</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“This is the first time anything goes to the server, and Bob asked before it did. The process is already there, with both tasks.”</li></ul></blockquote>
         </div>
 
         <div class="cue-panel" role="tabpanel" id="d-p4" aria-labelledby="d-t4" hidden>
@@ -268,7 +277,9 @@ In addition to the document:
               <li>Its four columns, taken from the Benefits and Eligibility screenshot, with the $ icon on the money fields.</li>
             </ol>
           </div>
-          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, go on.”</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good. Yes, import it.”</span></p>
+          <p class="cue-bob"><b>Bob does</b> <span>Snapshot 1.0.1 adds BenefitsBO, BenefitsDetails CV and the Benefits Information tab. <code>test_service</code> opens the “BenefitsDetails CV Preview” service. Bob shows the screenshots and asks whether to go on.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Go on.”</span></p>
           <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Every step is a small piece you can check in a minute. If something is wrong, you say so here, and Bob changes only that piece.”</li></ul></blockquote>
         </div>
       </div>
@@ -280,15 +291,18 @@ In addition to the document:
         <header class="sec-head">
           <p class="timecode">Part 3 <span aria-hidden="true">/</span> steps 6 to 8</p>
           <h2 id="build-title" class="h2">The human service, the validations, and the whole workflow.</h2>
-          <p class="lead">In step 6 the app goes to BAW for the first time, after Bob asks. Steps 7 and 8 are Bob's own tests, in a browser.</p>
+          <p class="lead">Step 6 adds the buttons and Review Quote, and the finished form goes to BAW after you say yes. Steps 7 and 8 are Bob's own tests, in a browser.</p>
         </header>
         <ol class="seq" aria-label="Bob's tools in steps 6 to 8, in order">
-          <li class="seq-ask"><span>Step 6 check: you approve the service</span></li>
-          <li><code>create_app</code> <span>writes the .twx</span></li>
+          <li class="seq-ask"><span>Step 6 check: you say yes to the import</span></li>
+          <li><code>create_app</code> <span>writes snapshot 1.0.2</span></li>
           <li><code>inspect_coaches</code> <span>checks its screens</span></li>
-          <li class="seq-ask"><span>Import stop: you approve the import</span></li>
-          <li><code>install_app</code> <span>installs the app</span></li>
-          <li class="seq-new"><code>test_service</code> <span>blocked Review; both tabs fill</span></li>
+          <li><code>install_app</code> <span>installs it</span></li>
+          <li class="seq-new"><code>test_service</code> <span>the form, both tabs</span></li>
+          <li class="seq-ask"><span>Step 7 check: you ask for the tab change</span></li>
+          <li><code>create_app</code> <span>writes snapshot 1.0.3</span></li>
+          <li><code>install_app</code> <span>installs it</span></li>
+          <li class="seq-new"><code>test_service</code> <span>blocked Next; Benefits locked; blocked Review</span></li>
           <li class="seq-new"><code>test_process</code> <span>two tasks, completes</span></li>
           <li class="seq-new"><code>test_process</code> <span>with <code>draft_then_resume</code></span></li>
         </ol>
@@ -296,7 +310,7 @@ In addition to the document:
         <div class="pair" aria-label="The blocked empty form, and the reopened draft">
           <figure>
             <img src="media/01-blocked-empty-form.webp" width="1400" height="1000" alt="The General Information tab with every field empty and every required field outlined in red after Review was pressed">
-            <figcaption>Image 01. Review on the empty form is blocked, every required field in red.</figcaption>
+            <figcaption>Image 01. Next on the empty form is blocked, every required field in red.</figcaption>
           </figure>
           <figure>
             <img src="media/02-draft-reopened.webp" width="1400" height="1000" alt="The task reopened after Save as Draft, on the Benefits Information tab, with Broker Commission 12.50, Age 0 and ERISA group set to No">
@@ -323,28 +337,38 @@ In addition to the document:
               <li>The <b>Review Quote</b> service for the second activity: both Views read-only, an Edit button on each section, and Submit.</li>
             </ol>
           </div>
-          <p class="cue-do"><b>Do</b> <span>Answer: “Use the built-in template, and I approve.”</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good. Yes, import it.”</span></p>
           <div class="ledger">
             <table class="order">
               <caption>Bob does</caption>
               <thead><tr><th scope="col">Order</th><th scope="col">Bob's step</th><th scope="col">Tool</th></tr></thead>
               <tbody>
-                <tr><td>1</td><td>Writes the app as a .twx file</td><td><code>create_app</code></td></tr>
+                <tr><td>1</td><td>Writes snapshot 1.0.2, with the buttons and the Review Quote service</td><td><code>create_app</code></td></tr>
                 <tr><td>2</td><td>Checks the screens in that file</td><td><code>inspect_coaches</code></td></tr>
-                <tr class="is-ask"><td>3</td><td>Asks you to approve the import</td><td>You answer</td></tr>
-                <tr><td>4</td><td>Installs the app in BAW, shows the run link and asks whether to go on</td><td><code>install_app</code></td></tr>
+                <tr><td>3</td><td>Installs it. Your yes was the import approval, so Bob does not ask again</td><td><code>install_app</code></td></tr>
+                <tr class="is-ask"><td>4</td><td>Opens the form with both tabs, shows the screenshots and the run link, and asks whether to go on</td><td><code>test_service</code></td></tr>
               </tbody>
             </table>
           </div>
-          <p class="cue-do"><b>Do</b> <span>Approve the import. When Bob asks, answer: “Go on.”</span></p>
-          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“This is the first time anything goes to the server, and Bob asked before it did.”</li></ul></blockquote>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Go on.”</span></p>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“Each import is a new snapshot, so we can see every step in BAW and go back to an earlier one.”</li></ul></blockquote>
         </div>
 
         <div class="cue-panel" role="tabpanel" id="b-p2" aria-labelledby="b-t2" hidden>
           <h3 class="step-title">Step 7. UI Validations.</h3>
           <p class="cue-bob"><b>Bob shows</b> <span>The rules: every field is required, the message for a missing field, Review stays blocked while a field is empty, and the user is kept on the tab with errors.</span></p>
-          <p class="cue-do"><b>Do</b> <span>Answer: “Looks good, test it.”</span></p>
-          <p class="cue-bob"><b>Bob does</b> <span><code>test_service</code> presses Review on the empty form. Review is blocked, no request is sent, and the first tab shows its errors (image 01). Both tabs then fill: 19 fields and 26 fields. Bob shows the screenshots.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Ask for a change, in plain words: “One change: the user must fill in the General Information tab before going to Benefits Information. Neither Next nor the tab header may skip ahead.”</span></p>
+          <p class="cue-bob"><b>Bob shows</b> <span>The changed part of the spec: the form gets <code>"tabsInOrder": true</code>. Next, or a click on the Benefits Information tab, stays on General Information while one of its required fields is empty. Going back is always allowed. Bob asks whether to build and test it.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Answer: “Yes, build it and test it.”</span></p>
+          <div class="cue-bob"><b>Bob does</b>
+            <ol class="num">
+              <li><code>create_app</code> writes snapshot 1.0.3, and <code>install_app</code> installs it.</li>
+              <li><code>test_service</code> presses Next on the empty form. The form stays on General Information, every empty field is marked, and the Benefits Information tab does not open (image 01).</li>
+              <li>It fills General Information. Now the Benefits Information tab opens. It presses Review with Benefits still empty: Review is blocked on Benefits Information.</li>
+              <li>It fills Benefits and presses Review. Bob shows the screenshots and asks whether to go on.</li>
+            </ol>
+          </div>
+          <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“We changed a rule in plain words. Bob changed the app, rebuilt it and tested the change itself. Nobody opened Designer.”</li></ul></blockquote>
           <p class="cue-do"><b>Do</b> <span>Answer: “Go on.”</span></p>
         </div>
 
@@ -353,7 +377,7 @@ In addition to the document:
           <div class="cue-bob"><b>Bob does</b>
             <ol class="num">
               <li><code>test_process</code>: the process runs Start, Generate Quote, Review Quote, End, and completes.</li>
-              <li><code>test_process</code> with <code>draft_then_resume</code>: Save as Draft works with required fields still empty. The task stays in the inbox. Reopening it brings back the values on the tab the user left: 0, No and 12.50 (image 02).</li>
+              <li><code>test_process</code> with <code>draft_then_resume</code>: Save as Draft works with required fields still empty. Bob types a few General Information fields, because Benefits does not open until that tab is complete. The task stays in the inbox, and reopening it brings back the values on General Information.</li>
               <li>Compares its screenshots with the client's screenshots.</li>
               <li>Shows its final report: the app, the acronym, the snapshot, the run links, the field counts, the test results and the screenshot folders, then the Workplace steps for you.</li>
             </ol>
@@ -416,7 +440,7 @@ In addition to the document:
               <thead><tr><th scope="col">#</th><th scope="col">What to see</th><th scope="col">Where to click</th></tr></thead>
               <tbody>
                 <tr><td>6</td><td>The client-side human service <b>Generate Quote</b> has two tabs, the variables <code>genInfo</code> and <code>benefits</code>, and the task data mapping (image 03).</td><td>User Interface, open Generate Quote, look at the diagram and the variables</td></tr>
-                <tr><td>7</td><td>Required-field validation blocks Review while a required field is empty, and shows the first tab with errors (image 01).</td><td>Preview Generate Quote, or Workplace. Press Review on the empty form.</td></tr>
+                <tr><td>7</td><td>Next and the Benefits Information tab stay on General Information while one of its required fields is empty (image 01), and Review is blocked while a Benefits field is empty.</td><td>Preview Generate Quote, or Workplace. Press Next on the empty form, then click the Benefits Information tab.</td></tr>
               </tbody>
             </table>
           </div>
@@ -464,8 +488,8 @@ In addition to the document:
           <div class="cue-do"><b>Do</b>
             <ol class="num">
               <li>In Workplace, click <b>Start workflow</b> and pick <b>Large Group Fully Insured Sales</b>. Generate Quote opens.</li>
-              <li>Open the Benefits Information tab and press <b>Review</b> on the empty form. It is blocked, and the first tab shows its errors (image 01).</li>
-              <li>Fill in part of the form, including one Yes/No answered No and one number set to 0.</li>
+              <li>Press <b>Next</b> on the empty form. It is blocked, and the empty fields are marked (image 01). Click the Benefits Information tab: it does not open.</li>
+              <li>Fill in all of General Information and press <b>Next</b>. Benefits Information opens. Fill in part of it, including one Yes/No answered No and one number set to 0.</li>
               <li>Press <b>Save as Draft</b>.</li>
               <li>Reopen the task from the task list. The values and the tab come back (image 02).</li>
               <li>Finish filling in the form, and press <b>Review</b>. The Generate Quote task closes.</li>
@@ -524,7 +548,7 @@ In addition to the document:
               <tr><th scope="row">4. Benefits Business Object</th><td>BenefitsBO, 26 fields</td><td>Bob</td></tr>
               <tr><th scope="row">5. Benefits Coach View</th><td>BenefitsDetails CV</td><td>Bob</td></tr>
               <tr><th scope="row">6. Client-Side Human Service</th><td>Generate Quote with two tabs, Review Quote, Save as Draft, the data mapping</td><td>Bob</td></tr>
-              <tr><th scope="row">7. UI Validations</th><td>Required fields, messages, the blocked Review, staying on the tab</td><td>Bob</td></tr>
+              <tr><th scope="row">7. UI Validations</th><td>Required fields, messages, the blocked Review, and the tabs in order that you asked for at step 7</td><td>Bob</td></tr>
               <tr><th scope="row">8. Expected Outcome</th><td>The tested workflow</td><td>Bob tested it; you ran it in Workplace</td></tr>
               <tr><th scope="row">Not in the document</th><td>The real dropdown option lists</td><td>Still to do, once the client supplies them</td></tr>
             </tbody>
@@ -552,6 +576,8 @@ In addition to the document:
           <table>
             <thead><tr><th scope="col">Problem</th><th scope="col">What to do</th></tr></thead>
             <tbody>
+              <tr><th scope="row">Bob does not offer the import at step 3, 5 or 6</th><td>Say: “Build it and import it into BAW so I can check it there.”</td></tr>
+              <tr><th scope="row">Bob says it cannot keep the user on the first tab</th><td>Restart Bob IDE so it loads the current skill, which has the <code>tabsInOrder</code> option.</td></tr>
               <tr><th scope="row">Bob does several steps without stopping</th><td>Say: “Stop. Go back to the to-do list and check with me after each item.” If it keeps going, restart Bob IDE so it loads the current App Builder rules.</td></tr>
               <tr><th scope="row">One of Bob's BAW tools fails</th><td>The tool error states the reason, either an HTTP code or “Cannot reach BAW”. Fix that, then ask Bob to continue.</td></tr>
               <tr><th scope="row">The login to BAW has expired</th><td>It is renewed automatically.</td></tr>
@@ -572,11 +598,12 @@ In addition to the document:
             <label><input type="checkbox" value="3"><span>Bob shows a to-do list with one item per heading of the document.</span></label>
             <label><input type="checkbox" value="4"><span>Bob stopped at the end of every step and waited for your answer.</span></label>
             <label><input type="checkbox" value="5"><span>Steps 2 and 4 show GenInfoBO (19 fields) and BenefitsBO (26 fields).</span></label>
-            <label><input type="checkbox" value="6"><span>In step 6 Bob asked before the import, and the app installed.</span></label>
-            <label><input type="checkbox" value="7"><span>Bob's tests pass: the blocked Review, both tabs filled, the process completed, Save as Draft and resume.</span></label>
-            <label><input type="checkbox" value="8"><span>The ten checks match what Designer shows.</span></label>
-            <label><input type="checkbox" value="9"><span>In Workplace, the empty form is blocked, the draft comes back on the right tab, and Review Quote opens from the task list.</span></label>
-            <label><input type="checkbox" value="10"><span>Submit refuses a cleared required field, and after a refill Submit completes the process.</span></label>
+            <label><input type="checkbox" value="6"><span>At steps 3, 5 and 6 Bob offered the import, asked the template question once, and snapshots 1.0.0, 1.0.1 and 1.0.2 installed.</span></label>
+            <label><input type="checkbox" value="7"><span>At step 7 Bob made the tab change you asked for, installed snapshot 1.0.3, and its test shows Benefits Information locked until General Information is complete.</span></label>
+            <label><input type="checkbox" value="8"><span>Bob's tests pass: the blocked Next, the blocked Review, both tabs filled, the process completed, Save as Draft and resume.</span></label>
+            <label><input type="checkbox" value="9"><span>The ten checks match what Designer shows.</span></label>
+            <label><input type="checkbox" value="10"><span>In Workplace, the empty form is blocked, Benefits Information does not open before General Information is complete, the draft comes back on the right tab, and Review Quote opens from the task list.</span></label>
+            <label><input type="checkbox" value="11"><span>Submit refuses a cleared required field, and after a refill Submit completes the process.</span></label>
           </fieldset>
         </div>
       </div>
