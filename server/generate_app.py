@@ -110,7 +110,7 @@ SPEC_KEYS = {
     "app": ("name", "acronym", "snapshot"),
     "businessObject": ("name", "variable"),
     "service": ("name", "description"),
-    "form": ("title", "intro", "nextLabel", "tabNextLabel", "draftLabel", "cancelLabel"),
+    "form": ("title", "intro", "nextLabel", "tabNextLabel", "draftLabel", "cancelLabel", "tabsInOrder"),
     "review": ("title", "intro", "submitLabel"),
     "confirmation": ("title", "message", "referencePrefix", "showFields"),
     "process": ("name", "description", "formTask", "approval", "review"),
@@ -245,6 +245,11 @@ def load_spec(path: Path) -> dict:
             errors.append('form.tabNextLabel needs layout "tabs": it labels the Next button at the end of each tab')
         elif not isinstance(label, str) or not label.strip():
             errors.append("form.tabNextLabel must be non-empty text, e.g. \"Next\"")
+    if (spec.get("form") or {}).get("tabsInOrder") is not None:
+        if spec.get("layout", "steps") != "tabs":
+            errors.append('form.tabsInOrder needs layout "tabs": it keeps the user on a tab until its required fields are filled')
+        elif not isinstance(spec["form"]["tabsInOrder"], bool):
+            errors.append("form.tabsInOrder must be true or false")
     if (spec.get("form") or {}).get("draftLabel") is not None:
         label = spec["form"]["draftLabel"]
         if spec.get("layout", "steps") != "tabs":
@@ -587,6 +592,36 @@ if (missing) {
 return true;"""
 
 
+# The Tab Section's On Tab changed handler for form.tabsInOrder: moving forward, by Next or by a tab header, past a tab
+# with an empty required field marks those fields and goes back to the first such tab. Going back is always allowed,
+# and the move back does not run the check again (its tabIndex is below oldTabIndex).
+TAB_ORDER_CHECK = """if (tabIndex <= oldTabIndex) return;
+var fields = %s;
+var missing = 0, first = null;
+for (var i = 0; i < fields.length; i++) {
+  var field = fields[i];
+  if (field[1] === null || field[1] >= tabIndex) continue;
+  var control = page.ui.get(field[0]);
+  if (!control) continue;
+  var group = field[2] ? page.ui.get(field[2]) : null;
+  if (group && group.context.options._metadata.visibility.get("value") === "READONLY") continue;
+  var value = control.getData();
+  if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
+    control.setValid(false, "%s");
+    missing++;
+    if (first === null) first = field[1];
+  } else {
+    control.setValid(true);
+  }
+}
+if (missing) page.ui.get("%s").setCurrentPane(first);"""
+
+
+def tab_order_check(fields, tabs_id):
+    """The On Tab changed handler that keeps the user on a tab until its required fields are filled."""
+    return TAB_ORDER_CHECK % (json.dumps(fields, separators=(",", ":")), REQUIRED_MESSAGE, tabs_id)
+
+
 def required_check(fields, tabs_id=None):
     """The On click handler that blocks a finishing button while a required field is empty. fields is the generator's
     list of [control path, tab index or None, group path or None]; the paths are computed here because the
@@ -766,7 +801,8 @@ def step_coach(spec, i):
 
 def form_coach(spec):
     """layout "tabs": every step is a tab of one screen; Next leaves the screen. With form.tabNextLabel each tab ends
-    with its own button bar instead: Next switches to the next tab, and the last tab's bar finishes the task."""
+    with its own button bar instead: Next switches to the next tab, and the last tab's bar finishes the task. With
+    form.tabsInOrder the user cannot move forward past a tab whose required fields are empty."""
     var, form = spec["businessObject"]["variable"], spec.get("form") or {}
     lay = Layout()
     tabs_id = lay._item_id("Tab Section")
@@ -799,7 +835,9 @@ def form_coach(spec):
         events = {**drafts, **events}
         contents[last] = [*contents[last], *required_summary(lay, checks), bar]
         tabs = [lay.view("Vertical Layout", s["title"], children=c) for s, c in zip(spec["steps"], contents)]
-    body = lay.view("Tab Section", "Steps", binding="tw.local.currentTab" if draft else None, children=tabs, show_label=False, item_id=tabs_id)
+    in_order = [("eventON_TABCHANGE", tab_order_check(required_fields(lay), tabs_id))] if form.get("tabsInOrder") and lay.required else []
+    body = lay.view("Tab Section", "Steps", binding="tw.local.currentTab" if draft else None, children=tabs, show_label=False,
+                    item_id=tabs_id, options=in_order)
     top = [*header(spec, lay, form.get("title", spec["service"]["name"]), form.get("intro", "")), *message_view(spec, lay, "s0")]
     if per_tab:
         return Layout.wrap([*top, body]), events
