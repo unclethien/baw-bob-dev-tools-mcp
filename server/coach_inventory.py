@@ -227,6 +227,9 @@ class CoachReader:
                 self.hint = it["label"] if it["builder"] == "review" and it["label"] and len(it["children"]) == 1 else None
             if view == "Tab Section":
                 self.tabs, self.tab_binding = True, it["binding"] or self.tab_binding
+                if (it["config"].get("eventON_TABCHANGE") or "").strip():  # e.g. the generator's form.tabsInOrder check
+                    self.dropped.append(f'{it["viewId"]} (Tab Section "On Tab changed" handler: the modernized tabs do not keep '
+                                        'the user on a tab until its required fields are filled)')
                 for self.tab, kid in enumerate(it["children"]):
                     self.section(self.item(kid)["label"])
                     self.walk(kid, in_tabs=True)
