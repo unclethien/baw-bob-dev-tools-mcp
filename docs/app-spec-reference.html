@@ -431,7 +431,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
     </div>
     <div class="card">
       <h3><code>"layout": "tabs"</code></h3>
-      <p>One screen with a tab per step. Users move freely between tabs, then one button leaves the screen for the
+      <p>One screen with a tab per step. Users move freely between tabs (unless <code>form.tabsInOrder</code> is set), then one button leaves the screen for the
       review (or the end). Step <code>intro</code> and step button labels are not used; set them in <code>form</code>.</p>
     </div>
   </div>
@@ -445,6 +445,7 @@ python3 server/generate_app.py work/ZZLEAVE.app.json work/ZZLEAVE-1.0.0.twx --to
         <tr><td class="mono">form.nextLabel</td><td>Next, or Submit when <code>"review": false</code></td><td>Text of the button that leaves the screen</td></tr>
         <tr><td class="mono">form.tabNextLabel</td><td>none</td><td>Only with <code>"layout": "tabs"</code>. Gives each tab its own button bar: every tab but the last ends with a Next button with this text that only switches to the next tab, and the last tab ends with the <code>form.nextLabel</code> button, which checks the required fields and leaves the screen. Without it, one shared bar sits under the tabs</td></tr>
         <tr><td class="mono">form.draftLabel</td><td>none</td><td>Only with <code>"layout": "tabs"</code> and a <code>process</code>. Adds a Save as Draft button with this text to every tab, before the Next or finishing button (on the shared bar when there is no <code>form.tabNextLabel</code>). It never checks required fields. The task is postponed: it returns to the inbox and reopens with the saved values, on the tab the user left</td></tr>
+        <tr><td class="mono">form.tabsInOrder</td><td>false</td><td>Only with <code>"layout": "tabs"</code>. When <code>true</code>, the user cannot move forward past a tab whose required fields are empty, by its Next button or by a tab header: the empty fields are marked and the first such tab stays open. Going back to an earlier tab is always allowed. A modernized copy does not keep this rule (the coach inventory lists it as dropped)</td></tr>
         <tr><td class="mono">form.cancelLabel</td><td>none</td><td>Adds a button with this text that ends the service</td></tr>
       </tbody>
     </table>
