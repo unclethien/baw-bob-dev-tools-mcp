@@ -24,7 +24,10 @@
 // the coach stays, visible error indicators appear and the first tab with an error is the one on screen. On a React coach with tabs it
 // then fills the first tab only and presses forward again: the coach must stay and show the first tab that
 // still has an error (reported as blocked.partial). Then the run goes on as usual. When every tab has its own button bar, the forward button is the one on the last
-// tab (the others only switch tabs): the run opens that tab to press it, and goes back to it after --tabs. --draft "Save as Draft" types the --value fields, presses that button on the first
+// tab (the others only switch tabs): the run opens that tab to press it, and goes back to it after --tabs.
+// When the last tab does not open while the first is empty (form.tabsInOrder), the run fills the tabs in order and
+// presses the last tab's button; --expect-blocked then presses the first tab's Next on the empty form (it must stay
+// there with errors), fills the first tab and presses the finishing button (it must stop on the next tab with errors). --draft "Save as Draft" types the --value fields, presses that button on the first
 // coach that shows it and passes when the coach closes; the report names the tab that was open (the resumed draft has to reopen on it). --check "Label=text" (repeatable) reads the field with
 // that label on the first coach that has it and fails when it does not hold the text (a resumed draft).
 // Fails (exit 1) on page errors, a screen that does not change after a press, duplicate
@@ -456,7 +459,12 @@ try {
       return (await frame.evaluate(inspectCoach).catch(() => null))?.button;
     };
     const first = await pick(names[0]);
-    const last = await pick(names[names.length - 1]);
+    // Tabs in order (form.tabsInOrder): the empty first tab keeps the user, so the last tab does not open and its
+    // button is read once the earlier tabs are filled.
+    if (!(await openTab(frame, names[names.length - 1])) && (await frame.evaluate(activeTabName, SELECTORS).catch(() => undefined)) === names[0]) {
+      return { tab: names[names.length - 1], inOrder: true };
+    }
+    const last = (await frame.evaluate(inspectCoach).catch(() => null))?.button;
     if (home && home !== names[names.length - 1]) await openTab(frame, home);
     return first && last && first !== last ? { button: last, tab: names[names.length - 1] } : {};
   };
@@ -484,11 +492,13 @@ try {
   // Press the forward button with nothing filled: the coach must stay, show error indicators and have the first tab with an error open.
   // On a React screen it then fills the first tab only and presses forward again: that must block too, with the first
   // tab that still has an error open (reported as `partial`).
-  const checkBlocked = async (frame, label, title, stem, tab, react) => {
+  const checkBlocked = async (frame, label, title, stem, tab, react, inOrder) => {
     const result = { button: label, stayed: false, errors: [] };
     const names = await frame.evaluate(listTabs, SELECTORS).catch(() => []);
     const postsBefore = posts;
-    await showForwardTab(frame, tab);
+    // With tabs in order the last tab cannot be opened yet: the first tab's own button (Next) is pressed instead.
+    if (inOrder) result.tabsInOrder = { lastTabOpened: false, pressed: label };
+    else await showForwardTab(frame, tab);
     await pressButton(frame, label);
     for (const end = Date.now() + 10000; Date.now() < end && !result.errors.length; await sleep(300)) {
       result.errors = await frame.evaluate(visibleErrors, SELECTORS).catch(() => []);
@@ -518,11 +528,11 @@ try {
     else if (!result.errors.length) result.failure = `the coach stayed after "${label}" but shows no error indicator (${SELECTORS.error})`;
     else if (result.firstErrorTab && result.tab !== result.firstErrorTab) result.failure = `tab "${result.tab}" is open but the first tab with an error is "${result.firstErrorTab}"`;
     result.ok = !result.failure;
-    if (result.ok && react && names.length > 1) {
-      if (!result.errorTabs.some((name) => name !== names[0])) {
+    if (result.ok && (react || inOrder) && names.length > 1) {
+      if (react && !result.errorTabs.some((name) => name !== names[0])) {
         result.partial = { skipped: 'only the first tab has errors, so filling it would let the coach move on' };
       } else {
-        result.partial = await checkPartial(after.frame, label, title, stem, tab, names);
+        result.partial = await checkPartial(after.frame, label, title, stem, tab, names, inOrder, react);
         result.ok = result.partial.ok;
         result.failure = result.partial.failure;
       }
@@ -530,12 +540,21 @@ try {
     return result;
   };
   // Fill the first tab only, press forward and expect to be blocked on the first tab that is still incomplete.
-  const checkPartial = async (frame, label, title, stem, tab, names) => {
+  const checkPartial = async (frame, label, title, stem, tab, names, inOrder, react) => {
     const partial = { filledTab: names[0], button: label, stayed: false, errors: [] };
     await openTab(frame, names[0]);
-    partial.filled = await fill(frame, true, true);
+    partial.filled = await fill(frame, react, true);
     const postsBefore = posts;
     await showForwardTab(frame, tab);
+    if (inOrder) { // the finishing button is the one on the last tab, which opens now that the first tab is filled
+      partial.lastTabOpened = (await frame.evaluate(activeTabName, SELECTORS).catch(() => undefined)) === tab;
+      if (!partial.lastTabOpened) {
+        partial.screenshot = path.join(args.out, `${stem}-blocked-partial.png`);
+        await shoot(frame, partial.screenshot);
+        return { ...partial, ok: false, failure: `with the first tab ("${names[0]}") filled, the last tab ("${tab}") still does not open` };
+      }
+      label = partial.button = (await frame.evaluate(inspectCoach).catch(() => null))?.button || label;
+    }
     await pressButton(frame, label);
     for (const end = Date.now() + 10000; Date.now() < end && !partial.errors.length; await sleep(300)) {
       partial.errors = await frame.evaluate(visibleErrors, SELECTORS).catch(() => []);
@@ -600,8 +619,10 @@ try {
     const route = await forwardRoute(current.frame);
     if (route.button) info.button = route.button;
     const forward = info.button;
-    if (presses.length && (buttons.includes(presses[0]) || presses[0] === route.button)) info.button = presses.shift();
-    const forwardTab = info.button === route.button ? route.tab : undefined;
+    const explicit = presses.length && (buttons.includes(presses[0]) || presses[0] === route.button);
+    if (explicit) info.button = presses.shift();
+    const forwardTab = route.inOrder || info.button === route.button ? route.tab : undefined;
+    if (route.inOrder) info.tabsInOrder = true;
     report.steps.push({ step, ...info, tab, typed: typed.length ? typed : undefined, screenshot: file, duplicate: hashes.has(hash) || undefined });
     hashes.add(hash);
     // A number control shows its value formatted, so 12.5 reads back as "12.50" and 1234.56 as "1,234.56".
@@ -644,7 +665,7 @@ try {
     if (!forward) { report.failure = 'no forward button'; break; }
     if (args['expect-blocked'] && !blockedChecked) {
       blockedChecked = true;
-      const blocked = await checkBlocked(current.frame, forward, info.title, stem, forwardTab, info.react);
+      const blocked = await checkBlocked(current.frame, forward, info.title, stem, forwardTab, info.react, route.inOrder);
       report.steps.at(-1).blocked = blocked;
       if (!blocked.ok) { report.failure = blocked.failure; break; }
     }
@@ -659,6 +680,10 @@ try {
       if (visits) report.steps.at(-1).tabs = visits;
     }
     await showForwardTab(current.frame, forwardTab);
+    if (route.inOrder && !explicit) { // the finishing button is on the last tab, open now that the earlier tabs are filled
+      const here = await current.frame.evaluate(inspectCoach).catch(() => null);
+      if (here?.button) info.button = report.steps.at(-1).button = here.button;
+    }
     if (args.fill) report.steps.at(-1).filled = await fill(current.frame, info.react, deep);
     // Compare against the screen as it is now (typed and filled), not as it was when first inspected.
     const now = await current.frame.evaluate(inspectCoach).catch(() => null);

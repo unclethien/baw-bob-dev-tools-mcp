@@ -701,7 +701,10 @@ def test_service(acronym: str, service: str, snapshot: str | None = None, fill: 
     pass only if the screen stays, no request is sent, error indicators are visible and the first tab
     with an error is selected; "blocked" under that step reports it. On a tabbed React screen it then
     fills the first tab only and presses forward again: the screen must stay on the first tab that
-    still has an error ("blocked.partial"). The run then goes on as usual.
+    still has an error ("blocked.partial"). When the tabs go in order (form.tabsInOrder: the last tab does
+    not open while the first is empty), it presses the first tab's Next instead ("blocked.tabsInOrder"),
+    then fills the first tab and presses the last tab's finishing button ("blocked.partial").
+    The run then goes on as usual.
     Left out, it is on when work/<ACRONYM>.app.json names this service (or the classic service a
     " (Modernized)" one is built from) and marks a field required on its first screen."""
     check_acronym(acronym)
@@ -783,7 +786,8 @@ def test_process(acronym: str, process: str, snapshot: str | None = None, press:
     values (label -> text, required) are typed and that button is pressed; the coach must close and the
     task stay open in the inbox. The task is then reopened (polled for up to 60 seconds until it can be
     opened), every typed value must still be there, and the run goes on as usual. "draft" under that
-    task reports both opens."""
+    task reports both opens. With form.tabsInOrder only the first tab can be reached while it is incomplete,
+    so give values from the first tab."""
     check_acronym(acronym)
     if not configured():
         raise offline()

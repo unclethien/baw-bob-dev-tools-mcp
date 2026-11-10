@@ -150,6 +150,20 @@ class LargeGroupApp(unittest.TestCase):
             self.assertTrue(group["fresh"], group)
             self.assertTrue(group["fields"], group)
 
+    def test_free_tabs_drop_no_tab_handler(self):
+        self.assertFalse([d for c in self.generate["coaches"] for d in c["dropped"] if "On Tab changed" in d])
+
+    def test_tabs_in_order_handler_is_listed_as_dropped(self):
+        spec = json.loads(FIXTURE.read_text())
+        spec["theme"] = THEME
+        spec["form"] = {**spec["form"], "tabsInOrder": True}
+        with tempfile.TemporaryDirectory() as tmp:
+            found = build(tmp, spec, "ordered")
+        service = find(found["services"], "Large Group Fully Insured Sales")
+        dropped = [d for c in service["coaches"] for d in c["dropped"] if "On Tab changed" in d]
+        self.assertEqual(len(dropped), 1)
+        self.assertIn("required fields are filled", dropped[0])
+
     def test_tab_binding(self):
         self.assertEqual(self.generate["coaches"][0]["tabBinding"], "tw.local.currentTab")
         self.assertNotIn("tabBinding", self.review["coaches"][0])
