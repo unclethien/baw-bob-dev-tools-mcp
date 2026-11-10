@@ -129,6 +129,17 @@ class SpecChecks(unittest.TestCase):
         self.assertIn('form.tabNextLabel needs layout "tabs"', str(caught.exception))
 
 
+    def test_tabs_in_order_is_refused_outside_the_tabs_layout(self):
+        with self.assertRaises(SystemExit) as caught:
+            load(small_spec(form={"tabsInOrder": True}))
+        self.assertIn('form.tabsInOrder needs layout "tabs"', str(caught.exception))
+
+    def test_tabs_in_order_must_be_true_or_false(self):
+        with self.assertRaises(SystemExit) as caught:
+            load(small_spec(layout="tabs", form={"tabsInOrder": "yes"}))
+        self.assertIn("form.tabsInOrder must be true or false", str(caught.exception))
+
+
 @unittest.skipUnless(TOOLKIT.exists(), "work/ABW-1.0.5.twx is needed to build")
 class LargeGroupQuote(unittest.TestCase):
     @classmethod
@@ -465,6 +476,29 @@ class SingleObject(unittest.TestCase):
             with self.subTest(spec=path.name):
                 spec = generate_app.load_spec(path)
                 self.assertTrue(build(spec))
+
+@unittest.skipUnless(TOOLKIT.exists(), "work/ABW-1.0.5.twx is needed to build")
+class TabsInOrder(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.xml = build(load(draft_spec(tabsInOrder=True)))
+        cls.free = build(load(draft_spec()))
+
+    def test_the_tab_section_checks_the_tabs_before_the_one_opened(self):
+        [code] = handlers(self.xml, "TABCHANGE")
+        self.assertTrue(code.startswith("if (tabIndex <= oldTabIndex) return;"))
+        self.assertIn("field[1] >= tabIndex", code)
+        self.assertIn('page.ui.get("Tab_Section1").setCurrentPane(first)', code)
+        listed = json.loads(re.search(r"var fields = (\[.*?\]);", code).group(1))
+        self.assertEqual(sorted({tab for _, tab, _ in listed}), [0, 1])
+
+    def test_next_and_the_finishing_check_are_unchanged(self):
+        self.assertEqual(sorted(c.strip() for c in handlers(self.xml, "CLICK") if "setCurrentPane(1)" in c and "var fields" not in c),
+                         sorted(c.strip() for c in handlers(self.free, "CLICK") if "setCurrentPane(1)" in c and "var fields" not in c))
+        self.assertEqual(len(checking(handlers(self.xml, "CLICK"))), len(checking(handlers(self.free, "CLICK"))))
+
+    def test_without_the_option_tabs_stay_free(self):
+        self.assertEqual(handlers(self.free, "TABCHANGE"), [])
 
 
 if __name__ == "__main__":
