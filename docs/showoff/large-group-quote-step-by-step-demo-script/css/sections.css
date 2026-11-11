@@ -429,3 +429,46 @@ button.btn { cursor: pointer; }
   .talk-body { grid-template-columns: minmax(0, 1fr); }
   .talk summary, .talk-body { padding-left: var(--s-4); padding-right: var(--s-4); }
 }
+
+/* ---------------------------------------------------------------- this page: one linear run, no tabs */
+.figures-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* a small label for the steps that put a snapshot into BAW */
+.tag {
+  display: inline-block; margin-left: var(--s-2); padding: 1px var(--s-2);
+  font: normal 400 var(--t-xs) / 1.5 var(--font-code); letter-spacing: 0.32px; white-space: nowrap;
+  color: var(--accent); background: var(--accent-soft); vertical-align: 1px;
+}
+.glance { grid-template-columns: minmax(0, 1fr); align-content: center; }
+.glance-table th[scope="row"] { width: 34%; }
+.glance-table td:last-child { color: var(--ink); font-weight: 600; }
+.glance-table tr.is-you th, .glance-table tr.is-you td { background: var(--paper-3); }
+.glance-table tr.is-change td:last-child { box-shadow: inset 3px 0 0 #f1c21b; }
+
+/* the eight steps, as cards in reading order */
+.steps-section { grid-template-columns: minmax(0, 1fr); align-content: start; }
+.steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); max-width: 56rem; }
+.step { display: grid; gap: var(--s-3); align-content: start; padding: var(--s-4) var(--s-6) var(--s-6); background: var(--paper-2); border-top: 2px solid var(--rule-strong); }
+.step.is-baw { border-top-color: var(--accent); }
+.step.is-change { border-top-color: #f1c21b; }
+.step .step-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); }
+.step .step-title > span { font: 400 var(--t-md) / 1 var(--font-code); color: var(--accent); }
+.step .step-title .tag { margin-left: 0; }
+.reply { font-weight: 600; }
+.reply-box { background: var(--paper); margin-left: calc(5.5rem + var(--s-3)); }
+.dot-baw { background: var(--accent); }
+
+.quad img { max-height: 30dvh; object-fit: cover; object-position: top left; }
+.cue-do > div > p + .num { margin-top: var(--s-2); }
+
+.guard .sec-head .lead b { color: var(--ink); font-weight: 600; }
+.close-ask { display: grid; gap: var(--s-2); margin-top: var(--s-2); font-size: var(--t-sm); }
+.close-side { display: grid; gap: var(--s-6); align-content: start; }
+
+@media (max-width: 640px) {
+  .step { padding: var(--s-4); }
+  .reply-box { margin-left: 0; }
+  .glance-table th[scope="row"] { width: auto; }
+  .glance-table td:empty { display: none; }
+  .figures-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
