@@ -38,6 +38,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import puppeteer from 'puppeteer-core';
+import { findBrowser, isHelium } from './browsers.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -71,9 +72,6 @@ if (!BASE || !setting('BAW_USER') || !(secret.password || secret.api_key)) {
   console.error('Missing BAW settings: BAW_URL, BAW_USER, and BAW_PASSWORD or BAW_APIKEY (environment or .env)');
   process.exit(2);
 }
-const BROWSERS = [process.env.BROWSER_PATH, '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Helium.app/Contents/MacOS/Helium',
-  '/usr/bin/chromium', '/usr/bin/google-chrome'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // A certificate failure names the settings that fix it. A redirect is never followed: the login body carries the password, and a 307 would resend it to wherever the Location header points.
@@ -375,7 +373,7 @@ async function fill(frame, react, refine = false) {
   return count;
 }
 
-const executablePath =BROWSERS.find((p) => p && fs.existsSync(p));
+const executablePath = findBrowser();
 // Cookies are bound to the port and scheme they were set for, so the token cookie reaches the BAW port only. Puppeteer merges this flag into the single --enable-features list it passes to Chrome, next to its own features.
 const browser = await puppeteer.launch({
   executablePath, headless: 'new', acceptInsecureCerts: insecure,
@@ -411,7 +409,14 @@ try {
   page.on('response', (r) => { // a server error says why in its body (for example a service call from the coach that BAW rejects)
     if (r.status() >= 500) r.text().then((body) => report.errors.push(`HTTP ${r.status()} ${r.request().method()} ${new URL(r.url()).pathname}: ${body.replace(/\s+/g, ' ').slice(0, 300)}`)).catch(() => {});
   });
-  await page.goto(item.runURL, { waitUntil: 'networkidle2', timeout: 90000 });
+  try {
+    await page.goto(item.runURL, { waitUntil: 'networkidle2', timeout: 90000 });
+  } catch (e) {
+    if (String(e).includes('net::ERR_ABORTED') && isHelium(executablePath)) {
+      throw new Error(`Helium aborted loading the page (${String(e).slice(0, 160)}); Helium cannot open a BAW task link. Install Chrome or Brave, or Chrome for Testing with \`npx @puppeteer/browsers install chrome@stable --path ~/.cache/puppeteer\`, or set BROWSER_PATH to another Chromium browser`);
+    }
+    throw e;
+  }
 
   const coach = async (timeout = 30000) => {
     for (const end = Date.now() + timeout; Date.now() < end; await sleep(500)) {

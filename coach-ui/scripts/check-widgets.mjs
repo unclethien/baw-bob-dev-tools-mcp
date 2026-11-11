@@ -10,18 +10,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import puppeteer from 'puppeteer-core';
+import { findBrowser } from './browsers.mjs';
 
 const { values: args } = parseArgs({ options: { shot: { type: 'string' } } });
-const BROWSERS = [process.env.BROWSER_PATH, '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Helium.app/Contents/MacOS/Helium',
-  '/usr/bin/chromium', '/usr/bin/google-chrome'];
 const harness = new URL('./widget-harness.html', import.meta.url).href;
 // Every widget of the toolkit's contract (widgets/modernizer-widgets.json), so a new widget is covered without editing this script.
 const contract = JSON.parse(fs.readFileSync(new URL('../widgets/modernizer-widgets.json', import.meta.url), 'utf8')).widgets;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const browser = await puppeteer.launch({
-  executablePath: BROWSERS.find((p) => p && fs.existsSync(p)), headless: 'new',
+  executablePath: findBrowser(), headless: 'new',
   args: ['--allow-file-access-from-files', `--user-data-dir=${fs.mkdtempSync(path.join(os.tmpdir(), 'mdw-check-'))}`],
 });
 const results = [];
