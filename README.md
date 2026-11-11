@@ -88,7 +88,7 @@ The steps Bob follows are in [`.bob/skills/coach-groups/SKILL.md`](.bob/skills/c
 
 - An IBM BAW server on Cloud Pak for Business Automation, with an account that can install process apps. Without one, the agent still builds the `.twx` files and you import them yourself (see [Without a BAW server](#without-a-baw-server)).
 - [uv](https://docs.astral.sh/uv/) (runs the server with its pinned MCP dependency), Python 3.11+
-- Node.js 18+ and Google Chrome, Brave or Helium (for `build_screens`, `build_widget_toolkit("modernizer")`, `modernize_app` and `test_service`). Set `BROWSER_PATH` to use another Chromium.
+- Node.js 18+ and Google Chrome, Brave or Chrome for Testing (for `build_screens`, `build_widget_toolkit("modernizer")`, `modernize_app`, `test_service` and `test_process`). Helium works too, except for `test_process`: it aborts the task page. Set `BROWSER_PATH` to use another Chromium.
 
 ## Setup
 

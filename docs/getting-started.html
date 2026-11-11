@@ -588,8 +588,11 @@ rounded buttons, "Office Supplies" as the product name. Install it and test it.<
   <code>.bob/skills/coach-groups/SKILL.md</code>.</p>
 
   <h3 id="browser">Use another browser</h3>
-  <p>The browser test tries <code>BROWSER_PATH</code> first, then Brave, Chrome and Helium. To use another Chromium browser
-  with Bob, add it to the server's environment in <code>.bob/mcp.json</code>:</p>
+  <p>The browser test tries <code>BROWSER_PATH</code> first, then Brave, Chrome, Chrome for Testing from the Puppeteer cache, and Helium.
+  Helium renders a service, but it aborts a task link, so <code>test_process</code> fails with it. Without Brave or Chrome, install
+  Chrome for Testing once:</p>
+<pre><code>npx @puppeteer/browsers install chrome@stable --path ~/.cache/puppeteer</code></pre>
+  <p>To use another Chromium browser with Bob, add it to the server's environment in <code>.bob/mcp.json</code>:</p>
 <pre><code>"env": { "BROWSER_PATH": "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" }</code></pre>
   <p>The same <code>"env"</code> block can hold <code>BAW_URL</code> to point Bob at another server without editing
   <code>.env</code>; settings in the environment win over <code>.env</code>.</p>
@@ -671,6 +674,7 @@ python3 server/baw_ops.py services ZZOFFICE</code></pre>
         <tr><td class="mono">PostgreSQL is not configured (missing &hellip;)</td><td><code>.env</code> has no <code>POSTGRES_*</code> admin settings</td><td>Fill them in, or skip the database tools: the other tools work without them</td></tr>
         <tr><td class="mono">No BAW server is configured</td><td><code>.env</code> is missing a setting</td><td>Fix step 4, or <a href="#no-server">import the app yourself</a></td></tr>
         <tr><td><code>test_service</code> cannot start a browser</td><td>No Chrome, Brave or Helium in the usual place</td><td>Install one, or set <a href="#browser"><code>BROWSER_PATH</code></a></td></tr>
+        <tr><td><code>test_process</code> fails with "Helium cannot open a BAW task link"</td><td>Helium is the only browser found; it aborts the task page</td><td>Install Chrome, Brave or <a href="#browser">Chrome for Testing</a></td></tr>
       </tbody>
     </table>
   </div>
