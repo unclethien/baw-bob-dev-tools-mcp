@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>What Bob and BAW Dev Tools can do</title>
+<meta name="description" content="IBM Bob with the BAW Dev Tools MCP server builds, modernizes, installs and tests IBM Business Automation Workflow apps from a description or a screenshot.">
+<link rel="preconnect" href="https://1.www.s81c.com" crossorigin>
+<style>
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:300;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-Light-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-Regular-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:600;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Sans/fonts/split/woff2/IBMPlexSans-SemiBold-Latin1.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url(https://1.www.s81c.com/common/carbon/plex/fonts/IBM-Plex-Mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2) format("woff2")}
+/* Carbon g10 (light) and g100 (dark) tokens, the same set the other docs pages use */
+:root{
+  color-scheme:light;
+  --white:#ffffff; --layer-01:#f4f4f4; --layer-02:#ffffff; --layer-accent:#e0e0e0;
+  --border-subtle:#e0e0e0; --border-strong:#8d8d8d;
+  --text-primary:#161616; --text-secondary:#525252; --text-helper:#6f6f6f; --text-on-color:#ffffff;
+  --link:#0f62fe; --blue-60:#0f62fe; --blue-70:#0043ce; --blue-10:#edf5ff;
+  --gray-100:#161616; --gray-90:#262626; --gray-80:#393939; --gray-10:#f4f4f4;
+  --red-60:#da1e28; --red-10:#fff1f1; --green-50:#24a148; --green-10:#defbe6;
+  --yellow-30:#f1c21b; --yellow-10:#fcf4d6; --purple-60:#8a3ffc; --purple-10:#f6f2ff;
+  --teal-60:#007d79; --teal-10:#d9fbfb;
+  --s02:4px; --s03:8px; --s04:12px; --s05:16px; --s06:24px; --s07:32px; --s08:40px; --s09:48px; --s10:64px; --s11:80px;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.2,0,.38,.9);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--white);color:var(--text-primary);font-family:var(--sans);
+  font-size:14px;line-height:1.43;letter-spacing:.16px;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+.shell{max-width:1120px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* UI shell header */
+.masthead{background:var(--gray-100);color:var(--text-on-color);padding-top:env(safe-area-inset-top,0px);
+  position:sticky;top:0;z-index:20;border-bottom:1px solid var(--gray-80)}
+.masthead .shell{display:flex;align-items:center;gap:var(--s05);height:48px}
+.masthead .brand{font-weight:600;letter-spacing:.1px;color:inherit;text-decoration:none}
+.masthead .brand:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.masthead .divider{width:1px;height:20px;background:var(--gray-80)}
+.masthead .ctx{color:#c6c6c6;font-size:13px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.masthead nav{display:flex;height:48px;margin-left:var(--s05)}
+.masthead nav a{display:flex;align-items:center;padding:0 var(--s05);color:#c6c6c6;text-decoration:none;font-size:14px;
+  border-bottom:2px solid transparent;transition:background-color 110ms var(--ease),color 110ms var(--ease)}
+.masthead nav a:hover{background:#353535;color:#f4f4f4}
+.masthead nav a:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+.masthead .spacer{flex:1}
+#theme-toggle{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:40px;height:40px;padding:0;border:0;background:none;color:#f4f4f4;cursor:pointer}
+#theme-toggle:hover{background:#353535}
+#theme-toggle:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+#theme-toggle svg{display:block;flex:none}
+
+/* Hero: Carbon g100 band */
+.hero{background:var(--gray-100);color:#f4f4f4;padding-block:var(--s10) var(--s09)}
+.hero .crumb{margin:0 0 var(--s06);font-size:13px}
+.hero .crumb a{color:#78a9ff;text-decoration:none}
+.hero .crumb a:hover{text-decoration:underline}
+.hero .eyebrow{display:block;margin-bottom:var(--s05);font-size:14px;letter-spacing:.16px;color:#c6c6c6}
+.hero h1{margin:0 0 var(--s06);font-size:clamp(32px,5.4vw,60px);line-height:1.17;font-weight:300;letter-spacing:0;max-width:20ch;text-wrap:balance}
+.hero .lede{margin:0;max-width:60ch;color:#c6c6c6;font-size:18px;line-height:1.55;font-weight:400}
+.hero .lede strong{color:#f4f4f4;font-weight:600}
+.hero .actions{display:flex;flex-wrap:wrap;gap:1px;margin-top:var(--s07)}
+.btn{display:inline-flex;align-items:center;justify-content:space-between;gap:var(--s07);min-height:48px;
+  padding:var(--s04) var(--s05);font:400 14px/1.29 var(--sans);letter-spacing:.16px;text-decoration:none;
+  transition:background-color 70ms var(--ease)}
+.btn-primary{background:#0f62fe;color:#fff}
+.btn-primary:hover{background:#0050e6}
+.btn-ghost{background:#393939;color:#f4f4f4}
+.btn-ghost:hover{background:#4c4c4c}
+.btn:focus-visible{outline:2px solid #fff;outline-offset:-4px;box-shadow:inset 0 0 0 1px #0f62fe}
+
+/* Split: who does what */
+.roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--border-subtle);
+  border:1px solid var(--border-subtle);margin-top:calc(-1 * var(--s07));position:relative}
+.role{background:var(--layer-01);padding:var(--s06) var(--s05);min-width:0}
+.role .kicker{font-size:12px;letter-spacing:.32px;color:var(--text-secondary)}
+.role h2{margin:var(--s02) 0 var(--s03);font-size:20px;line-height:1.4;font-weight:400}
+.role p{margin:0;color:var(--text-secondary)}
+
+/* Progress indicator: request to app */
+.steps{list-style:none;margin:var(--s08) 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s03)}
+.steps li{margin:0;padding-top:var(--s04);border-top:2px solid var(--blue-60);min-width:0}
+.steps .n{display:flex;align-items:center;gap:var(--s03);font-size:14px;font-weight:600}
+.steps .n svg{flex:none;color:var(--blue-60)}
+.steps span.d{display:block;margin-top:var(--s02);font-size:13px;color:var(--text-secondary)}
+
+/* Sections */
+main{padding-bottom:var(--s10)}
+section{padding-top:var(--s10);scroll-margin-top:64px}
+.sec-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:var(--s06) var(--s07);margin-bottom:var(--s07);align-items:end}
+.sec-head .kicker{display:block;font-size:14px;color:var(--blue-60);margin-bottom:var(--s03)}
+h2.big{margin:0;font-size:clamp(28px,3.4vw,42px);line-height:1.2;font-weight:300;letter-spacing:0;text-wrap:balance}
+.sec-head p{margin:0;max-width:62ch;color:var(--text-secondary);font-size:16px;line-height:1.5}
+p{margin:0 0 var(--s05);max-width:76ch}
+a{color:var(--link)}
+code{font-family:var(--mono);font-size:.9em;background:var(--layer-01);padding:1px 5px;border-radius:2px;word-break:break-word}
+
+/* Tiles */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--border-subtle);border:1px solid var(--border-subtle)}
+.tile{background:var(--white);padding:var(--s06) var(--s05) var(--s07);min-width:0;display:flex;flex-direction:column;gap:var(--s04)}
+.tile .icon{width:32px;height:32px;color:var(--blue-60)}
+.tile h3{margin:0;font-size:20px;line-height:1.4;font-weight:400}
+.tile .sub{margin:0;color:var(--text-secondary);font-size:14px}
+.tile ul{margin:var(--s02) 0 0;padding-left:var(--s05);display:grid;gap:var(--s03)}
+.tile li{margin:0;padding-left:var(--s02)}
+.tile li::marker{color:var(--text-helper)}
+.tile li b{font-weight:600}
+.tile .tags{margin-top:auto;padding-top:var(--s03)}
+.tile.wide{grid-column:1 / -1}
+.tile.wide .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s03) var(--s07)}
+
+/* Tags */
+.tags{display:flex;flex-wrap:wrap;gap:var(--s03)}
+.tag{display:inline-flex;align-items:center;height:24px;padding:0 var(--s03);border-radius:12px;
+  font-size:12px;font-weight:400;letter-spacing:.32px;white-space:nowrap}
+.tag-blue{background:var(--blue-10);color:var(--blue-70)}
+.tag-gray{background:var(--layer-accent);color:var(--gray-90)}
+.tag-teal{background:var(--teal-10);color:#005d5d}
+.tag-purple{background:var(--purple-10);color:#6929c4}
+.tag-green{background:var(--green-10);color:#0e6027}
+
+/* Inline notification */
+.note{display:flex;gap:var(--s04);padding:var(--s04) var(--s05);margin:var(--s03) 0 0;
+  border-left:3px solid var(--blue-60);background:var(--blue-10);font-size:14px}
+.note svg{flex:none;margin-top:2px;color:var(--blue-60)}
+.note.warn{border-left-color:var(--yellow-30);background:var(--yellow-10)}
+.note.warn svg{color:#8e6a00}
+.note p{margin:0}
+
+/* BPMN diagram */
+.diagram{border:1px solid var(--border-subtle);background:var(--white)}
+.diagram .bar{display:flex;flex-wrap:wrap;gap:var(--s03) var(--s05);align-items:center;justify-content:space-between;
+  padding:var(--s04) var(--s05);border-bottom:1px solid var(--border-subtle);background:var(--layer-01)}
+.diagram .bar strong{font-weight:600}
+.diagram .bar span{color:var(--text-secondary);font-size:13px}
+.scroll{overflow-x:auto}
+.scroll:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+svg.bpmn{display:block;min-width:760px;width:100%;height:auto;font-family:var(--sans)}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s03) var(--s06);padding:var(--s04) var(--s05);border-top:1px solid var(--border-subtle);
+  font-size:13px;color:var(--text-secondary)}
+.legend i{display:inline-block;width:16px;height:0;border-top:2px solid var(--text-primary);vertical-align:middle;margin-right:6px}
+.legend i.back{border-top:2px dashed var(--blue-60)}
+
+/* Structured list: tools */
+.slist{border-top:1px solid var(--border-subtle)}
+.srow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3fr);gap:var(--s03) var(--s07);padding:var(--s05) 0;border-bottom:1px solid var(--border-subtle)}
+.srow h4{margin:0;font-size:14px;font-weight:600}
+.srow h4 small{display:block;font-weight:400;color:var(--text-secondary);font-size:13px;margin-top:2px}
+.srow .chips{display:flex;flex-wrap:wrap;gap:var(--s03)}
+.chip{font-family:var(--mono);font-size:12.5px;padding:3px var(--s03);background:var(--layer-01);border:1px solid var(--border-subtle)}
+
+/* Two columns: need / not yet */
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s07)}
+.pair h3{margin:0 0 var(--s04);font-size:20px;font-weight:400}
+.pair ul{margin:0;padding-left:var(--s05);display:grid;gap:var(--s03);color:var(--text-secondary)}
+.pair li{margin:0}
+
+/* Call to action band */
+.cta{margin-top:var(--s10);background:var(--blue-60);color:#fff}
+.cta .shell{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s06);padding-block:var(--s08)}
+.cta h2{margin:0;font-size:28px;font-weight:300;line-height:1.29;max-width:28ch}
+.cta .actions{display:flex;flex-wrap:wrap;gap:1px}
+.cta .btn-light{background:#fff;color:#0f62fe}
+.cta .btn-light:hover{background:#e8e8e8}
+.cta .btn-outline{background:transparent;color:#fff;box-shadow:inset 0 0 0 1px #fff}
+.cta .btn-outline:hover{background:#0050e6}
+
+footer{padding-block:var(--s06) calc(var(--s09) + env(safe-area-inset-bottom,0px));color:var(--text-helper);font-size:12px}
+footer p{max-width:76ch;margin-bottom:6px}
+
+/* a11y */
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.skip{position:absolute;left:-9999px;top:0;z-index:30;background:var(--link);color:#fff;
+  padding:var(--s04) var(--s05);font-weight:600;text-decoration:none}
+.skip:focus{left:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Dark theme: Carbon g100. System preference by default; an explicit choice on the root wins. */
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]){color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-60:#4589ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;--teal-10:#022b30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root:not([data-theme="light"]) .tag-gray{color:#f4f4f4}
+:root:not([data-theme="light"]) .tag-teal{color:#3ddbd9}
+:root:not([data-theme="light"]) .tag-purple{color:#be95ff}
+:root:not([data-theme="light"]) .tag-green{color:#42be65}
+:root:not([data-theme="light"]) .note.warn svg{color:#f1c21b}
+}
+:root[data-theme="dark"]{color-scheme:dark;
+    --white:#161616;--layer-01:#262626;--layer-02:#262626;--layer-accent:#393939;
+    --border-subtle:#393939;--border-strong:#6f6f6f;
+    --text-primary:#f4f4f4;--text-secondary:#c6c6c6;--text-helper:#8d8d8d;
+    --link:#78a9ff;--blue-60:#4589ff;--blue-10:#001d6c;--blue-70:#a6c8ff;
+    --red-10:#2d0709;--green-10:#071908;--yellow-10:#1c1500;--purple-10:#1c0f30;--teal-10:#022b30;
+    --gray-100:#000000;--gray-90:#262626;--gray-80:#393939;}
+:root[data-theme="dark"] .tag-gray{color:#f4f4f4}
+:root[data-theme="dark"] .tag-teal{color:#3ddbd9}
+:root[data-theme="dark"] .tag-purple{color:#be95ff}
+:root[data-theme="dark"] .tag-green{color:#42be65}
+:root[data-theme="dark"] .note.warn svg{color:#f1c21b}
+
+/* Small screens: Carbon sm breakpoint */
+@media (max-width:671px){
+  .masthead nav{display:none}
+  .roles,.tiles,.pair,.sec-head,.srow,.tile.wide .cols{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}
+  .roles{margin-top:var(--s06)}
+}
+@media (min-width:672px) and (max-width:1055px){
+  .masthead nav a:nth-child(n+4){display:none}
+  .steps{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:var(--s05)}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to main content</a>
+
+<header class="masthead">
+  <div class="shell">
+    <a class="brand" href="index.html">IBM</a>
+    <span class="divider" aria-hidden="true"></span>
+    <span class="ctx">BAW Dev Tools MCP · Overview</span>
+    <nav aria-label="On this page">
+      <a href="#build">Build</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#modernize">Modernize</a>
+      <a href="#run">Run</a>
+      <a href="#tools">Tools</a>
+    </nav>
+    <span class="spacer" aria-hidden="true"></span>
+    <button type="button" id="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">
+        <path d="M13.5 2c-1.7 0-3.4.4-4.9 1.2 3.6 1.9 6.1 5.6 6.1 9.9s-2.5 8-6.1 9.9c1.5.8 3.2 1.2 4.9 1.2 6.1 0 11.1-5 11.1-11.1S19.6 2 13.5 2z" transform="translate(4 3)"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="shell">
+    <p class="crumb"><a href="index.html">Docs</a> / Overview</p>
+    <span class="eyebrow">IBM Bob + BAW Dev Tools MCP</span>
+    <h1>From a sentence or a screenshot to a running BAW app</h1>
+    <p class="lede">Describe a form, a workflow or an approval process in plain English, or show Bob a picture of the screen.
+      <strong>Bob designs it, builds it, installs it on your IBM Business Automation Workflow server and tests it in a real browser.</strong>
+      Nobody opens Process Designer and nobody edits TWX XML by hand.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="getting-started.html">Get started
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg></a>
+      <a class="btn btn-ghost" href="showoff/baw-mcp-demo-script/index.html">See a demo script
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg></a>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+<div class="shell">
+
+  <div class="roles">
+    <div class="role">
+      <span class="kicker">The agent</span>
+      <h2>Bob designs</h2>
+      <p>The app spec, the theme (colours, logo, shapes), the screen specs and any hand-written React + Carbon screens.</p>
+    </div>
+    <div class="role">
+      <span class="kicker">The MCP server</span>
+      <h2>The server does the platform work</h2>
+      <p>It packages <code>.twx</code> files, builds screens from drag-and-drop widgets, installs over the BAW REST API, reads existing apps and runs browser tests.</p>
+    </div>
+  </div>
+
+  <ol class="steps" aria-label="How a request becomes an app">
+    <li><span class="n"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M14 21.414l-5-5.001L10.413 15 14 18.586 21.585 11 23 12.415l-9 8.999z"/><path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12z"/></svg>Describe</span><span class="d">A request, a requirements document or a screenshot</span></li>
+    <li><span class="n"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M14 21.414l-5-5.001L10.413 15 14 18.586 21.585 11 23 12.415l-9 8.999z"/><path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12z"/></svg>Approve</span><span class="d">Bob shows the look, screens and fields before it builds</span></li>
+    <li><span class="n"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M14 21.414l-5-5.001L10.413 15 14 18.586 21.585 11 23 12.415l-9 8.999z"/><path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12z"/></svg>Build</span><span class="d">A new snapshot of an installable <code>.twx</code></span></li>
+    <li><span class="n"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M14 21.414l-5-5.001L10.413 15 14 18.586 21.585 11 23 12.415l-9 8.999z"/><path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12z"/></svg>Install</span><span class="d">Straight to BAW on Cloud Pak, after you agree</span></li>
+    <li><span class="n"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M14 21.414l-5-5.001L10.413 15 14 18.586 21.585 11 23 12.415l-9 8.999z"/><path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12z"/></svg>Test</span><span class="d">Every screen, tab and task walked in a browser</span></li>
+  </ol>
+
+  <!-- BUILD -->
+  <section id="build" aria-labelledby="h-build">
+    <div class="sec-head">
+      <div><span class="kicker">Build</span><h2 class="big" id="h-build">New apps, from words or pictures</h2></div>
+      <p>Bob writes a short JSON description of the app and the server turns it into a real BAW process app, with its screens made of widgets people can still drag and drop in Coach Designer.</p>
+    </div>
+    <div class="tiles">
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M17.74 30L16 29l4-7h6a2 2 0 002-2V8a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2h9v2H6a4 4 0 01-4-4V8a4 4 0 014-4h20a4 4 0 014 4v12a4 4 0 01-4 4h-4.84z"/><path d="M8 10h16v2H8zM8 16h10v2H8z"/></svg>
+        <h3>App from a description</h3>
+        <p class="sub">Plain English in, an installed app out.</p>
+        <ul>
+          <li><b>From a request:</b> "an office supply request with requester, item, quantity and needed-by date, a review screen, a navy header and rounded buttons."</li>
+          <li><b>From a requirements document:</b> Bob turns its headings into a to-do list and builds one item at a time, stopping for your answer after each.</li>
+          <li><b>Design approval first:</b> Bob shows the look, screens, fields, buttons and its assumptions, and waits for your OK.</li>
+          <li><b>Changes the same way:</b> "add a field", "split this into tabs" or "add an approval step" edits the spec and builds a new snapshot.</li>
+          <li><b>Complete apps:</b> business object, multi-step screens or one tabbed screen, Back, Next, Submit and Cancel, an optional review page and a confirmation page.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-blue">BAW App Builder mode</span><span class="tag tag-gray">create_app</span></div>
+      </div>
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M19 14a3 3 0 10-3-3 3 3 0 003 3zm0-4a1 1 0 11-1 1 1 1 0 011-1z"/><path d="M26 4H6a2 2 0 00-2 2v20a2 2 0 002 2h20a2 2 0 002-2V6a2 2 0 00-2-2zm0 22H6v-6l5-5 5.59 5.59a2 2 0 002.82 0L21 19l5 5zm0-4.83l-3.59-3.59a2 2 0 00-2.82 0L18 19.17l-5.59-5.59a2 2 0 00-2.82 0L6 17.17V6h20z"/></svg>
+        <h3>Screens from screenshots</h3>
+        <p class="sub">Attach an image or a mockup, get BAW screens that match it.</p>
+        <ul>
+          <li><b>Layout:</b> tabs, sections, side-by-side columns and their relative widths, and which field sits in which column.</li>
+          <li><b>Controls:</b> labels, text fields, text areas, dates, dropdowns, radio groups, checkboxes, required markers, help icons and buttons.</li>
+          <li><b>Look:</b> brand colours sampled from the image, the logo cut out for the header banner, field icons, corner shapes and button placement.</li>
+          <li><b>Compare and fix:</b> after installing, Bob screenshots the live app, compares it with the original and fixes the differences.</li>
+          <li><b>Clear about gaps:</b> Bob lists what it guessed, such as the options of a closed dropdown, and what it can't build yet, such as tables or file uploads.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-blue">screenshot-to-app skill</span><span class="tag tag-gray">image_colors · crop_image</span></div>
+      </div>
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><circle cx="10" cy="12" r="2"/><circle cx="16" cy="9" r="2"/><circle cx="22" cy="12" r="2"/><circle cx="23" cy="18" r="2"/><circle cx="19" cy="23" r="2"/><path d="M16.54 2A14 14 0 002 16a4.82 4.82 0 006.09 4.65l1.12-.31a3 3 0 013.79 2.9V27a3 3 0 003 3 14 14 0 0014-14.54A14.05 14.05 0 0016.54 2zm8.11 22.31A11.93 11.93 0 0116 28a1 1 0 01-1-1v-3.76a5 5 0 00-5-5 5.07 5.07 0 00-1.33.18l-1.12.31A2.82 2.82 0 014 16 12 12 0 0116.47 4 12.18 12.18 0 0128 15.53a11.89 11.89 0 01-3.35 8.79z"/></svg>
+        <h3>Theme and branding</h3>
+        <p class="sub">One file controls the whole look.</p>
+        <ul>
+          <li>Colours, font, corner shape, field icon boxes, page width, button placement, and the header's product name and logo.</li>
+          <li>The same theme styles the classic screens and the React + Carbon screens. Rebranding means editing one file and rebuilding.</li>
+          <li>Written from your description, a screenshot or a brand you name. There is no default look, so Bob asks for one.</li>
+          <li>An optional header banner with a title and subtitle.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-blue">app-theme skill</span><span class="tag tag-gray">*.theme.json</span></div>
+      </div>
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M10 6h18v2H10zM10 24h18v2H10zM10 15h18v2H10zM4 15h2v2H4zM4 6h2v2H4zM4 24h2v2H4z"/></svg>
+        <h3>Forms and fields</h3>
+        <p class="sub">The building blocks of every screen.</p>
+        <ul>
+          <li><b>Field types:</b> text, text area, date, checkbox, whole number, decimal, dropdown, radio group, a Yes/No radio for true/false values and a number dropdown.</li>
+          <li><b>Field options:</b> help text, required fields that block the finishing button, patterns and examples.</li>
+          <li><b>Sections:</b> titled, with 1 to 6 columns. The title bar can be hidden.</li>
+          <li><b>Tabs:</b> a Next button per tab, an option to keep users on a tab until its required fields are filled, and the first tab with an error selected for you.</li>
+          <li><b>Save as Draft</b> on tabbed workflow tasks. The task returns to the inbox and reopens on the tab where it was saved.</li>
+          <li><b>Two business objects in one app,</b> for example Group and Quote edited side by side.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-gray">1–6 columns</span><span class="tag tag-gray">Tabs or steps</span></div>
+      </div>
+      <div class="tile wide">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M14 4H6a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2zm0 10H6V6h8zM26 4h-6v2h6v6h2V6a2 2 0 00-2-2zM26 16h2v6a2 2 0 01-2 2h-6v-2h6zM12 20H6v6h6v2H6a2 2 0 01-2-2v-6a2 2 0 012-2h6z"/></svg>
+        <h3>Reusable field groups</h3>
+        <p class="sub">Build a block of fields once, place it on any screen.</p>
+        <div class="cols">
+          <ul>
+            <li><b>Reusable by default:</b> every section becomes a View listed under the app's User Interface in Workflow Center.</li>
+            <li><b>One group, many places:</b> editable on the form, read-only on a later step and shown on the review page.</li>
+            <li><b>Suggested by Bob</b> when three or more fields repeat on two or more screens, and built only after you agree.</li>
+          </ul>
+          <ul>
+            <li><b>Preview service</b> for each group, so you can view it on its own.</li>
+            <li><b>Per-placement settings:</b> hide any optional field, or set the whole placement to Read only.</li>
+            <li><b>Edits made in BAW are kept:</b> if someone changes a group in Coach Designer, a rebuild keeps their version, says what changed and asks before replacing it.</li>
+          </ul>
+        </div>
+        <div class="tags"><span class="tag tag-blue">coach-groups skill</span><span class="tag tag-gray">Both UI styles</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKFLOW -->
+  <section id="workflow" aria-labelledby="h-workflow">
+    <div class="sec-head">
+      <div><span class="kicker">Workflow</span><h2 class="big" id="h-workflow">A real BPMN process behind the form</h2></div>
+      <p>One line in the request, "add an approval by Underwriting", produces this process. It is saved as a BPMN 2 model, so it opens in Business Automation Studio's process editor, where people can keep moving, adding and connecting steps by hand.</p>
+    </div>
+    <div class="diagram">
+      <div class="bar"><strong>Quote Workflow</strong><span>Generated by create_app from the spec's process section</span></div>
+      <div class="scroll" tabindex="0" role="region" aria-label="Quote Workflow diagram, scrollable">
+        <svg class="bpmn" viewBox="0 0 760 270" role="img" aria-labelledby="bpmn-title">
+          <title id="bpmn-title">Quote Workflow: Sales enters the quote, Underwriting reviews it, and the quote ends if approved or goes back to Sales if not</title>
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--text-primary)"/></marker>
+            <marker id="arr-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--blue-60)"/></marker>
+          </defs>
+          <rect x="0" y="0" width="760" height="135" style="fill:var(--layer-01)"/>
+          <rect x="0" y="135" width="760" height="135" style="fill:var(--red-10)"/>
+          <line x1="0" y1="135" x2="760" y2="135" stroke-width="1" style="stroke:var(--border-strong)"/>
+          <line x1="40" y1="0" x2="40" y2="270" stroke-width="1" style="stroke:var(--border-strong)"/>
+          <text x="22" y="67" transform="rotate(-90 22 67)" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--text-secondary)">Sales</text>
+          <text x="22" y="202" transform="rotate(-90 22 202)" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--text-secondary)">Underwriting</text>
+
+          <circle cx="92" cy="80" r="13" stroke-width="2" style="fill:var(--white);stroke:var(--text-primary)"/>
+          <text x="92" y="112" text-anchor="middle" font-size="11" style="fill:var(--text-secondary)">Start</text>
+          <rect x="150" y="50" width="140" height="60" rx="4" stroke-width="1.5" style="fill:var(--white);stroke:var(--text-primary)"/>
+          <text x="220" y="76" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--text-primary)">Enter Quote Info</text>
+          <text x="220" y="94" text-anchor="middle" font-size="11" style="fill:var(--text-secondary)">form task</text>
+          <rect x="340" y="175" width="140" height="60" rx="4" stroke-width="1.5" style="fill:var(--white);stroke:var(--text-primary)"/>
+          <text x="410" y="201" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--text-primary)">Review Quote</text>
+          <text x="410" y="219" text-anchor="middle" font-size="11" style="fill:var(--text-secondary)">Approve · Send Back</text>
+          <path d="M570,185 L595,205 L570,225 L545,205 z" stroke-width="1.5" style="fill:var(--white);stroke:var(--text-primary)"/>
+          <text x="570" y="247" text-anchor="middle" font-size="11" style="fill:var(--text-secondary)">Approved?</text>
+          <circle cx="690" cy="205" r="13" stroke-width="4" style="fill:var(--white);stroke:var(--text-primary)"/>
+          <text x="690" y="237" text-anchor="middle" font-size="11" style="fill:var(--text-secondary)">End</text>
+
+          <path d="M105,80 L148,80" fill="none" stroke-width="1.5" style="stroke:var(--text-primary)" marker-end="url(#arr)"/>
+          <path d="M290,80 L410,80 L410,173" fill="none" stroke-width="1.5" style="stroke:var(--text-primary)" marker-end="url(#arr)"/>
+          <path d="M480,205 L543,205" fill="none" stroke-width="1.5" style="stroke:var(--text-primary)" marker-end="url(#arr)"/>
+          <path d="M595,205 L675,205" fill="none" stroke-width="1.5" style="stroke:var(--text-primary)" marker-end="url(#arr)"/>
+          <text x="635" y="197" text-anchor="middle" font-size="11" style="fill:var(--text-secondary)">Yes</text>
+          <path d="M570,185 L570,24 L220,24 L220,48" fill="none" stroke-width="1.5" stroke-dasharray="5 4" style="stroke:var(--blue-60)" marker-end="url(#arr-b)"/>
+          <text x="580" y="60" font-size="11" font-weight="600" style="fill:var(--blue-60)">No: Send Back</text>
+          <text x="395" y="16" text-anchor="middle" font-size="11" style="fill:var(--blue-60)">returns with everything entered so far</text>
+        </svg>
+      </div>
+      <div class="legend"><span><i></i>Sequence flow</span><span><i class="back"></i>Send Back loop, repeats until approved</span></div>
+    </div>
+    <div class="tiles" style="margin-top:var(--s06)">
+      <div class="tile">
+        <h3>What the workflow can include</h3>
+        <ul>
+          <li><b>Swim lanes</b> such as Sales and Underwriting, with the form as the first task.</li>
+          <li><b>Approval task</b> with Approve, Send Back and an "Approved?" decision.</li>
+          <li><b>Review task</b> as an alternative: everything read-only, with an Edit button on each section that unlocks it in place.</li>
+          <li><b>Rewired processes:</b> when an app is modernized, its processes are switched to the modern screens.</li>
+        </ul>
+      </div>
+      <div class="tile">
+        <h3>How you change it</h3>
+        <ul>
+          <li><b>Through chat:</b> "rename the lanes", "add an approval step" or "switch to a review step". Bob edits the spec and rebuilds.</li>
+          <li><b>By hand:</b> open the process in Business Automation Studio's process editor.</li>
+          <li><b>Tested end to end:</b> Bob works every task of the process in a browser until it completes.</li>
+        </ul>
+        <div class="note warn" role="note">
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm-1.1 6h2.2v11h-2.2zM16 25a1.5 1.5 0 111.5-1.5A1.5 1.5 0 0116 25z"/></svg>
+          <p>Free-form BPMN modelling, drawing any process from scratch, is outside this tool. Bob refers that to a separate IBM BAW Author mode.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODERNIZE -->
+  <section id="modernize" aria-labelledby="h-modernize">
+    <div class="sec-head">
+      <div><span class="kicker">Modernize</span><h2 class="big" id="h-modernize">Existing apps, a modern UI</h2></div>
+      <p>Bob gives a legacy app new React + Carbon screens while the logic underneath keeps running exactly as before.</p>
+    </div>
+    <div class="tiles">
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M18 28A12 12 0 1030 16h-2A10 10 0 1118 26zM10 16l4.59 4.59L13.17 22 7 15.83V6h2v9z" transform="translate(-4 0)"/></svg>
+        <h3>Legacy to React + Carbon</h3>
+        <p class="sub">New screens on top, the old logic untouched underneath.</p>
+        <ul>
+          <li><b>Inventory:</b> Bob reads every screen of an existing app (sections, fields, buttons, flow and groups) into an editable spec.</li>
+          <li><b>Improve:</b> better labels, grouping, required fields, patterns, examples and help text, then a pause for your review.</li>
+          <li><b>Modern UI:</b> a React + IBM Carbon copy of each service, built from drag-and-drop widgets and styled by the theme file.</li>
+          <li><b>Nothing breaks:</b> the original flow, scripts, variables and button wiring keep running, and the classic screens stay in the app.</li>
+          <li><b>Event code carries over</b> from the old controls to the new widgets.</li>
+          <li><b>Hand-made screens:</b> for a screen that needs a custom design, Bob writes a dedicated React + Carbon screen.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-purple">BAW Coach Modernizer mode</span><span class="tag tag-gray">modernize_app</span></div>
+      </div>
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M12 4H6a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2V6a2 2 0 00-2-2zm0 8H6V6h6zM26 4h-6a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2V6a2 2 0 00-2-2zm0 8h-6V6h6zM12 18H6a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2v-6a2 2 0 00-2-2zm0 8H6v-6h6zM26 18h-6a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2v-6a2 2 0 00-2-2zm0 8h-6v-6h6z"/></svg>
+        <h3>Drag-and-drop widget toolkits</h3>
+        <p class="sub">Generated screens stay editable by people.</p>
+        <ul>
+          <li><b>App Builder Widgets</b> for new apps, and <b>Modernizer Widgets</b>, 12 React + Carbon widgets for modernized apps. The server builds and installs both.</li>
+          <li><b>Editable in Coach Designer,</b> with palette icons and live previews on the canvas.</li>
+          <li><b>Familiar settings:</b> each Modernizer Widget has the same settings, sections and events as the IBM UI Toolkit control it replaces.</li>
+          <li><b>New widgets when needed,</b> such as a Yes/No toggle. Bob writes the component and its icon, checks it in a browser and publishes a new toolkit version.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-teal">ABW toolkit</span><span class="tag tag-teal">MDW toolkit</span><span class="tag tag-gray">build_widget_toolkit</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RUN -->
+  <section id="run" aria-labelledby="h-run">
+    <div class="sec-head">
+      <div><span class="kicker">Run</span><h2 class="big" id="h-run">Data, servers and testing</h2></div>
+      <p>Everything after the build: the app's data, getting it onto the server safely, and proof that it works.</p>
+    </div>
+    <div class="tiles">
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M24 3H8a2 2 0 00-2 2v22a2 2 0 002 2h16a2 2 0 002-2V5a2 2 0 00-2-2zm0 2v6H8V5zm0 8v6H8v-6zM8 27v-6h16v6z"/><circle cx="11" cy="8" r="1"/><circle cx="11" cy="16" r="1"/><circle cx="11" cy="24" r="1"/></svg>
+        <h3>Database</h3>
+        <p class="sub">The platform's PostgreSQL, with safety rails.</p>
+        <ul>
+          <li><b>Explore:</b> list databases and tables, describe columns, keys and indexes, and answer questions with SQL.</li>
+          <li><b>Data apps:</b> an app can Load a record by key and Save on Submit. Bob creates the table, checks its shape, installs the app and tests both actions.</li>
+          <li><b>Import and export:</b> load CSV or JSON files into tables, and export tables or query results to CSV.</li>
+          <li><b>Limited by design:</b> Bob's login writes only to the app database, with caps on rows, size and time. A change to a system database needs your approval and backs up the affected rows first. Only you can run a restore.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-blue">baw-database skill</span><span class="tag tag-gray">Any mode</span></div>
+      </div>
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M26 24v4H6v-4H4v4a2 2 0 002 2h20a2 2 0 002-2v-4zM6 12l1.41 1.41L15 5.83V24h2V5.83l7.59 7.58L26 12 16 2 6 12z" transform="rotate(180 16 16)"/></svg>
+        <h3>Install and versions</h3>
+        <p class="sub">Safe, traceable releases on your server.</p>
+        <ul>
+          <li><b>Browse:</b> process apps, toolkits, snapshots and launchable services with their run URLs.</li>
+          <li><b>Move apps:</b> export an app to <code>.twx</code>, or install one and wait for the result.</li>
+          <li><b>Safe versioning:</b> every build is a new snapshot, reusing a snapshot name is refused, and there is no delete tool.</li>
+          <li><b>Older BAW:</b> packaging for 24.0.x and 25.0.x, checked against exports from those versions. Installs on them are not tested yet.</li>
+          <li><b>No server needed to build:</b> you still get <code>.twx</code> files to import yourself.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-green">New snapshots only</span><span class="tag tag-gray">install_app</span></div>
+      </div>
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M14 21.414l-5-5.001L10.413 15 14 18.586 21.585 11 23 12.415l-9 8.999z"/><path d="M26 4H6a2 2 0 00-2 2v20a2 2 0 002 2h20a2 2 0 002-2V6a2 2 0 00-2-2zm0 22H6V6h20z"/></svg>
+        <h3>Testing in a real browser</h3>
+        <p class="sub">Proof that the app works, with screenshots.</p>
+        <ul>
+          <li><b>Screens:</b> opens the service, screenshots every screen, fills in sample values or yours, and presses the buttons you name.</li>
+          <li><b>Tabs:</b> opens, fills and screenshots every tab.</li>
+          <li><b>Required fields:</b> confirms that Submit stays blocked while they are empty.</li>
+          <li><b>Whole workflows:</b> starts the process and works every task until it completes, including paths such as "Send Back once".</li>
+          <li><b>Drafts:</b> saves a draft, reopens the task and checks that the values were kept and that it opens on the right tab.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-gray">test_service</span><span class="tag tag-gray">test_process</span></div>
+      </div>
+      <div class="tile">
+        <svg class="icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 22a4 4 0 10-4-4 4 4 0 004 4zm0-6a2 2 0 11-2 2 2 2 0 012-2zM14 6h4v2h-4z"/><path d="M24 2H8a2 2 0 00-2 2v24a2 2 0 002 2h16a2 2 0 002-2V4a2 2 0 00-2-2zm-4 26h-8v-2a1 1 0 011-1h6a1 1 0 011 1zm2 0v-2a3 3 0 00-3-3h-6a3 3 0 00-3 3v2H8V4h16v24z"/></svg>
+        <h3>Working with Bob</h3>
+        <p class="sub">Two specialist modes, with you in control.</p>
+        <ul>
+          <li><b>BAW App Builder</b> builds new apps and changes existing ones. <b>BAW Coach Modernizer</b> modernizes their screens.</li>
+          <li><b>Automatic routing:</b> ask for "a React UI" and Bob moves to the Modernizer. Ask for a new field and it moves back. Data questions work in any mode.</li>
+          <li><b>Human in the loop:</b> Bob asks before it builds, crops images, installs or changes a system database.</li>
+          <li><b>Guardrails:</b> Bob can only edit app specs, themes and UI files, credentials never reach the AI, and database rows are treated as data, never as instructions.</li>
+        </ul>
+        <div class="tags"><span class="tag tag-blue">2 modes</span><span class="tag tag-gray">9 skills</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOOLS -->
+  <section id="tools" aria-labelledby="h-tools">
+    <div class="sec-head">
+      <div><span class="kicker">Under the hood</span><h2 class="big" id="h-tools">21 MCP tools</h2></div>
+      <p>Any MCP client that runs a local (stdio) server can call them. The <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp#readme">README</a> describes each one.</p>
+    </div>
+    <div class="slist">
+      <div class="srow"><h4>BAW server<small>Read and install</small></h4><div class="chips"><span class="chip">list_apps</span><span class="chip">list_snapshots</span><span class="chip">list_services</span><span class="chip">export_app</span><span class="chip">install_app</span></div></div>
+      <div class="srow"><h4>Build<small>Apps, screens and toolkits</small></h4><div class="chips"><span class="chip">create_app</span><span class="chip">inspect_coaches</span><span class="chip">modernize_app</span><span class="chip">build_screens</span><span class="chip">build_widget_toolkit</span></div></div>
+      <div class="srow"><h4>Images<small>Read screenshots</small></h4><div class="chips"><span class="chip">view_image</span><span class="chip">image_colors</span><span class="chip">crop_image</span></div></div>
+      <div class="srow"><h4>Database<small>PostgreSQL on the platform</small></h4><div class="chips"><span class="chip">list_tables</span><span class="chip">describe_table</span><span class="chip">run_sql</span><span class="chip">export_table</span><span class="chip">import_table</span><span class="chip">change_system_db</span></div></div>
+      <div class="srow"><h4>Test<small>In a real browser</small></h4><div class="chips"><span class="chip">test_service</span><span class="chip">test_process</span></div></div>
+    </div>
+  </section>
+
+  <section id="fit" aria-labelledby="h-fit">
+    <div class="pair">
+      <div>
+        <h3 id="h-fit">What you need</h3>
+        <ul>
+          <li>IBM Bob, or any MCP client that runs a local (stdio) server.</li>
+          <li>A BAW server on Cloud Pak for Business Automation, with an account that can install process apps. Without one, the build tools still produce files to import.</li>
+          <li>Python 3.11+ with uv, Node.js 18+ and a Chromium-based browser for the tests.</li>
+          <li>Optional: PostgreSQL admin settings for the database tools.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Not covered yet</h3>
+        <ul>
+          <li>Table controls and file uploads on generated screens.</li>
+          <li>Free-form BPMN modelling beyond form, approval and review workflows.</li>
+          <li>Changing or removing an existing widget during a build. That is a code change, made separately.</li>
+          <li>Deleting apps or snapshots. There is no delete tool.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="cta">
+  <div class="shell">
+    <h2>Build your first app on BAW in about 30 minutes</h2>
+    <div class="actions">
+      <a class="btn btn-light" href="getting-started.html">Getting started
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg></a>
+      <a class="btn btn-outline" href="app-spec-reference.html">App spec reference
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10L18 6z"/></svg></a>
+    </div>
+  </div>
+</div>
+</main>
+
+<footer class="shell">
+  <p>BAW Dev Tools MCP is not an official IBM project. Use it with test servers, test apps and test data.</p>
+  <p>Facts on this page checked on 13 November 2026 against the README, <code>.bob/</code> and the app spec reference.</p>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement,
+      btn  = document.getElementById('theme-toggle'),
+      mq   = window.matchMedia('(prefers-color-scheme: dark)');
+  function isDark() {
+    var set = root.getAttribute('data-theme');
+    return set ? set === 'dark' : mq.matches;
+  }
+  function sync() {
+    var dark = isDark();
+    btn.setAttribute('aria-pressed', String(dark));
+    btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  try {
+    var saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  sync();
+  btn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    sync();
+  });
+  mq.addEventListener('change', function () { if (!root.hasAttribute('data-theme')) sync(); });
+})();
+</script>
+</body>
+</html>
