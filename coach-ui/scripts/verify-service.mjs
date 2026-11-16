@@ -188,7 +188,7 @@ function findField(label) {
   };
   const want = norm(label);
   const exact = fields.find((el) => labelsOf(el).includes(want));
-  // A field with exactly this label on another tab is the one meant: "Broker" must not fall back to "Broker Commission".
+  // A field with exactly this label on another tab is the one meant: "Name" must not fall back to "Company Name".
   if (exact || all.some((el) => !el.offsetParent && labelsOf(el).includes(want))) return exact || null;
   return fields.find((el) => labelsOf(el).some((t) => t.includes(want))) || null;
 }

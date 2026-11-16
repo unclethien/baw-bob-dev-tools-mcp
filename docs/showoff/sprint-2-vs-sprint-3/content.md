@@ -1,6 +1,6 @@
 # Sprint 2 vs Sprint 3: from single widgets to whole sections that remember
 
-A short presentation for the BAW team and their managers. It shows what changed in the Coach UI between Sprint 2 and Sprint 3. In Sprint 2 you dragged one field at a time; in Sprint 3 you drag a whole section, and the screen saves to the database. Five slides, about six minutes. The word-for-word talk track is in [talk-track.md](talk-track.md).
+A short presentation for a BAW team and their managers. It shows what changed in the Coach UI between Sprint 2 and Sprint 3. In Sprint 2 you dragged one field at a time; in Sprint 3 you drag a whole section, and the screen saves to the database. Five slides, about six minutes. The word-for-word talk track is in [talk-track.md](talk-track.md).
 
 - **Sprint 2, "Quote widgets":** the Quote screen built from small widgets in two toolkits.
 - **Sprint 3, "Groups and the database":** the same screen built from reusable groups (Views inside the app) that save and load each quote.
@@ -84,4 +84,4 @@ A short presentation for the BAW team and their managers. It shows what changed 
 [^options]: IBM, Configuration properties and configuration options. https://www.ibm.com/docs/en/SSFPJS_8.6.0/com.ibm.wbpm.wle.editor.doc/topics/c_config_options.html
 [^sql]: IBM, Invoking SQL integration flows (Business Automation Workflow). https://www.ibm.com/docs/en/baw/20.0.0?topic=service-invoking-sql-integration-flows
 
-Project sources: `README.md` (Reusable groups, Database access), `docs/showoff/quote-widgets-demo-script/`, `docs/showoff/groups-and-database-demo-script/`.
+Project sources: `README.md` (Reusable groups, Database access), `docs/showoff/groups-and-database-demo-script/`.
