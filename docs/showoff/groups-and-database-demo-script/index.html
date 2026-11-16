@@ -55,7 +55,7 @@
       <div class="hero-copy">
         <p class="kicker">IBM Bob × BAW Dev Tools MCP · demo script</p>
         <h1 id="hero-title" class="display">From pictures to a Quote screen that remembers.</h1>
-        <p class="lead">Bob builds the team's Quote screen from pictures, as <b>reusable groups</b> that <b>save every quote</b> to the database. Then a modern copy with a <b>widget Bob writes live</b>, and the app's data worked on live on the server.</p>
+        <p class="lead">Bob builds a Quote screen from pictures, as <b>reusable groups</b> that <b>save every quote</b> to the database. Then a modern copy with a <b>widget Bob writes live</b>, and the app's data worked on live on the server.</p>
         <dl class="figures" aria-label="At a glance">
           <div><dt>60</dt><dd>min</dd></div>
           <div><dt>4</dt><dd>acts</dd></div>
@@ -119,11 +119,11 @@
 git checkout -- coach-ui/widgets/modernizer-widgets.json
 uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.group_quote"</code></pre><button class="copy" type="button" data-copy>Copy</button></figure>
           </li>
-          <li>Keep <code>screenshots/Quote/</code> as it is: the six pictures of the old screen (<code>image (1).png</code> to <code>image (6).png</code>) and the team's newer quote screen (<code>generate-quote.png</code>). It stays on this laptop and is never published.</li>
+          <li>Keep <code>screenshots/Quote/</code> as it is: the six pictures of the old screen (<code>image (1).png</code> to <code>image (6).png</code>) and a newer quote screen (<code>generate-quote.png</code>). It stays on this laptop and is never published.</li>
           <li>Keep only the two toolkit builds in <code>work/</code> (<code>ABW-1.0.4.twx</code> and the newest <code>MDW-*.twx</code>), so Bob reads nothing from earlier runs.</li>
           <li>Pick a <b>new acronym</b> and put it in the Act 1 request (the script uses <code>ZZGDB</code>; use <code>ZZGDB2</code> after a rehearsal). Names already used on the test server:
             <ul class="bullets">
-              <li>Apps: ZZQI, ZZLGQ, ZZLGQI, ZZOLD, ZZGRP, ZZGRP2, ZZGWQ, ZZLGG, ZZGQ3, ZZGDEMO, ZZGDBR, ZZQDBR</li>
+              <li>Apps: ZZQI, ZZGRP, ZZGRP2, ZZGWQ, ZZGQ3, ZZGDEMO, ZZGDBR, ZZQDBR</li>
               <li>App Builder Widgets (ABW): up to 1.0.4</li>
               <li>Modernizer Widgets (MDW): up to 2.1.0, so Bob's new widget goes into 2.2.0 or later</li>
             </ul>
@@ -371,7 +371,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
         </div>
         <div class="cue-panel" role="tabpanel" id="a1-p1" aria-labelledby="a1-t1">
           <h3 class="step-title">Step 1. Show the old screen</h3>
-          <p class="cue-do"><b>Do</b> <span>Flip through the six pictures: one long “Info” tab of a quote in an old CRM, captured while scrolling. Point at the yes/no checkboxes. We come back to those in Act 2.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Flip through the six pictures: one long “Info” tab of a quote in an old CRM, captured while scrolling. Point at the three yes/no checkboxes. We come back to those in Act 2.</span></p>
           <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“All we have is pictures. The pictures are the requirement. And today the screen should also remember every quote.”</li></ul></blockquote>
         </div>
         <div class="cue-panel" role="tabpanel" id="a1-p2" aria-labelledby="a1-t2" hidden>
@@ -412,7 +412,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
           <h3 class="step-title">Step 4. Save a quote, then load it back</h3>
           <div class="cue-do"><b>Do</b>
             <ol class="num">
-              <li>Open the app. Type <b>Lighthouse Bakery Co</b> as the Group Name, pick a Rating Method, tick one <b>yes/no question</b>, press Review, then Submit. The confirmation shows a reference number.</li>
+              <li>Open the app. Type <b>Lighthouse Bakery Co</b> as the Group Name, pick a rating method, tick one of the <b>yes/no checkboxes</b>, press Review, then Submit. The confirmation shows a reference number.</li>
               <li>Open the app again: an empty form. Type <b>Lighthouse Bakery Co</b> and press <b>Load</b>. Everything comes back.</li>
             </ol>
           </div>
@@ -449,7 +449,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
         </header>
         <figure class="prompt">
           <figcaption>Step 2 · paste in Bob, same chat</figcaption>
-          <pre><code>Give the app you just built a React UI with IBM Carbon, from Modernizer Widgets, and keep its reusable groups. Lay it out like screenshots/Quote/generate-quote.png: the sections as tabs, the fields side by side, the team's blue from that screen on a white page, Submit and Cancel at the bottom right. Show the yes/no questions as a Carbon toggle switch with Yes and No. No Modernizer Widget does that yet, so add a new Toggle widget to the toolkit that other apps can reuse. Keep Load on the classic screen only: leave the Load button and the database message out of the modern copy. Show me the plan before you build.</code></pre>
+          <pre><code>Give the app you just built a React UI with IBM Carbon, from Modernizer Widgets, and keep its reusable groups. Lay it out like screenshots/Quote/generate-quote.png: the sections as tabs, the fields side by side, the blue from that screen on a white page, Submit and Cancel at the bottom right. Show the yes/no questions as a Carbon toggle switch with Yes and No. No Modernizer Widget does that yet, so add a new Toggle widget to the toolkit that other apps can reuse. Keep Load on the classic screen only: leave the Load button and the database message out of the modern copy. Show me the plan before you build.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
         <figure class="prompt">
@@ -480,7 +480,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
 
         <div class="cue-panel" role="tabpanel" id="a2-p1" aria-labelledby="a2-t1">
           <h3 class="step-title">Step 1. Show the target look</h3>
-          <p class="cue-do"><b>Do</b> <span>Open <code>screenshots/Quote/generate-quote.png</code>, the team's newer quote screen. Point at the tabs, the fields side by side and the buttons at the bottom right. Then point at the three yes/no checkboxes. Stay in the same chat.</span></p>
+          <p class="cue-do"><b>Do</b> <span>Open <code>screenshots/Quote/generate-quote.png</code>, a newer quote screen. Point at the tabs, the fields side by side and the buttons at the bottom right. Then point at the three yes/no checkboxes. Stay in the same chat.</span></p>
           <blockquote class="cue-say"><b class="say-label">Say</b><ul><li>“A checkbox is a poor fit for a yes/no question. A switch reads better, and nobody has one in the toolkit yet.”</li></ul></blockquote>
         </div>
 
@@ -873,7 +873,7 @@ uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.gr
       <li id="ref-5">Carbon Design System, Toggle usage. <a href="https://carbondesignsystem.com/components/toggle/usage" target="_blank" rel="noopener">https://carbondesignsystem.com/components/toggle/usage</a></li>
       <li id="ref-6">Model Context Protocol, Tools. <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools" target="_blank" rel="noopener">https://modelcontextprotocol.io/specification/2025-06-18/server/tools</a></li>
     </ol>
-    <p class="fine">The app pictures come from neutral example apps; on the day, Bob builds from the team's own pictures, which stay on the presenter's laptop. Bob makes up the sample quotes during the demo, in the test server's app database. The figures in Act 3 are an example.</p>
+    <p class="fine">The app pictures come from neutral example apps; on the day, Bob builds from your own pictures, which stay on the presenter's laptop. Bob makes up the sample quotes during the demo, in the test server's app database. The figures in Act 3 are an example.</p>
     <p class="fine">Project: <a href="https://github.com/unclethien/baw-bob-dev-tools-mcp" target="_blank" rel="noopener">https://github.com/unclethien/baw-bob-dev-tools-mcp</a> (Apache-2.0). Not an official IBM project; use it with test servers and test apps.</p>
   </footer>
 

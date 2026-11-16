@@ -1,0 +1,261 @@
+{
+  "app": {
+    "name": "Equipment Lease Quote",
+    "acronym": "ZZELQ"
+  },
+  "theme": "app-specs/example-quote-desk.theme.json",
+  "businessObjects": [
+    {
+      "name": "CustomerBO",
+      "variable": "customer"
+    },
+    {
+      "name": "LeaseBO",
+      "variable": "lease"
+    }
+  ],
+  "service": {
+    "name": "Equipment Lease Quote"
+  },
+  "layout": "tabs",
+  "review": false,
+  "form": {
+    "nextLabel": "Send for Review",
+    "tabNextLabel": "Next"
+  },
+  "steps": [
+    {
+      "title": "Customer",
+      "sections": [
+        {
+          "group": "CustomerDetails CV"
+        }
+      ]
+    },
+    {
+      "title": "Lease Terms",
+      "sections": [
+        {
+          "group": "LeaseTerms CV"
+        }
+      ]
+    }
+  ],
+  "process": {
+    "name": "Equipment Lease Quote",
+    "formTask": {
+      "name": "Generate Quote"
+    },
+    "review": {
+      "name": "Review Quote",
+      "lane": "Credit",
+      "completeLabel": "Submit",
+      "editLabel": "Edit"
+    }
+  },
+  "groups": [
+    {
+      "name": "CustomerDetails CV",
+      "businessObject": "CustomerBO",
+      "fields": [
+        {
+          "name": "quoteNumber",
+          "type": "String",
+          "required": true,
+          "label": "Quote Number"
+        },
+        {
+          "name": "companyName",
+          "type": "String",
+          "required": true,
+          "label": "Company Name"
+        },
+        {
+          "name": "contactName",
+          "type": "String",
+          "required": true,
+          "label": "Contact Name"
+        },
+        {
+          "name": "contactEmail",
+          "type": "String",
+          "required": true,
+          "label": "Contact Email"
+        },
+        {
+          "name": "industry",
+          "type": "String",
+          "required": true,
+          "label": "Industry"
+        },
+        {
+          "name": "salesRep",
+          "type": "String",
+          "required": true,
+          "label": "Sales Rep"
+        },
+        {
+          "name": "creditAnalyst",
+          "type": "String",
+          "required": true,
+          "label": "Credit Analyst"
+        },
+        {
+          "name": "requestDate",
+          "type": "Date",
+          "required": true,
+          "label": "Request Date"
+        },
+        {
+          "name": "neededByDate",
+          "type": "Date",
+          "required": true,
+          "label": "Needed By Date"
+        },
+        {
+          "name": "signedDate",
+          "type": "Date",
+          "required": true,
+          "label": "Signed Date"
+        },
+        {
+          "name": "existingCustomer",
+          "type": "Boolean",
+          "required": true,
+          "control": "Radio",
+          "label": "Existing Customer"
+        },
+        {
+          "name": "taxExempt",
+          "type": "Boolean",
+          "required": true,
+          "control": "Radio",
+          "label": "Tax Exempt"
+        },
+        {
+          "name": "publicCompany",
+          "type": "Boolean",
+          "required": true,
+          "control": "Radio",
+          "label": "Public Company"
+        }
+      ]
+    },
+    {
+      "name": "LeaseTerms CV",
+      "businessObject": "LeaseBO",
+      "fields": [
+        {
+          "name": "equipmentType",
+          "type": "String",
+          "required": true,
+          "label": "Equipment Type"
+        },
+        {
+          "name": "equipmentMake",
+          "type": "String",
+          "required": true,
+          "label": "Make"
+        },
+        {
+          "name": "equipmentModel",
+          "type": "String",
+          "required": true,
+          "label": "Model"
+        },
+        {
+          "name": "deliveryAddress",
+          "type": "String",
+          "required": true,
+          "label": "Delivery Address"
+        },
+        {
+          "name": "paymentFrequency",
+          "type": "String",
+          "required": true,
+          "label": "Payment Frequency"
+        },
+        {
+          "name": "maintenancePlan",
+          "type": "String",
+          "required": true,
+          "label": "Maintenance Plan"
+        },
+        {
+          "name": "insuranceProvider",
+          "type": "String",
+          "required": true,
+          "label": "Insurance Provider"
+        },
+        {
+          "name": "leaseAmount",
+          "type": "Decimal",
+          "required": true,
+          "label": "Lease Amount"
+        },
+        {
+          "name": "downPayment",
+          "type": "Decimal",
+          "required": true,
+          "label": "Down Payment"
+        },
+        {
+          "name": "monthlyPayment",
+          "type": "Decimal",
+          "required": true,
+          "label": "Monthly Payment"
+        },
+        {
+          "name": "residualValue",
+          "type": "Decimal",
+          "required": true,
+          "label": "Residual Value"
+        },
+        {
+          "name": "termMonths",
+          "type": "Integer",
+          "required": true,
+          "control": "Select",
+          "options": [
+            12,
+            24,
+            36,
+            48,
+            60
+          ],
+          "label": "Term (Months)"
+        },
+        {
+          "name": "unitCount",
+          "type": "Integer",
+          "required": true,
+          "label": "Number of Units"
+        },
+        {
+          "name": "locationCount",
+          "type": "Integer",
+          "required": true,
+          "label": "Number of Locations"
+        },
+        {
+          "name": "purchaseOption",
+          "type": "Boolean",
+          "required": true,
+          "label": "Purchase Option"
+        },
+        {
+          "name": "earlyBuyout",
+          "type": "Boolean",
+          "required": true,
+          "label": "Early Buyout"
+        },
+        {
+          "name": "guarantorRequired",
+          "type": "Boolean",
+          "required": true,
+          "label": "Guarantor Required"
+        }
+      ]
+    }
+  ]
+}

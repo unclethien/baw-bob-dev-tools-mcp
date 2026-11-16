@@ -53,5 +53,5 @@ description: Inventory the coaches of a BAW process app (.twx) into an editable 
 
 ## Rules
 
-- Never copy client or personal data into the spec. `example` values are obvious samples (`1234567890`, `name@example.com`, `(423) 555-0100`).
+- Never copy client or personal data into the spec. `example` values are obvious samples (`1234567890`, `name@example.com`, `(555) 555-0100`).
 - If a service shows `"modernize": false` with a `reason`, report the reason. Do not force it on. A service is skipped when fields placed straight in its coaches bind more than one object; groups binding other objects are fine.

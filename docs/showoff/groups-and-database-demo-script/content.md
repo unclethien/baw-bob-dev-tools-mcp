@@ -1,12 +1,12 @@
 # Demo script: from pictures to a Quote screen that remembers
 
-A one-hour session for the team's team and their managers. Last session the team asked for **reusable, configurable pieces** they can maintain in IBM Business Automation Workflow (BAW). Today IBM Bob builds the team's Quote screen from pictures, as **reusable groups**, and makes it **remember** every quote. Then Bob adds a modern version with a widget it writes on the spot, fills the app's table with sample quotes right on the server, and works on them together with the app.
+A one-hour session for a BAW team and their managers. Last session the team asked for **reusable, configurable pieces** they can maintain in IBM Business Automation Workflow (BAW). Today IBM Bob builds a Quote screen from pictures, as **reusable groups**, and makes it **remember** every quote. Then Bob adds a modern version with a widget it writes on the spot, fills the app's table with sample quotes right on the server, and works on them together with the app.
 
 1. **Act 1. Pictures in; a screen that remembers out.** Bob builds the app from pictures of the old screen, every section a reusable group, and saves each quote to the database. Submit a quote, then Load it back.
 2. **Act 2. Modern, with a new widget.** Bob gives the same app a React and Carbon version of every group, and **writes a new Toggle widget** for the yes/no questions.
 3. **Act 3. Your data, live in BAW.** Bob adds 20 quotes straight into the app's table on the server, and a question comes back as a table. A quote typed in the app is read by Bob, and Bob's change shows up in the app.
 
-**How to read this script.** Each step tells you what to **do**, what to **paste** into Bob, what **Bob does**, and what to **say**. Text in quotes is meant to be said out loud. The pictures on the demo page come from a neutral example app; on the day, Bob builds from the team's own pictures.
+**How to read this script.** Each step tells you what to **do**, what to **paste** into Bob, what **Bob does**, and what to **say**. Text in quotes is meant to be said out loud. The pictures on the demo page come from a neutral example app; on the day, Bob builds from your own pictures.
 
 ---
 
@@ -39,10 +39,10 @@ Thirty minutes before:
    uv run --script server/pg_ops.py sql bawexternal "DROP TABLE IF EXISTS public.group_quote"
    ```
    The table holds only sample quotes and test quotes.
-4. Keep `screenshots/Quote/` as it is: the six pictures of the old screen (`image (1).png` to `image (6).png`) and the team's newer quote screen (`generate-quote.png`). It stays on this laptop and is never published.
+4. Keep `screenshots/Quote/` as it is: the six pictures of the old screen (`image (1).png` to `image (6).png`) and a newer quote screen (`generate-quote.png`). It stays on this laptop and is never published.
 5. Keep only the two toolkit builds in `work/` (`ABW-1.0.4.twx` and the newest `MDW-*.twx`), so Bob reads nothing from earlier runs.
 6. Pick a **new acronym** and put it in the Act 1 request (the script uses `ZZGDB`; use `ZZGDB2` after a rehearsal). Names already used on the test server:
-   - Apps: ZZQI, ZZLGQ, ZZLGQI, ZZOLD, ZZGRP, ZZGRP2, ZZGWQ, ZZLGG, ZZGQ3, ZZGDEMO, ZZGDBR, ZZQDBR
+   - Apps: ZZQI, ZZGRP, ZZGRP2, ZZGWQ, ZZGQ3, ZZGDEMO, ZZGDBR, ZZQDBR
    - App Builder Widgets (ABW): up to 1.0.4
    - Modernizer Widgets (MDW): up to 2.1.0, so Bob's new widget goes into 2.2.0 or later
 7. In Bob's auto-approve settings, allow mode switches, and keep **change_system_db** off, so Bob must ask before any change to a system database.
@@ -87,7 +87,7 @@ Thirty minutes before:
 
 ### Step 1. Show the old screen
 
-**Do.** Flip through the six pictures: one long "Info" tab of a quote in an old CRM, captured while scrolling. Point at the yes/no checkboxes. We come back to those in Act 2.
+**Do.** Flip through the six pictures: one long "Info" tab of a quote in an old CRM, captured while scrolling. Point at the three yes/no checkboxes. We come back to those in Act 2.
 
 **Say.** "All we have is pictures. The pictures are the requirement. And today the screen should also remember every quote."
 
@@ -126,7 +126,7 @@ Thirty minutes before:
 ### Step 4. Save a quote, then load it back
 
 **Do.**
-1. Open the app. Type **Lighthouse Bakery Co** as the Group Name, pick a Rating Method, tick one **yes/no question**, press Review, then Submit. The confirmation shows a reference number.
+1. Open the app. Type **Lighthouse Bakery Co** as the Group Name, pick a rating method, tick one of the **yes/no checkboxes**, press Review, then Submit. The confirmation shows a reference number.
 2. Open the app again: an empty form. Type **Lighthouse Bakery Co** and press **Load**. Everything comes back.
 
 **Say.** "That quote now lives in the database, not in someone's inbox or spreadsheet. And the review placed the same groups, read-only."
@@ -143,7 +143,7 @@ Thirty minutes before:
 
 ### Step 1. Show the target look
 
-**Do.** Open `screenshots/Quote/generate-quote.png`, the team's newer quote screen. Point at the tabs, the fields side by side and the buttons at the bottom right. Then point at the three yes/no checkboxes. Stay in the same chat.
+**Do.** Open `screenshots/Quote/generate-quote.png`, a newer quote screen. Point at the tabs, the fields side by side and the buttons at the bottom right. Then point at the three yes/no checkboxes. Stay in the same chat.
 
 **Say.** "A checkbox is a poor fit for a yes/no question. A switch reads better, and nobody has one in the toolkit yet."
 
@@ -151,7 +151,7 @@ Thirty minutes before:
 
 **Paste.**
 
-> Give the app you just built a React UI with IBM Carbon, from Modernizer Widgets, and keep its reusable groups. Lay it out like screenshots/Quote/generate-quote.png: the sections as tabs, the fields side by side, the team's blue from that screen on a white page, Submit and Cancel at the bottom right. Show the yes/no questions as a Carbon toggle switch with Yes and No. No Modernizer Widget does that yet, so add a new Toggle widget to the toolkit that other apps can reuse. Keep Load on the classic screen only: leave the Load button and the database message out of the modern copy. Show me the plan before you build.
+> Give the app you just built a React UI with IBM Carbon, from Modernizer Widgets, and keep its reusable groups. Lay it out like screenshots/Quote/generate-quote.png: the sections as tabs, the fields side by side, the blue from that screen on a white page, Submit and Cancel at the bottom right. Show the yes/no questions as a Carbon toggle switch with Yes and No. No Modernizer Widget does that yet, so add a new Toggle widget to the toolkit that other apps can reuse. Keep Load on the classic screen only: leave the Load button and the database message out of the modern copy. Show me the plan before you build.
 
 **Bob does.**
 1. **Switches to its second role**, the Modernizer, by itself.

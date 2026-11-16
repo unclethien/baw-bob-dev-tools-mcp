@@ -90,7 +90,7 @@
       <ol class="checklist">
         <li>Check the BAW login file (<code>.env</code>) is filled in. Never show it on screen.</li>
         <li>Open the project in Bob. The tools panel shows <b>baw-dev-tools</b> with 21 tools.</li>
-        <li>Put the six pictures of the old screen and the team's newer quote screen <code>generate-quote.png</code> in <code>screenshots/Quote/</code>, and nothing else. It stays on this laptop.</li>
+        <li>Put the six pictures of the old screen and a newer quote screen <code>generate-quote.png</code> in <code>screenshots/Quote/</code>, and nothing else. It stays on this laptop.</li>
         <li>Do one full rehearsal. Open Business Automation Studio in a second tab.</li>
         <li>In Bob, pick the <b>BAW App Builder</b> role and allow mode switches in Bob's auto-approve settings. Make the font bigger.</li>
       </ol>
@@ -296,17 +296,17 @@
       <header class="sec-head act2-head">
         <p class="timecode">30:00 <span aria-hidden="true">/</span> 48:00</p>
         <h2 id="act2-title" class="h2">Demo 2. A modern version.</h2>
-        <p class="lead">Show <code>generate-quote.png</code>, the team's newer screen they already like: tabs, four columns, buttons bottom right. Then ask Bob to match it.</p>
+        <p class="lead">Show <code>generate-quote.png</code>, a newer screen the team already likes: tabs, four columns, buttons bottom right. Then ask Bob to match it.</p>
       </header>
 
       <div class="prompt-grid">
         <figure class="prompt">
           <figcaption>Request 3 · the modern look</figcaption>
-          <pre><code>Give the app you just built a React UI with IBM Carbon components. Lay it out like screenshots/Quote/generate-quote.png, the team's newer quote screen: the fields split into tabs by section, four columns, labels close to their fields, the title in the header, Submit and Cancel at the bottom right. Use a clean look in the team's blue from that screen, on a white page. Improve the labels and add help text and validation. Show me the plan before you build.</code></pre>
+          <pre><code>Give the app you just built a React UI with IBM Carbon components. Lay it out like screenshots/Quote/generate-quote.png, a newer quote screen: the fields split into tabs by section, four columns, labels close to their fields, the title in the header, Submit and Cancel at the bottom right. Use a clean look in the blue from that screen, on a white page. Improve the labels and add help text and validation. Show me the plan before you build.</code></pre>
           <button class="copy" type="button" data-copy>Copy</button>
         </figure>
         <div class="notes">
-          <p class="cue-bob"><b>Bob does</b> <span><b>Switches to its second role</b> by itself, reads the team's screen and its blue, plans the tabs and columns, improves labels and checks, then <b>stops to show the plan</b>.</span></p>
+          <p class="cue-bob"><b>Bob does</b> <span><b>Switches to its second role</b> by itself, reads that screen and its blue, plans the tabs and columns, improves labels and checks, then <b>stops to show the plan</b>.</span></p>
           <p class="cue-do"><b>Say</b> <span>“Bob changed role by itself. Only the screen changes; the process behind it stays the same.”</span></p>
         </div>
         <figure class="prompt">
@@ -322,7 +322,7 @@
           <figcaption>Request 5 · fields that react</figcaption>
           <pre><code>Now make the screen react to what the user enters:
 - Add an Other choice to each benefit dropdown. Show its "Other" box only when Other is chosen, and make it required then.
-- Show the commission $ and % boxes only when the broker commission is Custom.
+- Show the commission $ and % boxes only when the commission is set to Custom.
 - Keep the Reward Programs tab locked until a Reward Delivery Method is chosen.
 - Show on each tab how many required fields are still empty, and when Submit finds a problem, open the first tab that has it.
 
