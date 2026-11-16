@@ -28,7 +28,7 @@
       "name": "Rating Method",
       "columns": 2,
       "fields": [
-        { "name": "ratingMethod", "label": "Proposed Rating Method", "type": "Select", "options": ["Community", "Experience", "Blended"] },
+        { "name": "ratingMethod", "label": "Rating Method", "type": "Select", "options": ["Community", "Experience", "Blended"] },
         { "name": "brokerCommission", "label": "Broker Commission (%)", "type": "Decimal" },
         { "name": "effectiveDate", "label": "Effective Date", "type": "Date" },
         { "name": "grandfathered", "label": "Grandfathered plan", "type": "Boolean" }

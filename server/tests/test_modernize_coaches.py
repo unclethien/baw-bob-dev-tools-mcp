@@ -70,14 +70,14 @@ class SingleObjectApp(unittest.TestCase):
 
 
 @unittest.skipUnless(TOOLKIT.exists() and MODERNIZER.exists(), "needs work/ABW-1.0.5.twx and work/MDW-2.4.3.twx")
-class LargeGroupApp(unittest.TestCase):
+class LeaseQuoteApp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.directory = tempfile.TemporaryDirectory()
-        spec = json.loads((FIXTURES / "large-group-quote.json").read_text())
+        spec = json.loads((FIXTURES / "equipment-lease-quote.json").read_text())
         spec["theme"] = THEME
         spec["form"] = {**spec["form"], "draftLabel": "Save as Draft"}
-        cls.source = build(cls.directory.name, spec, "large")
+        cls.source = build(cls.directory.name, spec, "lease")
         cls.original = objects(cls.source)
         cls.modern_path = modernize(cls.directory.name, cls.source)
         cls.modern = objects(cls.modern_path)
@@ -190,8 +190,8 @@ class LargeGroupApp(unittest.TestCase):
 
     def test_group_items_bind_their_own_object(self):
         text = "".join(self.copies().values())
-        self.assertIn("tw.local.genInfo", text)
-        self.assertIn("tw.local.benefits", text)
+        self.assertIn("tw.local.customer", text)
+        self.assertIn("tw.local.lease", text)
 
     def test_group_views_have_the_fresh_form_option_and_blank_script(self):
         views = self.group_views()
@@ -201,9 +201,9 @@ class LargeGroupApp(unittest.TestCase):
             self.assertIn("view.context.options.freshForm", text)
 
     def test_group_views_blank_their_required_numbers_dropdowns_and_yes_no(self):
-        views = {("Benefits" in t): html.unescape(t) for t in self.group_views().values()}
-        for text, names, kept in ((views[False], ["priorCoverage", "multiOption"], "quoteNumber"),
-                                  (views[True], ["brokerCommission", "dependentAgeLimit", "age"], None)):
+        views = {("LeaseTerms" in t): html.unescape(t) for t in self.group_views().values()}
+        for text, names, kept in ((views[False], ["taxExempt", "publicCompany"], "quoteNumber"),
+                                  (views[True], ["leaseAmount", "termMonths", "unitCount"], None)):
             listed = json.loads(re.search(r"var blankIds = (\[[^\]]*\]);", text).group(1))
             self.assertLessEqual(set(names), set(listed))
             self.assertNotIn(kept, listed)
@@ -318,7 +318,7 @@ class LargeGroupApp(unittest.TestCase):
                 self.assertIn(f'<object id="{bpd}" versionId="{version(text)}"', twx.read("META-INF/package.xml").decode())
 
     def test_summary_names_each_rewired_activity(self):
-        self.assertIn("Generate Quote now runs Large Group Fully Insured Sales (Modernized)", self.rewired)
+        self.assertIn("Generate Quote now runs Equipment Lease Quote (Modernized)", self.rewired)
         for line in self.rewired:
             self.assertRegex(line, r"^.+ now runs .+ \(Modernized\)$")
 
@@ -352,11 +352,11 @@ class LargeGroupApp(unittest.TestCase):
 
 
 @unittest.skipUnless(TOOLKIT.exists() and MODERNIZER.exists(), "needs work/ABW-1.0.5.twx and work/MDW-2.4.3.twx")
-class LargeGroupReviewPage(unittest.TestCase):
+class LeaseQuoteReviewPage(unittest.TestCase):
     """The tabbed two-object form with its own review page and no separate review task."""
 
     def test_review_page_buttons_validate_by_role(self):
-        spec = json.loads((FIXTURES / "large-group-quote.json").read_text())
+        spec = json.loads((FIXTURES / "equipment-lease-quote.json").read_text())
         spec["theme"] = THEME
         spec["form"] = {**spec["form"], "nextLabel": "Review", "draftLabel": "Save as Draft"}
         spec["review"] = {"title": "Review and Submit"}
@@ -369,14 +369,14 @@ class LargeGroupReviewPage(unittest.TestCase):
             modern = {n: t for n, t in objects(modernize(d, source)).items() if n not in before}
         copy = next(t for t in modern.values() if "(Modernized)" in t and "Preview" not in t and "<ns19:layoutItemId>Button" in t)
         validate = {}
-        for b in LargeGroupApp.buttons(self, copy):
+        for b in LeaseQuoteApp.buttons(self, copy):
             validate.setdefault(b["@label"], set()).add(b["validate"])
         self.assertEqual(validate, {"Save as Draft": {"false"}, "Next": {"false"}, "Review": {"true"}, "Back": {"false"}, "Submit": {"true"}})
         self.assertEqual(modernize_coaches.UNRECOGNISED, [])
         self.assertEqual(len(modernize_coaches.REWIRED), 1)
 
     def test_review_page_sections_keep_the_step_titles(self):
-        spec = json.loads((FIXTURES / "large-group-quote.json").read_text())
+        spec = json.loads((FIXTURES / "equipment-lease-quote.json").read_text())
         spec["theme"] = THEME
         spec["review"] = {"title": "Review and Submit"}
         del spec["process"]["review"]
@@ -387,7 +387,7 @@ class LargeGroupReviewPage(unittest.TestCase):
 
     def test_back_from_the_review_page_keeps_zero_and_no_answers(self):
         """Without Save as Draft too, Back marks the form as seen, so its groups do not clear 0 and No again."""
-        spec = json.loads((FIXTURES / "large-group-quote.json").read_text())
+        spec = json.loads((FIXTURES / "equipment-lease-quote.json").read_text())
         spec["theme"] = THEME
         spec["review"] = {"title": "Review and Submit"}
         del spec["process"]["review"]

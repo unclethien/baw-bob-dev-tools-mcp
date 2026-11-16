@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "server"))
 import generate_app  # noqa: E402
 
 TOOLKIT = ROOT / "work" / "ABW-1.0.5.twx"
-FIXTURE = Path(__file__).parent / "fixtures" / "large-group-quote.json"
+FIXTURE = Path(__file__).parent / "fixtures" / "equipment-lease-quote.json"
 RADIO_VIEW = "64.bdddb841-6b07-4c08-bb5c-236a8da26b6a"
 BOOLEAN_CLASS = "12.83ff975e-8dbc-42e5-b738-fa8bc08274a2"
 SELECT_VIEW = "64.fd4da558-40d8-47be-92ca-c305708dc7b7"
@@ -141,22 +141,22 @@ class SpecChecks(unittest.TestCase):
 
 
 @unittest.skipUnless(TOOLKIT.exists(), "work/ABW-1.0.5.twx is needed to build")
-class LargeGroupQuote(unittest.TestCase):
+class LeaseQuote(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.spec = generate_app.load_spec(FIXTURE)
         cls.xml = build(cls.spec)
 
     def test_spec_shape(self):
-        self.assertEqual([bo["name"] for bo in self.spec["businessObjects"]], ["GenInfoBO", "BenefitsBO"])
-        self.assertEqual([len(g["fields"]) for g in self.spec["groups"]], [19, 26])
-        self.assertEqual(len(generate_app.fields(self.spec)), 45)
+        self.assertEqual([bo["name"] for bo in self.spec["businessObjects"]], ["CustomerBO", "LeaseBO"])
+        self.assertEqual([len(g["fields"]) for g in self.spec["groups"]], [13, 17])
+        self.assertEqual(len(generate_app.fields(self.spec)), 30)
 
     def test_one_class_per_business_object(self):
         classes = entries(self.xml, "objects/12.")
         names = sorted(re.search(r'<twClass[^>]* name="([^"]+)"', text).group(1) for text in classes
                        if "<twClass" in text)
-        self.assertEqual([n for n in names if n != "GroupFieldVisibility"], ["BenefitsBO", "GenInfoBO"])
+        self.assertEqual([n for n in names if n != "GroupFieldVisibility"], ["CustomerBO", "LeaseBO"])
 
     def test_each_class_holds_its_fields_with_their_types(self):
         from coach_builder import SYSTEM_TYPES
@@ -171,7 +171,7 @@ class LargeGroupQuote(unittest.TestCase):
             props = dict(re.findall(r"<property>\s*<name>([^<]+)</name>.*?<classRef>[^<]*/(12\.[^<]+)</classRef>", text, re.S))
             want = {field: SYSTEM_TYPES[kind] for field, kind in expected[name.group(1)].items()}
             self.assertEqual(props, want, name.group(1))
-        self.assertEqual(sorted(len(p) for p in expected.values()), [19, 26])
+        self.assertEqual(sorted(len(p) for p in expected.values()), [13, 17])
 
     def test_process_variables_are_typed_by_their_class_not_their_name(self):
         classes = {re.search(r'<twClass[^>]* name="([^"]+)"', t).group(1): re.search(r'<twClass id="([^"]+)"', t).group(1)
@@ -183,48 +183,48 @@ class LargeGroupQuote(unittest.TestCase):
     def test_each_group_view_is_bound_to_its_object(self):
         views = {re.search(r'<coachView[^>]* name="([^"]+)"', text).group(1): text
                  for text in entries(self.xml, "objects/64.") if "<coachView" in text}
-        self.assertIn("tw.businessData.genInfo.quoteNumber", views["QuoteDetails CV"])
-        self.assertNotIn("tw.businessData.benefits.", views["QuoteDetails CV"])
-        self.assertIn("tw.businessData.benefits.brokerCommission", views["BenefitsDetails CV"])
+        self.assertIn("tw.businessData.customer.quoteNumber", views["CustomerDetails CV"])
+        self.assertNotIn("tw.businessData.lease.", views["CustomerDetails CV"])
+        self.assertIn("tw.businessData.lease.leaseAmount", views["LeaseTerms CV"])
 
     def test_service_has_an_input_and_output_per_object(self):
-        service = next(t for t in entries(self.xml, "objects/1.") if 'name="Large Group Fully Insured Sales"' in t and "<processParameter" in t)
-        for variable in ("genInfo", "benefits"):
+        service = next(t for t in entries(self.xml, "objects/1.") if 'name="Equipment Lease Quote"' in t and "<processParameter" in t)
+        for variable in ("customer", "lease"):
             self.assertEqual(len(re.findall(rf'<processParameter[^>]* name="{variable}"', service)), 2, variable)
 
     def test_process_has_one_variable_per_object(self):
         process = next(t for t in entries(self.xml, "objects/25."))
         self.assertEqual(process.count("<privateVariable "), 2)
-        self.assertIn("<name>genInfo</name>", process)
-        self.assertIn("<name>benefits</name>", process)
+        self.assertIn("<name>customer</name>", process)
+        self.assertIn("<name>lease</name>", process)
 
     def test_boolean_radio_is_a_radio_group_of_true_and_false(self):
-        view = next(t for t in entries(self.xml, "objects/64.") if 'name="QuoteDetails CV"' in t)
-        item = re.search(r'ppacaGrandfathered.{0,2500}?</coachView>|ppacaGrandfathered.*', view, re.S).group(0)
+        view = next(t for t in entries(self.xml, "objects/64.") if 'name="CustomerDetails CV"' in t)
+        item = re.search(r'existingCustomer.{0,2500}?</coachView>|existingCustomer.*', view, re.S).group(0)
         self.assertIn(RADIO_VIEW, view)
-        self.assertIn("tw.businessData.genInfo.ppacaGrandfathered", item)
+        self.assertIn("tw.businessData.customer.existingCustomer", item)
         self.assertIn(json.dumps([{"name": True, "value": "Yes"}, {"name": False, "value": "No"}]), view)
-        props = next(t for t in entries(self.xml, "objects/12.") if 'name="GenInfoBO"' in t)
-        start = props.index("<name>ppacaGrandfathered</name>")
+        props = next(t for t in entries(self.xml, "objects/12.") if 'name="CustomerBO"' in t)
+        start = props.index("<name>existingCustomer</name>")
         self.assertIn(BOOLEAN_CLASS, props[start:start + 400])
 
     def test_integer_select_is_a_single_select_of_whole_numbers(self):
-        view = next(t for t in entries(self.xml, "objects/64.") if 'name="BenefitsDetails CV"' in t)
+        view = next(t for t in entries(self.xml, "objects/64.") if 'name="LeaseTerms CV"' in t)
         self.assertIn(SELECT_VIEW, view)
-        items = [{"name": n, "value": str(n)} for n in range(19, 27)]
+        items = [{"name": n, "value": str(n)} for n in (12, 24, 36, 48, 60)]
         self.assertIn(json.dumps(items), view)
 
     def test_radio_fields_do_not_start_with_false(self):
-        self.assertNotIn("ppacaGrandfathered", generate_app.init_script(self.spec))
+        self.assertNotIn("existingCustomer", generate_app.init_script(self.spec))
 
     def test_finishing_button_checks_every_required_field_with_its_tab(self):
         checks = [c for c in checking(handlers(self.xml, "CLICK")) if required_list(c)[0][1] is not None]
         self.assertEqual(len(checks), 1)
         fields = required_list(checks[0])
-        self.assertEqual(len(fields), 45)
-        self.assertEqual([f[1] for f in fields], [0] * 19 + [1] * 26)
+        self.assertEqual(len(fields), 30)
+        self.assertEqual([f[1] for f in fields], [0] * 13 + [1] * 17)
         self.assertEqual(fields[0], ["Section1/Group1/quoteNumber", 0, "Section1/Group1"])
-        self.assertEqual(fields[-1], ["Section2/Group2/erisaGroup", 1, "Section2/Group2"])
+        self.assertEqual(fields[-1], ["Section2/Group2/guarantorRequired", 1, "Section2/Group2"])
         self.assertIn('page.ui.get("Tab_Section1").setCurrentPane(first)', checks[0])
         self.assertIn("This field is required", checks[0])
 
@@ -271,7 +271,7 @@ class LargeGroupQuote(unittest.TestCase):
         self.assertNotRegex(self.form_coach(), r"Action_Bar(?!\d)")
 
     def test_group_view_blanks_required_numbers_and_radios_when_editable(self):
-        view = next(t for t in entries(self.xml, "objects/64.") if 'name="QuoteDetails CV"' in t)
+        view = next(t for t in entries(self.xml, "objects/64.") if 'name="CustomerDetails CV"' in t)
         self.assertIn('binding.set("value", null)', view)
         self.assertIn("input:checked", view)
         self.assertIn("setTimeout", view)
@@ -343,7 +343,7 @@ class SaveAsDraft(unittest.TestCase):
         self.assertIn('name="currentTab"', service)
 
     def test_group_views_take_the_fresh_flag(self):
-        view = next(t for t in entries(self.xml, "objects/64.") if 'name="QuoteDetails CV"' in t)
+        view = next(t for t in entries(self.xml, "objects/64.") if 'name="CustomerDetails CV"' in t)
         self.assertIn("freshForm", view)
 
     def test_spec_without_draft_label_has_no_postpone_and_no_fresh_flag(self):
@@ -400,9 +400,9 @@ class ReviewTask(unittest.TestCase):
         checks = [c for c in checking(handlers(self.xml, "CLICK")) if required_list(c)[0][1] is None]
         self.assertEqual(len(checks), 1)
         fields = required_list(checks[0])
-        self.assertEqual(len(fields), 45)
+        self.assertEqual(len(fields), 30)
         self.assertEqual(fields[0], ["Section1/Group1/quoteNumber", None, "Section1/Group1"])
-        self.assertEqual(fields[-1], ["Section2/Group2/erisaGroup", None, "Section2/Group2"])
+        self.assertEqual(fields[-1], ["Section2/Group2/guarantorRequired", None, "Section2/Group2"])
         self.assertIn('visibility.get("value") === "READONLY"', checks[0])
 
     def test_review_coach_nests_each_group_view_in_its_section(self):

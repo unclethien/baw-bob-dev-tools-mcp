@@ -13,7 +13,7 @@ import coach_inventory  # noqa: E402
 import generate_app  # noqa: E402
 
 TOOLKIT = ROOT / "work" / "ABW-1.0.5.twx"
-FIXTURE = Path(__file__).parent / "fixtures" / "large-group-quote.json"
+FIXTURE = Path(__file__).parent / "fixtures" / "equipment-lease-quote.json"
 THEME = str(ROOT / "app-specs" / "example-quote-desk.theme.json")
 
 
@@ -114,36 +114,36 @@ class SingleObjectApp(unittest.TestCase):
 
 
 @unittest.skipUnless(TOOLKIT.exists(), "work/ABW-1.0.5.twx is needed to build")
-class LargeGroupApp(unittest.TestCase):
+class LeaseQuoteApp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         spec = json.loads(FIXTURE.read_text())
         spec["theme"] = THEME
         spec["form"] = {**spec["form"], "draftLabel": "Save as Draft"}
         with tempfile.TemporaryDirectory() as tmp:
-            cls.found = build(tmp, spec, "large")
-        cls.generate = find(cls.found["services"], "Large Group Fully Insured Sales")
+            cls.found = build(tmp, spec, "lease")
+        cls.generate = find(cls.found["services"], "Equipment Lease Quote")
         cls.review = find(cls.found["services"], "Review Quote")
 
     def test_both_services_are_listed_without_a_skip(self):
         for service in (self.generate, self.review):
             self.assertTrue(service["modernize"], service)
             self.assertNotIn("reason", service)
-        self.assertEqual(set(self.generate["objects"]), {"genInfo", "benefits"})
+        self.assertEqual(set(self.generate["objects"]), {"customer", "lease"})
 
     def test_placements_carry_their_own_object(self):
         sections = {s["group"]: s for c in self.generate["coaches"] for s in c["sections"] if s.get("group")}
-        self.assertEqual(sections["QuoteDetails CV"]["variable"], "genInfo")
-        self.assertEqual(sections["BenefitsDetails CV"]["variable"], "benefits")
+        self.assertEqual(sections["CustomerDetails CV"]["variable"], "customer")
+        self.assertEqual(sections["LeaseTerms CV"]["variable"], "lease")
         for section in sections.values():
             self.assertTrue(section["classRef"].startswith("/12."), section)
-        self.assertNotEqual(sections["QuoteDetails CV"]["classRef"], sections["BenefitsDetails CV"]["classRef"])
+        self.assertNotEqual(sections["CustomerDetails CV"]["classRef"], sections["LeaseTerms CV"]["classRef"])
 
     def test_every_group_is_listed_with_its_flags(self):
         groups = {g["name"]: g for g in self.found["groups"]}
-        self.assertEqual(set(groups), {"QuoteDetails CV", "BenefitsDetails CV"})
-        self.assertEqual(groups["QuoteDetails CV"]["variable"], "genInfo")
-        self.assertEqual(groups["BenefitsDetails CV"]["variable"], "benefits")
+        self.assertEqual(set(groups), {"CustomerDetails CV", "LeaseTerms CV"})
+        self.assertEqual(groups["CustomerDetails CV"]["variable"], "customer")
+        self.assertEqual(groups["LeaseTerms CV"]["variable"], "lease")
         for group in groups.values():
             self.assertTrue(group["classRef"].startswith("/12."), group)
             self.assertTrue(group["blankRequired"], group)
@@ -159,7 +159,7 @@ class LargeGroupApp(unittest.TestCase):
         spec["form"] = {**spec["form"], "tabsInOrder": True}
         with tempfile.TemporaryDirectory() as tmp:
             found = build(tmp, spec, "ordered")
-        service = find(found["services"], "Large Group Fully Insured Sales")
+        service = find(found["services"], "Equipment Lease Quote")
         dropped = [d for c in service["coaches"] for d in c["dropped"] if "On Tab changed" in d]
         self.assertEqual(len(dropped), 1)
         self.assertIn("required fields are filled", dropped[0])
@@ -190,8 +190,8 @@ class LargeGroupApp(unittest.TestCase):
 
     def test_summary_names_every_object(self):
         text = coach_inventory.summary(self.found)
-        self.assertIn("tw.local.genInfo", text)
-        self.assertIn("tw.local.benefits", text)
+        self.assertIn("tw.local.customer", text)
+        self.assertIn("tw.local.lease", text)
 
 
 if __name__ == "__main__":

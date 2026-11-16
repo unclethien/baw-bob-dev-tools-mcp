@@ -17,7 +17,7 @@ A one-hour demo for managers. IBM Bob, an AI assistant, turns pictures of an old
 | 15:00 | Demo 1: rebuild the old screen | Pictures in, working BAW app out, then a two-step approval workflow |
 | 30:00 | Demo 2: a modern version | The same app with a modern look and fields that react |
 | 48:00 | Safety and questions | |
-| 52:00 | Next steps | What the client wants next |
+| 52:00 | Next steps | What the team wants next |
 
 ---
 
@@ -27,7 +27,7 @@ Thirty minutes before:
 
 1. Check the BAW login file (`.env`) is filled in. Never show it on screen.
 2. Open the project in Bob. The tools panel shows **baw-dev-tools** with 21 tools.
-3. Put the six pictures of the old screen (`image (1).png` to `image (6).png`) and the client's newer quote screen (`generate-quote.png`) in `screenshots/Quote/`. Keep nothing else in that folder. It stays on this laptop and is never published.
+3. Put the six pictures of the old screen (`image (1).png` to `image (6).png`) and a newer quote screen (`generate-quote.png`) in `screenshots/Quote/`. Keep nothing else in that folder. It stays on this laptop and is never published.
 4. Do one full rehearsal, so you know how long each step takes. Keep the rehearsal apps as a backup.
 5. Open Business Automation Studio in a second browser tab.
 6. In Bob, pick the **🏗️ BAW App Builder** role, and allow mode switches in Bob's auto-approve settings. Make the font bigger.
@@ -170,19 +170,19 @@ Thirty minutes before:
 
 ### Step 1. Show the target look
 
-**Do.** Open `screenshots/Quote/generate-quote.png`: the client's newer quote screen, the layout they already like. Point at the tabs across the top, the four columns and the buttons at the bottom right. Stay in the same chat.
+**Do.** Open `screenshots/Quote/generate-quote.png`: a newer quote screen, the layout the team already likes. Point at the tabs across the top, the four columns and the buttons at the bottom right. Stay in the same chat.
 
 ### Step 2. Ask for the modern version
 
 **Paste.**
 
-> Give the app you just built a React UI with IBM Carbon components. Lay it out like screenshots/Quote/generate-quote.png, the client's newer quote screen: the fields split into tabs by section, four columns, labels close to their fields, the title in the header, Submit and Cancel at the bottom right. Use a clean look in the client's blue from that screen, on a white page. Improve the labels and add help text and validation. Show me the plan before you build.
+> Give the app you just built a React UI with IBM Carbon components. Lay it out like screenshots/Quote/generate-quote.png, a newer quote screen: the fields split into tabs by section, four columns, labels close to their fields, the title in the header, Submit and Cancel at the bottom right. Use a clean look in the blue from that screen, on a white page. Improve the labels and add help text and validation. Show me the plan before you build.
 
 **Say.** "This request has all five parts: what we want, what to work from, how it should look, extras like help text, and where to stop."
 
 **Bob does.**
 1. **Switches to its second role**, the Modernizer, by itself.
-2. Opens the client's screen and reads its blue.
+2. Opens that screen and reads its blue.
 3. Reads the app it just built, plans the tabs and the four columns, and improves the labels, help text and checks.
 4. **Stops and shows us the plan.**
 
@@ -205,7 +205,7 @@ Thirty minutes before:
 **Do.** In Business Automation Studio, run the "(Modernized)" version. Fill a few fields, leave a required one empty and press Submit to show the check, then complete it.
 
 **Say.**
-- "The layout is the client's own newer screen. The old process keeps running underneath; only what people see has changed."
+- "The layout is the team's own newer screen. The old process keeps running underneath; only what people see has changed."
 - "The old screen is still there next to the new one, so nothing is lost."
 
 ### Step 4. Fields that react to each other
@@ -214,7 +214,7 @@ Thirty minutes before:
 
 > Now make the screen react to what the user enters:
 > - Add an Other choice to each benefit dropdown. Show its "Other" box only when Other is chosen, and make it required then.
-> - Show the commission $ and % boxes only when the broker commission is Custom.
+> - Show the commission $ and % boxes only when the commission is set to Custom.
 > - Keep the Reward Programs tab locked until a Reward Delivery Method is chosen.
 > - Show on each tab how many required fields are still empty, and when Submit finds a problem, open the first tab that has it.
 >
@@ -228,7 +228,7 @@ Thirty minutes before:
 
 **Say.** "The rules react instantly, and the data still lands in the same place in BAW, so the process does not change."
 
-Agree the exact rules with the client before the session; the request above uses examples from the Info tab.
+Agree the exact rules with the team before the session; the request above uses examples from the Info tab.
 
 ---
 
@@ -267,7 +267,7 @@ Agree the exact rules with the client before the session; the request above uses
 
 ## 10. Next steps
 
-**Do.** Ask the client, and write the answers down:
+**Do.** Ask the team, and write the answers down:
 1. Does the rebuilt screen match the old one? Which drop-down options did Bob guess wrong?
 2. Should the production screen use their own brand? Can they send the official logo?
 3. Which fields drive other fields, and which tabs depend on each other, in the real process?
